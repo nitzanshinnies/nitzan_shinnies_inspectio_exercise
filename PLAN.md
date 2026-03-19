@@ -141,7 +141,25 @@ Recent outcomes performance requirement:
 - Do not list large S3 prefixes to serve “recent outcomes”.
 - Maintain a bounded recent cache for the last 100 outcomes (e.g., `collections.deque(maxlen=100)` or a Redis list).
 
-## 8) Testing plan (requirements-first)
+## 8) Mock SMS provider container (requirements)
+
+The mock SMS provider must be a separate container (single service) with the sole purpose of simulating SMS sends for the worker.
+
+- Endpoint:
+  - `POST /send`
+- Request JSON:
+  - `to`: string
+  - `body`: string
+  - `shouldFail`: optional boolean
+- Failure behavior:
+  - If `shouldFail=true`, the provider must always fail the request.
+  - Otherwise, the provider must fail a fixed fraction of requests using a configurable failure rate for the exercise (so that some messages fail during load).
+- Failure signal:
+  - Failures are signaled to the worker via HTTP non-2xx responses.
+- Optional:
+  - The provider may support configurable latency to simulate slow/unreliable SMS delivery.
+
+## 9) Testing plan (requirements-first)
 
 Before meaningful implementation:
 
