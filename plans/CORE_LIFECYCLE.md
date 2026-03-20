@@ -117,6 +117,13 @@ Pending object includes:
 After success/failed transition:
 - Message must no longer be eligible under pending processing.
 
+### 5.3 Terminal outcome notification (required)
+
+After a **durable** terminal write to `state/success/...` or `state/failed/...`, the worker **must publish** a terminal-outcome event to the **outcomes notification service** ([`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md)) so `GET /messages/success` / `GET /messages/failed` can stay off broad terminal-prefix listing.
+
+- **Order:** S3 terminal object committed **first**, then **notify** (retry notify on transient failures; see notification service doc).
+- **Content:** at minimum `messageId`, `outcome` (`success` | `failed`), `recordedAt`, `notificationId`; align with the durable `state/notifications/...` record.
+
 ## 6) Failure handling and safety constraints
 
 ### 6.1 Mock SMS integration expectations
@@ -168,6 +175,7 @@ The lifecycle implementation is valid when:
 5. Success/failed transitions remove pending eligibility.
 6. Restarted worker can continue retries from persisted pending data.
 7. Duplicate processing does not create duplicate terminal side effects.
+8. After each terminal S3 transition, the notification service receives a publish (or is eventually consistent per retry policy in [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md)).
 
 ## 9) Conceptual lifecycle flow
 

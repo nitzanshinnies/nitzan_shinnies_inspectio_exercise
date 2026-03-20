@@ -257,7 +257,7 @@ When implementing, map cases to spec checklists:
 - **Sharding:** TC-SH-* ↔ [`SHARDING.md`](SHARDING.md) §8
 - **Lifecycle:** TC-RT-*, TC-WU-*, TC-NM-* ↔ [`CORE_LIFECYCLE.md`](CORE_LIFECYCLE.md) §8
 - **Resilience:** TC-RQ-* ↔ [`RESILIENCE.md`](RESILIENCE.md) §8
-- **REST / cache:** TC-API-*, TC-CA-* ↔ [`REST_API.md`](REST_API.md) §8
+- **REST / outcomes:** TC-API-*, TC-CA-*, TC-NTF-* ↔ [`REST_API.md`](REST_API.md) §8, [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) §9
 - **Mock:** TC-SMS-* ↔ [`MOCK_SMS.md`](MOCK_SMS.md) §10
 - **Security notes:** TC-SE-* ↔ [`REST_API.md`](REST_API.md) §7
 
@@ -287,26 +287,36 @@ When implementing, map cases to spec checklists:
 
 ---
 
-## 18) Remaining gaps & open points (review checklist)
+## 18) Resolved architecture: outcomes notification service
 
-Items below are **not fully specified** in the high-level plans or are **implementation-defined**. When you close them in code, add matching tests (new IDs or extend TC-CA-* / TC-E2E-*).
+**Spec:** [`plans/NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md). Workers **publish** after durable terminal S3 writes; a **notification service** holds an **in-memory** bounded cache and a durable **`state/notifications/...`** log; on startup it **hydrates ~10k** newest records from S3.
 
-### 18.1 Architecture / integration (needs a conscious design + test)
+### 18.1 Integration tests (normative)
 
-| Gap | Why | Suggested test once design exists |
-|-----|-----|-----------------------------------|
-| **API recent-outcomes cache vs worker** | Workers write terminal state in S3; API must **not** list prefixes for `GET /messages/*` but must still serve fresh outcomes ([`REST_API.md`](REST_API.md) §4). Plans do not mandate **how** the API learns of worker-only transitions (in-process call, internal HTTP, shared Redis, etc.). | **I/E:** terminal success/fail performed by worker (or harness) → **within bounded delay**, `GET` endpoints reflect outcome **without** broad S3 list (spy stays clean). |
-| **“Promptly” cache update** | [`REST_API.md`](REST_API.md) requires cache updates “promptly”—no numeric SLA in spec. | **I:** measure or bound (e.g. same event loop tick vs `< N ms` in single-process monolith). |
-| **Readiness vs `GET /healthz`** | [`REST_API.md`](REST_API.md) §3.5: liveness vs readiness (e.g. S3/mock unavailable) is implementation choice. | **I:** if readiness implemented, `/healthz` fails when persistence down; otherwise document liveness-only and test **always 2xx** when process up. |
+| ID | Layer | Test case | Notes |
+|----|-------|-----------|-------|
+| TC-NTF-01 | I | Worker completes terminal **success** in S3 → **publish** → `GET /messages/success` returns that `messageId` **without** listing `state/success/`. | Spy persistence `list` on API `GET`. |
+| TC-NTF-02 | I | Same for **failed** terminal and `GET /messages/failed`. | |
+| TC-NTF-03 | I | **Order:** if publish is stubbed to fail, S3 terminal still exists; retry publish succeeds → GET reflects outcome. | |
+| TC-NTF-04 | I | **Notification service restart:** after terminal events persisted to `state/notifications/...`, restart service → hydration fills memory → **GET** returns recent rows up to **`HYDRATION_MAX`**. | |
+| TC-NTF-05 | U / I | **Dedupe / idempotency:** duplicate publish same `messageId`+outcome does **not** corrupt GET ordering per documented policy ([`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) §3). | |
+| TC-NTF-06 | I | **`HYDRATION_MAX` boundary:** with >10k notifications in S3, memory holds **at most** cap; **newest** bias preserved. | |
 
-### 18.2 Persistence layer (contract tests)
+### 18.2 Remaining implementation choices (test when decided)
+
+| Topic | Suggested test |
+|-------|----------------|
+| **“Promptly”** after publish | **I:** bound latency (same process vs HTTP hop)—document. |
+| **Readiness vs `GET /healthz`** | [`REST_API.md`](REST_API.md) §3.5—**I:** readiness includes notification service dependency if split-process. |
+
+### 18.3 Persistence layer (contract tests)
 
 | Gap | Suggested coverage |
 |-----|-------------------|
 | **Dedicated persistence service surface** | Matrix over **put / get / delete / list-prefix** (owned paths only), **error mapping**, and **async** cancellation behavior if using `aioboto3`. |
 | **Strong vs eventual consistency** | **moto/file-backend:** usually strong. **Real S3** optional stage: put + immediate get/list visibility. |
 
-### 18.3 Lifecycle / ops edge cases (optional depth)
+### 18.4 Lifecycle / ops edge cases (optional depth)
 
 | Gap | Suggested coverage |
 |-----|-------------------|
@@ -314,7 +324,7 @@ Items below are **not fully specified** in the high-level plans or are **impleme
 | **In-flight send when SIGTERM** | Define: still count attempt outcome vs discard—**test matches policy**. |
 | **SOAK / memory** | Long run of 500ms loop + many messages: RSS stable (optional, not CI-gated). |
 
-### 18.4 Test methodology (not duplicate case IDs)
+### 18.5 Test methodology (not duplicate case IDs)
 
 | Gap | Note |
 |-----|------|
@@ -322,7 +332,7 @@ Items below are **not fully specified** in the high-level plans or are **impleme
 | **Contract / OpenAPI** | If schema published, **schemathesis** or Dredd against running API. |
 | **Multi-container E2E** | **docker-compose** (API + worker + mock SMS + LocalStack) optional; **in-process** tests remain baseline per [`TESTS.md`](TESTS.md). |
 
-### 18.5 Explicit non-goals (no test required unless you extend spec)
+### 18.6 Explicit non-goals (no test required unless you extend spec)
 
 - Multi-region S3, IAM least-privilege proofs, KMS, per-tenant isolation, cost budgets, mobile clients/CORS, chaos in production.
 
@@ -330,4 +340,4 @@ Items below are **not fully specified** in the high-level plans or are **impleme
 
 ### Coverage confidence
 
-After implementing **§18.1** (cache feed path + health semantics), the enumerated list + **§18** should cover all **normative** behaviors in [`PLAN.md`](PLAN.md), [`CORE_LIFECYCLE.md`](CORE_LIFECYCLE.md), [`SHARDING.md`](SHARDING.md), [`RESILIENCE.md`](RESILIENCE.md), [`REST_API.md`](REST_API.md), and [`MOCK_SMS.md`](MOCK_SMS.md). Remaining work is **operational depth** (§18.3–18.4) and **extended** security/scale (§15, §13).
+With **§18** resolved via [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md), the enumerated list + **§18** tracks all **normative** behaviors in [`PLAN.md`](PLAN.md), [`CORE_LIFECYCLE.md`](CORE_LIFECYCLE.md), [`SHARDING.md`](SHARDING.md), [`RESILIENCE.md`](RESILIENCE.md), [`REST_API.md`](REST_API.md), [`MOCK_SMS.md`](MOCK_SMS.md), and **notification** flows. Remaining work is **operational depth** (§18.4–18.5) and **extended** security/scale (§15, §13).

@@ -1,6 +1,6 @@
 # TESTS.md - Detailed Plan (Section 9)
 
-This document expands **Section 9** of [`plans/PLAN.md`](PLAN.md): **testing** for the SMS retry scheduler exercise. It aligns with [`plans/SYSTEM_OVERVIEW.md`](SYSTEM_OVERVIEW.md), [`plans/CORE_LIFECYCLE.md`](CORE_LIFECYCLE.md), [`plans/SHARDING.md`](SHARDING.md), [`plans/RESILIENCE.md`](RESILIENCE.md), [`plans/REST_API.md`](REST_API.md), and [`plans/MOCK_SMS.md`](MOCK_SMS.md).
+This document expands **Section 9** of [`plans/PLAN.md`](PLAN.md): **testing** for the SMS retry scheduler exercise. It aligns with [`plans/SYSTEM_OVERVIEW.md`](SYSTEM_OVERVIEW.md), [`plans/CORE_LIFECYCLE.md`](CORE_LIFECYCLE.md), [`plans/SHARDING.md`](SHARDING.md), [`plans/RESILIENCE.md`](RESILIENCE.md), [`plans/REST_API.md`](REST_API.md), [`plans/MOCK_SMS.md`](MOCK_SMS.md), and [`plans/NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md).
 
 **Enumerated checklist:** [`plans/TEST_LIST.md`](TEST_LIST.md) (full test case IDs, edge cases, 9.1 companion).
 
@@ -65,13 +65,14 @@ Test persistence orchestration (via fakes/moto):
 - **Terminal failure**: **failed** key under `state/failed/<yyyy>/<MM>/<dd>/<hh>/<messageId>.json`.
 - **Clock injection**: for a fixed “now”, assert path segments **`yyyy/MM/dd/hh`** match the implementation’s documented timezone rule (UTC vs local—pick one and test it).
 
-### 4.5 Recent outcomes cache (API-side)
+### 4.5 Recent outcomes (notification service + API)
 
-Cover [`REST_API.md`](REST_API.md) §4 and [`PLAN.md`](PLAN.md) §7:
+Cover [`REST_API.md`](REST_API.md) §4, [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md), and [`PLAN.md`](PLAN.md) §7:
 
-- **Bounded capacity** at least **`max(limit)`** including default **100** when `limit` is omitted.
-- **Success vs failed streams**: cache updates on terminal outcomes; `GET /messages/success` vs `GET /messages/failed` return the correct stream (document whether ordering is **global interleaved** or **per-stream** deques—test the chosen design).
-- **No S3 prefix scan** on read path: spy/fake persistence—list operations must not run to serve recent outcomes.
+- **Bounded in-memory capacity** in the notification service at least **`max(limit)`** (≥ **100** when `limit` omitted; service may retain **~10k** for hydration per architecture).
+- **Publish path:** after durable terminal S3 write, worker **publishes** to the notification service → in-memory update + `state/notifications/...` record.
+- **API `GET` path:** handlers query the **notification service** only—spy: **no** `state/success/` or `state/failed/` **list** on those requests.
+- **Hydration:** on notification service restart, **up to `HYDRATION_MAX`** newest rows load from S3—assert order and cap ([`RESILIENCE.md`](RESILIENCE.md) §7).
 - **`limit`**: optional query param, **default 100**; invalid `limit` → **4xx**; clamp policy if implemented ([`REST_API.md`](REST_API.md) §3.3–3.4).
 
 ### 4.6 Mock SMS contract (worker client or mock app)
@@ -170,7 +171,7 @@ Map suites to spec checklists:
 - **Sharding**: `SHARDING.md` §8 checklist.
 - **Lifecycle / 500ms / concurrency / idempotency**: `CORE_LIFECYCLE.md` §8 checklist.
 - **Bootstrap / degraded startup / terminal safety**: `RESILIENCE.md` §8 checklist.
-- **REST**: `REST_API.md` §8 checklist.
+- **REST / recent outcomes**: `REST_API.md` §8 checklist, `NOTIFICATION_SERVICE.md` §9 checklist.
 - **Mock SMS**: `MOCK_SMS.md` §10 checklist.
 
 ## 9) CI expectations (exercise)
@@ -185,11 +186,11 @@ Section 9 testing work is complete when:
 
 1. Unit tests cover **sharding**, **ownership**, **`HOSTNAME` mapping** (if applicable), **retry timeline**, **500ms cadence**, **wakeup due selection**, and **terminal rules**.
 2. Tests prove **pending / success / failed** key paths including **date-partitioned** terminal keys under an injectable clock.
-3. **Recent outcomes** are covered **without** S3 listing on read; **success** and **failed** endpoints behave per the chosen cache design.
+3. **Recent outcomes** follow [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md): **publish** path, **GET** without broad terminal-prefix listing, and **hydration** after notification service restart.
 4. **Idempotency** tests exist for duplicate activation / replay and **no duplicate terminal side effects**.
 5. **Persistence boundary** is enforced (no silent bypass) in tests or documented static review with spot-check spies.
 6. **Integration** tests cover bootstrap, **malformed** pendings, and (where implemented) **transient persistence retry** during startup.
-7. At least one **multi-component** test covers **API → pending → worker → mock SMS → terminal state** and **`/repeat`** with **`N > 1`**.
+7. At least one **multi-component** test covers **API → pending → worker → mock SMS → terminal state → notification publish → `GET` outcomes** and **`/repeat`** with **`N > 1`**.
 8. At least one test proves **bootstrap after restart** restores due work from owned pending shards.
 9. **`GET /healthz`** smoke is present for the API.
 10. How to run suites is documented in **README** (or **`CONTRIBUTING`**) once implementation exists.

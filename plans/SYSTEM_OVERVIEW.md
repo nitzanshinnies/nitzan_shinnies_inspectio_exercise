@@ -9,7 +9,7 @@ The system is composed of logical services/services-with-containers:
 1. **Backend / REST API service** (Python, FastAPI, run with `uvicorn`)
    - Exposes the REST endpoints required by the architect.
    - Creates the durable pending message state in S3 (through the dedicated persistence service).
-   - Maintains/serves “recent outcomes” via a bounded cache to avoid S3 listing overhead.
+   - Serves `GET /messages/success` and `GET /messages/failed` by **querying the notification service** (not by listing `state/success/` or `state/failed/` on each request).
    - Triggers the worker “newMessage” flow for attempt #1 (0s delay).
 
 2. **Worker scheduler** (Kubernetes StatefulSet; pods `worker-0`, `worker-1`, …)
@@ -23,7 +23,15 @@ The system is composed of logical services/services-with-containers:
    - **AWS mode**: uses `aioboto3` for async S3 operations.
    - **Local dev mode**: uses an in-process mock S3 implementation that performs file reader/writer semantics on a local directory while presenting the same persistence interface.
 
-4. **Mock SMS provider (separate single container)**
+4. **Outcomes notification service (required for recent `GET` behavior)**
+   - Maintains an **in-memory bounded cache** of recent terminal outcomes (success / failed).
+   - Persists an **append-style notification log** under `state/notifications/...` in S3 (via persistence service) for **restart hydration**.
+   - On startup, **hydrates** from S3 with up to **`HYDRATION_MAX`** records (default **10,000**), walking **recent hour prefixes** backward until the cap is reached (acceptable **cold-start** listing; not per user request).
+   - **Workers** publish a notification **after** the terminal message object is durably written to `state/success/...` or `state/failed/...`.
+   - **REST API** reads recent outcomes **only** from this service.
+   - **Detailed plan:** [`plans/NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md).
+
+5. **Mock SMS provider (separate single container)**
    - Exposes `POST /send`.
    - Fails some requests to exercise retry behavior (including a request-controlled `shouldFail` switch).
 
@@ -39,6 +47,8 @@ All message state is persisted in S3 under the architect-required prefixes:
   - `state/success/<yyyy>/<MM>/<dd>/<hh>/<messageId>.json`
 - **Failed (terminal)**
   - `state/failed/<yyyy>/<MM>/<dd>/<hh>/<messageId>.json`
+- **Outcome notifications (durable log for recent-outcomes service)**
+  - `state/notifications/<yyyy>/<MM>/<dd>/<hh>/<notificationId>.json`
 
 ### 2.2 Pending JSON schema (required)
 
@@ -154,8 +164,8 @@ Implement:
   - Health endpoints.
 
 Recent outcomes performance requirement:
-- Avoid listing large S3 prefixes for recent outcomes.
-- Serve recent outcomes from a bounded cache (e.g., maxlen=100 deque or Redis list semantics).
+- Avoid listing large `state/success/` / `state/failed/` trees on **each** `GET`.
+- Serve `GET /messages/success` and `GET /messages/failed` from the **notification service** in-memory views (backed by `state/notifications/...` for durability and startup hydration—see [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md)).
 
 ## 6) Mock SMS provider contract (required)
 
