@@ -1,3 +1,5 @@
+"""Smoke: `GET /healthz` on all FastAPI services (TESTS.md §4.7, §9)."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -25,6 +27,7 @@ from inspectio_exercise.worker.app import create_app as create_worker
         (create_worker, "worker"),
     ],
 )
+@pytest.mark.unit
 def test_healthz(factory: Callable[[], FastAPI], service: str) -> None:
     client = TestClient(factory())
     response = client.get("/healthz")

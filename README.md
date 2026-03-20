@@ -47,9 +47,16 @@ docker compose up --build
 
 ## Tests
 
+Layout follows **`plans/TESTS.md`**: `tests/unit/`, `tests/integration/`, `tests/e2e/`. Most cases are **skipped placeholders** until features exist; **`tests/unit/test_healthz.py`** runs today (all services `GET /healthz`).
+
 ```bash
 pytest
+pytest -m unit
+pytest -m integration
+pytest -m e2e
 ```
+
+Dev deps include **`httpx`** and **`pytest-asyncio`** for upcoming async / ASGI tests.
 
 ## Status
 
