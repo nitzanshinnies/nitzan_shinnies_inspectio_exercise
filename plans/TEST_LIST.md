@@ -284,3 +284,50 @@ When implementing, map cases to spec checklists:
 | 15 Security | 2 |
 
 **Total enumerated:** **127** test case rows (some U+I overlap; adjust per pyramid).
+
+---
+
+## 18) Remaining gaps & open points (review checklist)
+
+Items below are **not fully specified** in the high-level plans or are **implementation-defined**. When you close them in code, add matching tests (new IDs or extend TC-CA-* / TC-E2E-*).
+
+### 18.1 Architecture / integration (needs a conscious design + test)
+
+| Gap | Why | Suggested test once design exists |
+|-----|-----|-----------------------------------|
+| **API recent-outcomes cache vs worker** | Workers write terminal state in S3; API must **not** list prefixes for `GET /messages/*` but must still serve fresh outcomes ([`REST_API.md`](REST_API.md) §4). Plans do not mandate **how** the API learns of worker-only transitions (in-process call, internal HTTP, shared Redis, etc.). | **I/E:** terminal success/fail performed by worker (or harness) → **within bounded delay**, `GET` endpoints reflect outcome **without** broad S3 list (spy stays clean). |
+| **“Promptly” cache update** | [`REST_API.md`](REST_API.md) requires cache updates “promptly”—no numeric SLA in spec. | **I:** measure or bound (e.g. same event loop tick vs `< N ms` in single-process monolith). |
+| **Readiness vs `GET /healthz`** | [`REST_API.md`](REST_API.md) §3.5: liveness vs readiness (e.g. S3/mock unavailable) is implementation choice. | **I:** if readiness implemented, `/healthz` fails when persistence down; otherwise document liveness-only and test **always 2xx** when process up. |
+
+### 18.2 Persistence layer (contract tests)
+
+| Gap | Suggested coverage |
+|-----|-------------------|
+| **Dedicated persistence service surface** | Matrix over **put / get / delete / list-prefix** (owned paths only), **error mapping**, and **async** cancellation behavior if using `aioboto3`. |
+| **Strong vs eventual consistency** | **moto/file-backend:** usually strong. **Real S3** optional stage: put + immediate get/list visibility. |
+
+### 18.3 Lifecycle / ops edge cases (optional depth)
+
+| Gap | Suggested coverage |
+|-----|-------------------|
+| **Graceful shutdown (SIGTERM)** | Worker finishes current tick or cancels tasks cleanly; **no** stuck pendings except those mid-retry per rules; optional **pytest** “no pending asyncio tasks” after shutdown hook. |
+| **In-flight send when SIGTERM** | Define: still count attempt outcome vs discard—**test matches policy**. |
+| **SOAK / memory** | Long run of 500ms loop + many messages: RSS stable (optional, not CI-gated). |
+
+### 18.4 Test methodology (not duplicate case IDs)
+
+| Gap | Note |
+|-----|------|
+| **Property-based / fuzz** | `hypothesis` for `nextDueAt` recurrence, shard id range, JSON parse robustness. |
+| **Contract / OpenAPI** | If schema published, **schemathesis** or Dredd against running API. |
+| **Multi-container E2E** | **docker-compose** (API + worker + mock SMS + LocalStack) optional; **in-process** tests remain baseline per [`TESTS.md`](TESTS.md). |
+
+### 18.5 Explicit non-goals (no test required unless you extend spec)
+
+- Multi-region S3, IAM least-privilege proofs, KMS, per-tenant isolation, cost budgets, mobile clients/CORS, chaos in production.
+
+---
+
+### Coverage confidence
+
+After implementing **§18.1** (cache feed path + health semantics), the enumerated list + **§18** should cover all **normative** behaviors in [`PLAN.md`](PLAN.md), [`CORE_LIFECYCLE.md`](CORE_LIFECYCLE.md), [`SHARDING.md`](SHARDING.md), [`RESILIENCE.md`](RESILIENCE.md), [`REST_API.md`](REST_API.md), and [`MOCK_SMS.md`](MOCK_SMS.md). Remaining work is **operational depth** (§18.3–18.4) and **extended** security/scale (§15, §13).
