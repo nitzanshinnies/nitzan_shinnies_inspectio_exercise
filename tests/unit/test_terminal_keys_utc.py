@@ -1,22 +1,28 @@
-"""S3 terminal keys and UTC partitions (TESTS.md §4.4, PLAN.md §3)."""
+"""UTC terminal keys — production must match `tests/reference_spec.py` (TESTS.md §4.4, PLAN.md §3)."""
 
 from __future__ import annotations
 
 import pytest
 
-pytestmark = pytest.mark.unit
+from inspectio_exercise.domain import utc_paths as utc_mod
+from tests import reference_spec as spec
 
 
-@pytest.mark.skip(reason="Skeleton: success key path + status (TESTS.md §4.4)")
-def test_success_move_and_json_status() -> None:
-    """state/success/yyyy/MM/dd/hh/id.json; body status success."""
+@pytest.mark.unit
+def test_utc_segments_match_spec() -> None:
+    ms = 1_705_329_000_000
+    assert utc_mod.utc_segments_for_instant_ms(ms) == spec.utc_segments_for_instant_ms(ms)
 
 
-@pytest.mark.skip(reason="Skeleton: failed terminal key path + status (TESTS.md §4.4)")
-def test_failed_terminal_move_and_json_status() -> None:
-    """state/failed/...; body status failed."""
+@pytest.mark.unit
+def test_year_boundary_segments_match_spec() -> None:
+    ms = 1_704_024_000_000
+    assert utc_mod.utc_segments_for_instant_ms(ms) == spec.utc_segments_for_instant_ms(ms)
 
 
-@pytest.mark.skip(reason="Skeleton: UTC segments for fixed instant (TESTS.md §4.4)")
-def test_terminal_path_segments_match_utc_instant() -> None:
-    """Inject clock; assert yyyy/MM/dd/hh from UTC."""
+@pytest.mark.unit
+def test_terminal_keys_match_spec() -> None:
+    instant = 1_705_329_000_000
+    mid = "msg-1"
+    assert utc_mod.terminal_success_key(mid, instant) == spec.terminal_success_key(mid, instant)
+    assert utc_mod.terminal_failed_key(mid, instant) == spec.terminal_failed_key(mid, instant)

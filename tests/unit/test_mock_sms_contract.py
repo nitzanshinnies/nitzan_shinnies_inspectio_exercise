@@ -1,22 +1,31 @@
-"""Mock SMS HTTP contract and audit (TESTS.md §4.6, MOCK_SMS.md)."""
+"""Mock SMS outcome classification — production must match `tests/reference_spec.py` (TESTS.md §4.6, MOCK_SMS.md)."""
 
 from __future__ import annotations
 
 import pytest
 
-pytestmark = pytest.mark.unit
+from inspectio_exercise.domain import sms_outcome
+from inspectio_exercise.mock_sms import config as mock_config
+from tests import reference_spec as spec
 
 
-@pytest.mark.skip(reason="Skeleton: 2xx vs 5xx send outcomes (TESTS.md §4.6)")
-def test_send_2xx_success_5xx_retry_path() -> None:
-    """Worker treats any 5xx as failed send for lifecycle."""
+@pytest.mark.unit
+def test_module_constants_are_valid() -> None:
+    assert 0.0 <= mock_config.FAILURE_RATE <= 1.0
+    assert 0.0 <= mock_config.UNAVAILABLE_FRACTION <= 1.0
+    assert mock_config.AUDIT_LOG_MAX_ENTRIES > 0
+    assert mock_config.MOCK_SMS_CONTRACT_COMPLETE is True
 
 
-@pytest.mark.skip(reason="Skeleton: shouldFail forces 5xx (MOCK_SMS §3)")
-def test_should_fail_always_5xx() -> None:
-    """Deterministic failure when shouldFail=true."""
+@pytest.mark.parametrize("status", [200, 204])
+@pytest.mark.unit
+def test_2xx_classification_matches_spec(status: int) -> None:
+    assert sms_outcome.is_successful_send(status) == spec.is_successful_send(status)
+    assert sms_outcome.is_failed_send_for_lifecycle(status) == spec.is_failed_send_for_lifecycle(status)
 
 
-@pytest.mark.skip(reason="Skeleton: audit row per POST /send (MOCK_SMS §8)")
-def test_audit_row_per_handled_send() -> None:
-    """JSONL / GET /audit/sends alignment."""
+@pytest.mark.parametrize("status", [500, 502, 503])
+@pytest.mark.unit
+def test_5xx_classification_matches_spec(status: int) -> None:
+    assert sms_outcome.is_successful_send(status) == spec.is_successful_send(status)
+    assert sms_outcome.is_failed_send_for_lifecycle(status) == spec.is_failed_send_for_lifecycle(status)

@@ -47,17 +47,22 @@ docker compose up --build
 
 ## Tests
 
-Layout follows **`plans/TESTS.md`**: `tests/unit/`, `tests/integration/`, `tests/e2e/`. Most cases are **skipped placeholders** until features exist; **`tests/unit/test_healthz.py`** runs today (all services `GET /healthz`).
+Layout follows **`plans/TESTS.md`**: `tests/unit/`, `tests/integration/`, `tests/e2e/` (integration/e2e are mostly placeholders until features exist).
+
+**TDD:** Canonical behavior is documented in **`tests/reference_spec.py`** (with notes tying to **`plans/`**). **`inspectio_exercise.domain`** should match that spec; stubs raise **`NotImplementedError`** until implemented — **`pytest tests/unit`** stays **red** until domain, REST contract, and related gates pass.
+
+Smoke / wiring: **`GET /healthz`** (liveness) passes with the skeleton; REST contract tests and domain tests fail until implementation lands (see **`plans/TESTS.md` §1.1–§1.2**).
 
 ```bash
 pytest
+pytest tests/unit
 pytest -m unit
 pytest -m integration
 pytest -m e2e
 ```
 
-Dev deps include **`httpx`** and **`pytest-asyncio`** for upcoming async / ASGI tests.
+Dev deps include **`httpx`** and **`pytest-asyncio`** for async / ASGI tests.
 
 ## Status
 
-Skeleton only: **`GET /healthz`** on each service; business routes return **501** until implemented per plan documents.
+Skeleton: **`GET /healthz`** on each service; business routes return **501** until implemented per plan documents. **Domain** package: implement to satisfy **`tests/reference_spec.py`** (see **`plans/TESTS.md` §4**).

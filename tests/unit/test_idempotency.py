@@ -1,22 +1,34 @@
-"""Idempotency and duplicate handling (TESTS.md §4.8, CORE_LIFECYCLE §6.2)."""
+"""Idempotency — `ActivationLedger` must mirror `tests/reference_spec.ActivationLedgerRef` (TESTS.md §4.8, CORE_LIFECYCLE §6.2)."""
 
 from __future__ import annotations
 
 import pytest
 
-pytestmark = pytest.mark.unit
+from inspectio_exercise.domain.idempotency import ActivationLedger
+from tests.reference_spec import ActivationLedgerRef
 
 
-@pytest.mark.skip(reason="Skeleton: duplicate activation / replay (TESTS.md §4.8)")
-def test_duplicate_activation_no_duplicate_terminal() -> None:
-    """Same messageId must not create duplicate terminal keys."""
+@pytest.mark.unit
+def test_duplicate_activation_rejected_matches_ref() -> None:
+    ref = ActivationLedgerRef()
+    impl = ActivationLedger()
+    assert impl.try_activate("m1") == ref.try_activate("m1")
+    assert impl.try_activate("m1") == ref.try_activate("m1")
 
 
-@pytest.mark.skip(reason="Skeleton: replay monotonic side effects (TESTS.md §4.8)")
-def test_replay_after_terminal_is_monotonic() -> None:
-    """No second terminal write after success or terminal failed."""
+@pytest.mark.unit
+def test_replay_after_terminal_rejected_matches_ref() -> None:
+    ref = ActivationLedgerRef()
+    impl = ActivationLedger()
+    assert impl.try_activate("m1") == ref.try_activate("m1")
+    impl.mark_terminal("m1")
+    ref.mark_terminal("m1")
+    assert impl.try_activate("m1") == ref.try_activate("m1")
 
 
-@pytest.mark.skip(reason="Skeleton: API duplicate submission policy (REST_API §5.2)")
-def test_api_duplicate_submission_defined() -> None:
-    """Reject vs dedupe vs idempotent accept — per product rule."""
+@pytest.mark.unit
+def test_distinct_messages_independent_matches_ref() -> None:
+    ref = ActivationLedgerRef()
+    impl = ActivationLedger()
+    assert impl.try_activate("a") == ref.try_activate("a")
+    assert impl.try_activate("b") == ref.try_activate("b")

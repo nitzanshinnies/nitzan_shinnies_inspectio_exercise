@@ -196,6 +196,8 @@ A **dedicated health monitor** container **compares** the mock SMS send audit (v
 
 **Full test case list:** [`plans/TEST_LIST.md`](TEST_LIST.md) (numbered cases and edge cases).
 
+**Strict TDD:** [`plans/TESTS.md`](TESTS.md) §1.1–§1.2 — tests assert planned behavior; stay red until implementation; a **tests-first branch** may add tests without implementing `src/` yet (see §1.2).
+
 **Recent outcomes architecture:** [`plans/NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) (notification service container + **Redis** container + S3 log + hydration into Redis).
 
 Before meaningful implementation:

@@ -1,4 +1,4 @@
-"""Smoke: `GET /healthz` on all FastAPI services (TESTS.md §4.7, §9)."""
+"""Smoke: `GET /healthz` on all FastAPI services (plans/TESTS.md §4.7, §9)."""
 
 from __future__ import annotations
 
@@ -29,6 +29,7 @@ from inspectio_exercise.worker.app import create_app as create_worker
 )
 @pytest.mark.unit
 def test_healthz(factory: Callable[[], FastAPI], service: str) -> None:
+    """Liveness smoke: `register_healthz` (plans/REST_API.md §3.5 exercise minimum). Readiness is separate."""
     client = TestClient(factory())
     response = client.get("/healthz")
     assert response.status_code == 200
