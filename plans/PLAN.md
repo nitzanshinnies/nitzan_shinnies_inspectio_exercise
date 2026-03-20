@@ -143,6 +143,8 @@ Recent outcomes performance requirement:
 
 ## 8) Mock SMS provider container (requirements)
 
+**Detailed plan:** [`plans/MOCK_SMS.md`](MOCK_SMS.md) (intermittent/probabilistic failures, config, and validation checklist).
+
 The mock SMS provider must be a separate container (single service) with the sole purpose of simulating SMS sends for the worker.
 
 - Endpoint:
