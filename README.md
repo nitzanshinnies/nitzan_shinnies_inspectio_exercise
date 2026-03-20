@@ -47,10 +47,14 @@ docker compose up --build
 
 ## Tests
 
+**Unit** tests live under `tests/unit/` and target **`inspectio_exercise.domain`** (pure sharding, retry, wakeup, UTC keys, idempotency, SMS outcome helpers) plus REST/persistence fakes and **`GET /healthz`** smoke — see **`plans/TESTS.md` §4**.
+
 ```bash
 pytest
+pytest tests/unit
+pytest -m unit
 ```
 
 ## Status
 
-Skeleton only: **`GET /healthz`** on each service; business routes return **501** until implemented per plan documents.
+Skeleton only: **`GET /healthz`** on each service; business routes return **501** until implemented per plan documents. **Domain** logic and **unit** tests are in place for deterministic behavior (sharding, retry timeline, due selection, UTC terminal paths).
