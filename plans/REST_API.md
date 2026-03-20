@@ -79,7 +79,7 @@ Query parameters:
   - If provided, must be a positive integer; API may enforce a configured **maximum** (e.g. cap at 100 or another agreed upper bound) and clamp or reject out-of-range values.
 
 Performance requirement:
-- Must serve from the **notification service** in-memory recent-outcomes views (see [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) §3).
+- Must serve from the **notification service**, which reads **Redis** (see [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) §4, §6).
 - Must not list broad `state/success/` or `state/failed/` prefixes to assemble the response.
 
 ### 3.4 `GET /messages/failed`
@@ -109,14 +109,14 @@ Response expectation:
 - Fast, lightweight response indicating service health status.
 - Clarify in implementation whether this is **liveness-only** (process up) vs **readiness** (dependencies OK); the exercise minimum is a lightweight liveness-style response unless you extend the spec.
 
-## 4) Recent outcomes (notification service)
+## 4) Recent outcomes (notification service + Redis)
 
-Recent outcomes are **not** held only inside the API process. They are maintained by the **outcomes notification service** ([`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md)):
+Recent outcomes are **not** stored in the **API** process. They live in **Redis** (dedicated container), updated by the **outcomes notification service** ([`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md)):
 
-- **In-memory bounded cache** (e.g. up to **~10,000** total notifications, implementation constant)—large enough to serve the API’s **maximum `limit`** (including default **100** when `limit` is omitted).
-- **Success** and **failed** streams are derived by filtering published terminal outcomes.
-- Workers **publish** to the service **after** durable terminal writes; the API **queries** the service for `GET /messages/success` and `GET /messages/failed`.
-- **Startup:** the notification service **hydrates** from **`state/notifications/...`** in S3 (up to **`HYDRATION_MAX`**, default 10k newest records). That **cold-start** scan is **not** executed per `GET` request.
+- **Redis** holds **bounded** **success** and **failed** streams (e.g. **LIST** or **ZSET**, **~10,000** entries cap)—large enough for the API’s **maximum `limit`** (including default **100** when `limit` is omitted).
+- Workers **publish** to the **notification service** **after** durable terminal S3 writes; the service **puts** `state/notifications/...` and **updates Redis**.
+- The API **queries the notification service** (HTTP) for `GET /messages/success` and `GET /messages/failed`—the API **must not** use a Redis client for outcomes.
+- **Startup:** the notification service **hydrates Redis** from **`state/notifications/...`** in S3 (up to **`HYDRATION_MAX`**, default 10k). That **cold-start** scan is **not** executed per `GET` request.
 - **Per-request rule:** outcome endpoints must **not** list broad `state/success/` or `state/failed/` trees to build the response.
 
 ## 5) API contract consistency requirements
@@ -172,7 +172,7 @@ The REST API plan is considered complete when:
 
 1. All required endpoints are defined and scoped.
 2. Input validation expectations are explicit for each endpoint class.
-3. Recent outcomes are served via the **notification service** ([`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md)) with bounded in-memory views and documented startup hydration.
+3. Recent outcomes are served via the **notification service** + **Redis** ([`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md)) with bounded streams and documented **S3 → Redis** hydration on notification service startup.
 4. No-broad-`state/success/` / `state/failed/` listing on each `GET` for outcomes is explicit.
 5. Response/error contract consistency is defined.
 6. API observability and operational guardrails are included.
@@ -192,7 +192,8 @@ flowchart LR
   Repeat --> Persist
   Repeat --> Activate
 
-  GetSuccess --> Cache[RecentOutcomesCache]
-  GetFailed --> Cache
+  GetSuccess --> NotifyQ[NotificationServiceQuery]
+  GetFailed --> NotifyQ
+  NotifyQ --> Redis[(Redis)]
 ```
 

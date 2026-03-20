@@ -15,6 +15,7 @@ This document mirrors the architect’s “High-Throughput SMS Retry Scheduler�
 - FastAPI
 - `aioboto3` (async AWS operations)
 - `uvicorn` to run the FastAPI service(s)
+- **Redis** (outcomes hot cache; dedicated container); **`redis-py`** / **`redis.asyncio`** in the **notification service**
 
 ## 3) S3 data model & bucket layout
 
@@ -141,7 +142,7 @@ Implement the following endpoints:
 Recent outcomes performance requirement:
 
 - Do not list large `state/success/` or `state/failed/` prefixes to answer each `GET /messages/success` or `GET /messages/failed`.
-- Use an **outcomes notification service** with an **in-memory** recent view and a durable **`state/notifications/...`** log; on startup hydrate **~10,000** newest notifications from S3 (cold path only). **Details:** [`plans/NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md).
+- Use an **outcomes notification service** (dedicated container) plus **Redis** (dedicated container) for the **hot** recent-outcomes cache, and a durable **`state/notifications/...`** log in S3; on notification service startup **hydrate ~10,000** newest records from S3 **into Redis** (cold path only). **Details:** [`plans/NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md).
 
 ## 8) Mock SMS provider container (requirements)
 
@@ -172,7 +173,7 @@ The mock SMS provider must be a separate container (single service) with the sol
 
 **Full test case list:** [`plans/TEST_LIST.md`](TEST_LIST.md) (numbered cases and edge cases).
 
-**Recent outcomes architecture:** [`plans/NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) (notification service + S3 log + hydration).
+**Recent outcomes architecture:** [`plans/NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) (notification service container + **Redis** container + S3 log + hydration into Redis).
 
 Before meaningful implementation:
 

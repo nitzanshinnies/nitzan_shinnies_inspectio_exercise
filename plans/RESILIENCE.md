@@ -101,8 +101,9 @@ The worker should enter normal processing only after owned shard bootstrap has c
 
 The **notification service** ([`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md)) must:
 
-- On process start, run **hydration**: load up to **`HYDRATION_MAX`** (default **10,000**) **newest** notification records from `state/notifications/...` via the persistence service, **before** treating the service as **ready** (or document degraded mode).
-- Use **bounded** pagination when listing hour prefixes; **do not** assume unbounded memory.
+- On process start, after **Redis** is reachable, run **hydration**: load up to **`HYDRATION_MAX`** (default **10,000**) **newest** notification records from `state/notifications/...` via the persistence service and **write them into Redis**—**before** treating the service as **ready** (or document degraded mode).
+- Use **bounded** pagination when listing hour prefixes; **do not** assume unbounded memory on the notification service JVM/process (Redis holds the hot cache).
+- If **Redis** is unavailable: **readiness** fails or **degraded** mode (no publish / query)—**document**.
 - If hydration fails after retries: emit **startup-degraded** telemetry; outcome `GET` endpoints may **503** or return **empty** until recovered—**document** the choice.
 
 **Note:** Worker pods follow the existing pending-shard bootstrap rules in §3; this section applies to the **notification service process**, not worker scheduling.
@@ -133,7 +134,7 @@ A resilience implementation is valid when:
 5. Malformed records are skipped safely with diagnostics.
 6. Recovery metrics/logs are sufficient to diagnose startup behavior.
 7. Scale/restart events do not cause silent pending message loss.
-8. After notification service restart, **hydration** restores recent outcomes up to **`HYDRATION_MAX`** per [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) §4 (or documented degraded behavior).
+8. After notification service restart, **hydration** restores **Redis** up to **`HYDRATION_MAX`** per [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) §7 (or documented degraded behavior).
 
 ## 10) Conceptual resilience flow
 

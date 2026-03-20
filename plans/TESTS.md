@@ -69,10 +69,11 @@ Test persistence orchestration (via fakes/moto):
 
 Cover [`REST_API.md`](REST_API.md) §4, [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md), and [`PLAN.md`](PLAN.md) §7:
 
-- **Bounded in-memory capacity** in the notification service at least **`max(limit)`** (≥ **100** when `limit` omitted; service may retain **~10k** for hydration per architecture).
-- **Publish path:** after durable terminal S3 write, worker **publishes** to the notification service → in-memory update + `state/notifications/...` record.
-- **API `GET` path:** handlers query the **notification service** only—spy: **no** `state/success/` or `state/failed/` **list** on those requests.
-- **Hydration:** on notification service restart, **up to `HYDRATION_MAX`** newest rows load from S3—assert order and cap ([`RESILIENCE.md`](RESILIENCE.md) §7).
+- **Bounded Redis streams** (via notification service) at least **`max(limit)`** (≥ **100** when `limit` omitted; **~10k** cap per [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) §4).
+- **Publish path:** after durable terminal S3 write, worker **publishes** to the notification service → **`state/notifications/...`** put + **Redis** update (`LPUSH`/`LTRIM` or ZSET equivalent).
+- **API `GET` path:** handlers query the **notification service** only (**no Redis client in API**)—spy: **no** `state/success/` or `state/failed/` **list** on those requests.
+- **Hydration:** on notification service restart, **up to `HYDRATION_MAX`** newest rows load from S3 **into Redis**—assert order and cap ([`RESILIENCE.md`](RESILIENCE.md) §7).
+- **Integration:** **fakeredis**, **embedded Redis**, or **Testcontainers Redis** for publish/query/hydration tests.
 - **`limit`**: optional query param, **default 100**; invalid `limit` → **4xx**; clamp policy if implemented ([`REST_API.md`](REST_API.md) §3.3–3.4).
 
 ### 4.6 Mock SMS contract (worker client or mock app)

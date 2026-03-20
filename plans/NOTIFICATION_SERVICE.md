@@ -2,35 +2,50 @@
 
 This document **closes the API recent-outcomes gap**: workers perform terminal `success` / `failed` writes in S3, while `GET /messages/success` and `GET /messages/failed` must **not** scan broad `state/success/` or `state/failed/` trees on every request ([`REST_API.md`](REST_API.md), [`PLAN.md`](PLAN.md) §7).
 
-**Chosen approach:** a dedicated **notification service** with:
+**Chosen approach:** two runtime pieces:
 
-1. **In-memory bounded cache** of recent terminal outcomes (hot read path for the API).
-2. **Durable notification records** in S3 (append-style, time-partitioned keys) so the service can **rebuild** memory after restart.
-3. **Worker → notification service** calls after **successful** terminal persistence in S3 (ordering: **terminal write first**, then notify).
+1. **Dedicated Redis container** — **hot cache** for recent terminal outcomes (fast reads, shared across processes).
+2. **Dedicated notification service container** — accepts worker **publishes**, writes **durable** records to S3 (`state/notifications/...`), and **updates Redis**; serves **query** calls used by the REST API.
 
-The **REST API** does **not** own the deque directly; it **queries** the notification service (in-process call, localhost HTTP, or UDS—implementation choice).
+**Ordering:** terminal object **durably** in S3 **first** → **publish** to notification service → **S3 notification record** + **Redis** update.
+
+The **REST API** does **not** connect to Redis directly; it **queries the notification service** (HTTP), which reads from **Redis** (encapsulates key schema and trimming).
 
 ---
 
-## 1) Responsibilities
+## 1) Deployment topology
+
+| Runtime | Role |
+|---------|------|
+| **Redis** (dedicated container, e.g. `redis:7-alpine`) | In-memory datastore for **recent outcome entries** (bounded length per stream). |
+| **Notification service** (dedicated container, Python/async) | HTTP **publish** API for workers; HTTP **query** API for API service; S3 writes for durable log; **Redis client** for cache updates and reads. |
+| **REST API** | `GET /messages/*` → **HTTP to notification service** (not Redis). |
+| **Workers** | HTTP **publish** to notification service after terminal S3 success. |
+
+**Configuration:** notification service uses e.g. `REDIS_URL=redis://redis:6379/0` (Kubernetes Service name `redis` in-cluster).
+
+---
+
+## 2) Responsibilities
 
 | Actor | Responsibility |
 |-------|----------------|
-| **Worker** | After moving a message to `state/success/...` or `state/failed/...`, **publish** a terminal-outcome notification (with **retry** if the notification service is temporarily unavailable). |
-| **Notification service** | Accept publishes; **append** durable record to S3; update **in-memory** structures so recent success/failed streams are available in **O(cache size)** time. |
-| **REST API** | `GET /messages/success` and `GET /messages/failed` **read from** the notification service only—**no** listing of `state/success/` / `state/failed/` for those endpoints. |
-| **Persistence service** | All S3 I/O for notification objects goes through the same boundary as the rest of the system. |
+| **Worker** | After `state/success/...` or `state/failed/...` is durably written, **POST** publish to notification service (**retry** on transient failures). |
+| **Notification service** | **Put** `state/notifications/...` JSON; **push** summary into **Redis** (trim to cap); answer **querySuccess|queryFailed** from Redis. |
+| **REST API** | Delegate `GET /messages/success` and `GET /messages/failed` to notification service only—**no** `state/success/` / `state/failed/` listing. |
+| **Redis** | Hold **bounded** lists or sorted sets for **success** and **failed** streams—**no business logic**. |
+| **Persistence service** | All S3 I/O (notification objects) through the same boundary as the rest of the system. |
 
 ---
 
-## 2) S3 layout for notification records (durable log)
+## 3) S3 layout for notification records (durable log)
 
 **Prefix (required):**
 
 `state/notifications/<yyyy>/<MM>/<dd>/<hh>/<notificationId>.json`
 
-- **`notificationId`**: **UUID** or **ULID** (preferred for **time-sortable** lexicographic order within an hour folder).
-- **One object per terminal outcome event** (success or failed).
+- **`notificationId`**: **ULID** or **UUID** (ULID preferred for **sortable** ids within an hour).
+- **One object per** terminal publish event.
 
 **Record body (minimum):**
 
@@ -45,113 +60,141 @@ The **REST API** does **not** own the deque directly; it **queries** the notific
 ```
 
 - `outcome`: **`success`** | **`failed`**
-- `recordedAt`: epoch **milliseconds** (server clock at publish time; used for hydration ordering).
-- Optional fields: `attemptCount`, summary metadata—must not be required for `GET` recent outcomes if you keep responses minimal.
+- `recordedAt`: epoch **milliseconds**
 
-**Why not reuse `state/success/` keys as the log?**  
-Those paths are keyed by **message lifecycle**, not an append-only **event stream**; listing “latest N terminals” would still require **wide** listing across date prefixes. The **`state/notifications/...`** tree is a **narrow, purpose-built** log for replay/hydration.
+**Why this log exists:** **Hydration** after Redis flush / cold start / notification service redeploy without requiring scans of `state/success/` or `state/failed/`.
 
 ---
 
-## 3) In-memory cache (hot path)
+## 4) Redis data model (hot cache)
 
-- **Bounded** structure: hold at least the **latest ~10,000** notifications **total** (config constant), or separate caps per outcome stream—**document** the chosen rule.
-- **Eviction:** **FIFO** or **by `recordedAt`** so memory stays bounded when publish rate exceeds disk trim (exercise: 10k is plenty).
-- **Serving `GET`:** Filter by `outcome`, sort by **`recordedAt` desc**, apply `limit` (default 100 per [`REST_API.md`](REST_API.md)).
-- **Dedupe (recommended):** if the same `messageId` receives a second terminal publish (retry bug), **keep the latest** `recordedAt` for display **or** reject duplicate terminal for same id—**document** policy.
+**Implementation must document exact key names; example:**
 
----
+| Key / pattern | Type | Semantics |
+|---------------|------|-----------|
+| `outcomes:success` | **LIST** (JSON strings) or **ZSET** (score=`recordedAt`, member=payload) | **Newest-first** read path for success stream. |
+| `outcomes:failed` | same | Failed stream. |
 
-## 4) Startup hydration (~10k from S3)
+**Recommended:** **LIST** with **`LPUSH`** + **`LTRIM 0 MAX_ENTRIES-1`** where `MAX_ENTRIES` ≥ **`HYDRATION_MAX`** (e.g. **10,000**) and ≥ API **`max(limit)`**.
 
-**When:** notification service **process start** (before accepting traffic or parallel with readiness gate).
+**Alternative:** **ZSET** with **`ZADD`** + **`ZREMRANGEBYRANK`** to cap size—good for strict time ordering.
 
-**Goal:** populate in-memory cache with up to **`HYDRATION_MAX`** records (default **10,000**), **newest first**.
+**Dedupe:** same as before—**latest `recordedAt` wins** for a given `messageId` if duplicates appear (implement with auxiliary **`HSET`** `outcomes:by_message:<messageId>` → last notification id, or accept duplicate rows in LIST and dedupe on **read**—**document**).
 
-**Algorithm (normative enough for implementation):**
-
-1. Set `HYDRATION_MAX = 10000` (module constant).
-2. Starting from **current** UTC `(yyyy, MM, dd, hh)`, iterate **hour buckets backward in time** (hour → previous hour → previous day as needed).
-3. Within each bucket prefix `state/notifications/<yyyy>/<MM>/<dd>/<hh>/`, **list** keys with **pagination** (persistence service), sort by **`notificationId`** (ULID) or **`recordedAt`** after **GetObject** until the bucket’s contribution is ordered.
-4. **Merge** into a **max-heap** or collect-then-sort-by-`recordedAt` until **`HYDRATION_MAX`** records are loaded **or** no more objects exist.
-5. **Stop** early when memory cache is full—**do not** scan the entire bucket for exercise scale.
-
-**Performance note:** This **is** multi-prefix **listing**, but it runs **once per notification-service restart**, not per `GET`. That satisfies the spirit of [`REST_API.md`](REST_API.md): user-facing reads stay off S3.
-
-**Failure:** if hydration cannot complete (S3 down), service may enter **degraded** mode: empty cache + **503** on outcome endpoints, or **retry** hydration with bounded backoff—**document** choice.
+**TTL:** optional **`EXPIRE`** on keys (exercise: usually **no TTL**, rely on **LTRIM**).
 
 ---
 
-## 5) Worker publish contract
+## 5) Publish path (worker → notification service)
 
-**Trigger:** **only after** the terminal object exists in S3 under `state/success/...` or `state/failed/...` (same transaction order: **write terminal → then notify**).
+**Trigger:** only after terminal **Put** to `state/success/...` or `state/failed/...` succeeds.
 
-**Transport (pick one and document):**
+**HTTP** (recommended): `POST /internal/v1/outcomes` (private network; shared secret / mTLS in real deployments).
 
-- **HTTP `POST`** to notification service (e.g. `POST /internal/v1/outcomes` with shared secret / mTLS in production; **open** on private network in exercise).
-- **In-process** function call if worker and notification service share a **single binary** in tests (still keep boundaries in code).
+**Steps inside notification service (happy path):**
 
-**Payload:** align with §2 body (at least `messageId`, `outcome`, `recordedAt`, `notificationId`).
+1. **Validate** payload (`messageId`, `outcome`, `recordedAt`, `notificationId`, …).
+2. **Put** S3 object under `state/notifications/...` (persistence service).
+3. **Pipeline Redis:** `LPUSH` appropriate list + `LTRIM` (or ZSET equivalent).
+4. Return **2xx**.
 
-**Reliability:**
+**Partial failure:**
 
-- **At-least-once** delivery is acceptable: duplicate publishes should be **deduped** (§3) or harmless.
-- Implement **short retry with backoff** (e.g. 3 tries) if publish fails; **do not** roll back S3 terminal state if publish fails (terminal state is source of truth; notification can be **replayed** from a future admin tool or **backfill** from log—out of scope for minimal exercise).
+- S3 put **OK**, Redis **fail** → **retry** publish idempotently if same `notificationId` overwrites or skip duplicate S3 put; **document** reconciliation (e.g. **hydration** can rebuild Redis from S3).
+- S3 put **fail** → **5xx** to worker; worker **retries** publish; terminal state already exists—second publish must be **idempotent** in S3 (`notificationId` deterministic or overwrite same key).
 
----
-
-## 6) API integration
-
-- `GET /messages/success` → notification service **`querySuccess(limit)`**.
-- `GET /messages/failed` → **`queryFailed(limit)`**.
-- **No `ListBucket` on `state/success/` / `state/failed/`** in those handlers.
-
-**Submission path:** when the API itself learns of an outcome **only** through workers, it **does not** need to push to the notification service **if** workers always publish—optional **dual publish** from API if activation is co-located (avoid if redundant).
+**Tests should cover:** S3 OK / Redis fail and eventual consistency via **re-publish** or **hydration**.
 
 ---
 
-## 7) Multi-replica considerations (exercise scope)
+## 6) Query path (REST API → notification service → Redis)
 
-- **Single notification service replica** (or **single logical writer**): simplest; all workers point to one URL.
-- **Multiple replicas** with **only in-memory** state: workers would need to **fan-out** to all replicas (impractical) or you add **Redis**/shared store—**out of scope** unless you extend the spec.
-- **Recommendation for the interview:** **one** notification service Deployment **replica=1**, or **colocate** notification module inside the **API** process with **in-proc** calls from workers replaced by **HTTP to API sidecar** only if you split processes.
+- `GET` handler on API calls notification service: e.g. `GET /internal/v1/outcomes/success?limit=100`.
+- Notification service **`LRANGE outcomes:success 0 limit-1`** (if LIST) or **`ZREVRANGE`** (if ZSET), parse JSON, return JSON array.
 
----
+**Rules:**
 
-## 8) Observability
-
-- Counters: `notifications_published_total`, `notifications_publish_failures_total`, `hydration_records_loaded`, `hydration_duration_seconds`.
-- Logs: structured publish events with `messageId`, `outcome`, `notificationId`.
+- **No** listing `state/success/` or `state/failed/` for these responses.
+- **No** Redis access from **API** process—only from **notification service**.
 
 ---
 
-## 9) Validation checklist
+## 7) Startup hydration (~10k from S3 into Redis)
 
-1. Terminal S3 write happens **before** notification publish (happy path).
-2. `GET /messages/*` **never** lists `state/success/` or `state/failed/` for assembly.
-3. After notification service restart, hydrated cache contains **up to** `HYDRATION_MAX` **newest** notifications.
-4. Publish failures are **retried** briefly; system does not **lose** S3 terminal state.
-5. In-memory bounds enforced under load.
+**When:** notification service **start** (after **Redis connection** healthy)—**before** marking **ready** (or serve **503** until hydration completes—**document**).
+
+**Goal:** load up to **`HYDRATION_MAX`** (default **10,000**) **newest** notification records from S3 into **Redis** (same key layout as §4).
+
+**Algorithm** (same spirit as before):
+
+1. Walk **`state/notifications/<yyyy>/<MM>/<dd>/<hh>/`** from **current hour backward**, **list** + **get** with pagination.
+2. Sort by **`recordedAt`** desc (or ULID desc), take **HYDRATION_MAX**.
+3. **`DEL outcomes:success`** / **`DEL outcomes:failed`** (optional: **merge** if preserving multi-writer—exercise: **replace** on cold hydration) then **`RPUSH`** in chronological batch or **`LPUSH`** in reverse order so **`LRANGE 0 N-1`** returns newest first—**document** order contract.
+
+**Frequency:** **once per notification-service startup**, not per user `GET`.
+
+**Redis empty but running:** if Redis **persisted** RDB/AOF and data present, either **skip** full hydration or **merge** with cap—exercise default: **always re-hydrate from S3** on notification service boot to **match** S3 truth (simpler).
+
+**Failure modes:**
+
+- **Redis down:** notification service **readiness fails** or degraded; publish **retry**; API outcomes **503**.
+- **S3 down during hydration:** bounded retry; then degraded empty cache or block readiness.
 
 ---
 
-## 10) Conceptual flow
+## 8) Scaling and replicas
+
+- **Redis:** single primary for exercise (`replica=1`). **Redis Cluster** out of scope.
+- **Notification service:** **≥1** replicas **safe for reads** if all **writes** are **idempotent** and share one Redis (duplicate `LPUSH` still needs dedupe policy). **Simplest:** **1 replica** for notification service to avoid double-processing publishes without distributed locks.
+- **API:** can scale horizontally; each instance calls notification service **query** URL (load-balanced).
+
+---
+
+## 9) Observability
+
+- Metrics: `notifications_published_total`, `notifications_redis_errors_total`, `hydration_records_loaded`, `hydration_duration_seconds`, Redis **latency** histogram on publish/query.
+- Logs: `messageId`, `outcome`, `notificationId`, `redis_ok`, `s3_ok`.
+
+---
+
+## 10) Validation checklist
+
+1. Terminal S3 write **before** publish.
+2. **Dedicated Redis container** in compose/K8s manifests; notification service has **`REDIS_URL`**.
+3. `GET /messages/*` never lists broad `state/success/` / `state/failed/`.
+4. **Hydration** fills Redis up to **`HYDRATION_MAX`** from `state/notifications/...`.
+5. **API** does not import Redis client for outcomes—only notification service does.
+6. Publish **retries** do not corrupt terminal S3 or Redis beyond documented dedupe.
+
+---
+
+## 11) Conceptual flow
 
 ```mermaid
 sequenceDiagram
   participant Worker
   participant Persist as S3_Persistence
   participant Notify as NotificationSvc
+  participant Redis
   participant API
   participant Client
 
   Worker->>Persist: Put terminal success_or_failed
-  Worker->>Notify: POST terminal outcome
-  Notify->>Persist: Put notification record state_notifications
-  Notify->>Notify: Append in-memory cache
+  Worker->>Notify: POST publish outcome
+  Notify->>Persist: Put state_notifications record
+  Notify->>Redis: LPUSH_LTRIM outcomes stream
 
-  Client->>API: Query Get success
-  API->>Notify: Query success stream
-  Notify-->>API: last N success
-  API-->>Client: JSON response
+  Client->>API: GET messages_success
+  API->>Notify: GET internal outcomes success
+  Notify->>Redis: LRANGE outcomes_success
+  Redis-->>Notify: rows
+  Notify-->>API: JSON
+  API-->>Client: JSON
 ```
+
+---
+
+## 12) Local development
+
+- **docker-compose:** `redis` + `notification-service` + dependencies; `REDIS_URL=redis://redis:6379/0`.
+- **Tests:** **fakeredis** / **Redis testcontainer** for integration tests without a full cluster.

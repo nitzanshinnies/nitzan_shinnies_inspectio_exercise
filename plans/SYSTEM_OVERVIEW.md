@@ -23,15 +23,19 @@ The system is composed of logical services/services-with-containers:
    - **AWS mode**: uses `aioboto3` for async S3 operations.
    - **Local dev mode**: uses an in-process mock S3 implementation that performs file reader/writer semantics on a local directory while presenting the same persistence interface.
 
-4. **Outcomes notification service (required for recent `GET` behavior)**
-   - Maintains an **in-memory bounded cache** of recent terminal outcomes (success / failed).
-   - Persists an **append-style notification log** under `state/notifications/...` in S3 (via persistence service) for **restart hydration**.
-   - On startup, **hydrates** from S3 with up to **`HYDRATION_MAX`** records (default **10,000**), walking **recent hour prefixes** backward until the cap is reached (acceptable **cold-start** listing; not per user request).
-   - **Workers** publish a notification **after** the terminal message object is durably written to `state/success/...` or `state/failed/...`.
-   - **REST API** reads recent outcomes **only** from this service.
+4. **Redis (dedicated container — outcomes hot cache)**
+   - Runs as its **own container** (e.g. official Redis image).
+   - Holds **bounded** recent-outcome structures for **success** and **failed** streams (**LIST**/ZSET pattern—see [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) §4).
+   - Accessed **only** by the **notification service** (not directly by the REST API or workers).
+
+5. **Outcomes notification service (dedicated container)**
+   - Accepts **publish** requests from workers after terminal S3 writes.
+   - Writes the **durable** log to `state/notifications/...` in S3 (via persistence service) and **updates Redis**.
+   - Exposes **query** endpoints (or internal HTTP) used by the **REST API** for `GET /messages/success` and `GET /messages/failed`.
+   - On startup, **hydrates Redis** from S3 with up to **`HYDRATION_MAX`** records (default **10,000**), walking **recent hour prefixes** backward (acceptable **cold-start** listing; not per user request).
    - **Detailed plan:** [`plans/NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md).
 
-5. **Mock SMS provider (separate single container)**
+6. **Mock SMS provider (separate single container)**
    - Exposes `POST /send`.
    - Fails some requests to exercise retry behavior (including a request-controlled `shouldFail` switch).
 
@@ -165,7 +169,7 @@ Implement:
 
 Recent outcomes performance requirement:
 - Avoid listing large `state/success/` / `state/failed/` trees on **each** `GET`.
-- Serve `GET /messages/success` and `GET /messages/failed` from the **notification service** in-memory views (backed by `state/notifications/...` for durability and startup hydration—see [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md)).
+- Serve `GET /messages/success` and `GET /messages/failed` via the **notification service**, which reads **Redis** (hot cache) with **S3 `state/notifications/...`** as durable log and **hydration** source—see [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md).
 
 ## 6) Mock SMS provider contract (required)
 
@@ -193,6 +197,8 @@ Optional simulated latency:
 ## 7) Local development mapping (required)
 
 - **Mock S3 provider**: in-process file reader/writer that implements the same persistence interface as the dedicated S3 persistence service.
+- **Redis**: dedicated container with `REDIS_URL` wired into the **notification service** (see [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) §12).
+- **Notification service**: dedicated container (or local run) talking to Redis + persistence layer.
 - **Mock SMS provider**: runs as a separate container (single container) calling `POST /send`.
 - **State ownership**: worker pods still use `HOSTNAME` and shard-range ownership semantics so the same code paths apply in local and cluster environments.
 
@@ -209,7 +215,7 @@ Before meaningful implementation:
   - wakeup due-selection behavior: only process messages with `nextDueAt <= now`
   - retry timeline mapping from `attemptCount` to `nextDueAt`
   - terminal transition correctness: `pending -> success` and `pending -> failed`
-  - recent outcomes bounded-cache behavior (no S3 listing dependency)
+  - recent outcomes via **notification service + Redis** (no per-GET broad terminal-prefix listing)
 - Integration tests should cover:
   - S3 persistence via local mock S3 and/or an AWS simulator
   - end-to-end: API creates pending -> worker activation triggers attempt #1 -> due retries proceed -> terminal success/failed keys are written
