@@ -190,6 +190,8 @@ Optional simulated latency:
 
 **Detailed plan:** [`plans/TESTS.md`](TESTS.md).
 
+**Enumerated test cases:** [`plans/TEST_LIST.md`](TEST_LIST.md).
+
 Before meaningful implementation:
 
 - Unit tests should cover:

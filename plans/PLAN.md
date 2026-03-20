@@ -168,6 +168,8 @@ The mock SMS provider must be a separate container (single service) with the sol
 
 **Detailed plan:** [`plans/TESTS.md`](TESTS.md) (unit/integration/e2e scope, tooling, determinism, traceability, checklist).
 
+**Full test case list:** [`plans/TEST_LIST.md`](TEST_LIST.md) (numbered cases and edge cases).
+
 Before meaningful implementation:
 
 - Unit test requirements:
