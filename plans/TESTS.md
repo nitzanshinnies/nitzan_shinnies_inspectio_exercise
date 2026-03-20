@@ -13,6 +13,18 @@ This document expands **Section 10** of [`plans/PLAN.md`](PLAN.md): **testing** 
 - Prove the **persistence service boundary**: API and workers do **not** bypass the dedicated persistence layer ([`SYSTEM_OVERVIEW.md`](SYSTEM_OVERVIEW.md)).
 - Keep tests **fast**, **repeatable**, and **isolated**—no reliance on real AWS or real SMS.
 
+### 1.1 Strict TDD policy (this repo)
+
+- **Unit tests assert final behavior** from the plans (`tests/reference_spec.py`, `REST_API.md`, etc.), not stub responses (**501** skeleton handlers, **`NotImplementedError`** domain stubs) as an acceptable steady state.
+- Tests **stay failing** until the corresponding feature is implemented; do not rewrite tests to match placeholders just to go green.
+- **`tests/fakes.RecordingPersistence`** is for **spies** in integration tests; **`PersistencePort`** contract tests target **`src/`** once a real adapter exists (see §4.10).
+- **`GET /healthz`** liveness is exercised in `tests/unit/test_healthz.py` (**`status` + `service`**); that **passes** with the skeleton. **Readiness** (deps OK) is optional per [`REST_API.md`](REST_API.md) §3.5—add dedicated tests when you extend the contract.
+- **`mock_sms.config.MOCK_SMS_CONTRACT_COMPLETE`**: set to **`True`** only when the mock SMS contract (`tests/unit/test_mock_sms_contract.py`) is fully green with production code.
+
+### 1.2 Tests-first branch (no implementation yet)
+
+A branch may land **only** the **expanded unit test suite** (and keep **`src/`** as skeletons / stubs). That is valid workflow: **`pytest` is expected to be red** on that branch. A **separate** branch/series of commits **implements** production code until `tests/unit` passes. Do not add production logic on the tests-first branch just to satisfy the suite.
+
 ## 2) Out of scope (for this exercise)
 
 - Production load/chaos testing at tens-of-thousands RPS.

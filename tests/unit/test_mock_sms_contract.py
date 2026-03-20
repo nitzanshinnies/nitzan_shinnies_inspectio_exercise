@@ -14,6 +14,7 @@ def test_module_constants_are_valid() -> None:
     assert 0.0 <= mock_config.FAILURE_RATE <= 1.0
     assert 0.0 <= mock_config.UNAVAILABLE_FRACTION <= 1.0
     assert mock_config.AUDIT_LOG_MAX_ENTRIES > 0
+    assert mock_config.MOCK_SMS_CONTRACT_COMPLETE is True
 
 
 @pytest.mark.parametrize("status", [200, 204])
