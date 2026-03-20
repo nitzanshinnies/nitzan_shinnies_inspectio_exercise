@@ -1,0 +1,199 @@
+# REST_API.md - Detailed Plan (Section 7)
+
+This document provides a detailed requirements-level plan for Section 7: REST API surface.
+
+It is aligned with:
+- `plans/PLAN.md`
+- `plans/SYSTEM_OVERVIEW.md`
+- `plans/CORE_LIFECYCLE.md`
+- `plans/RESILIENCE.md`
+
+## 1) Scope
+
+In scope:
+- API endpoints and responsibilities for Section 7
+- Request/response behavior and constraints
+- Recent outcomes performance requirements
+- API-level observability and validation criteria
+
+Out of scope:
+- Worker internals and retry scheduler implementation details
+- Shard ownership math details
+- UI behavior beyond API contract expectations
+
+## 2) API responsibilities
+
+The REST API service must:
+- Accept message submission requests.
+- Trigger message activation flow (attempt #1 immediate path is handled by lifecycle flow).
+- Expose recent successful and failed outcomes.
+- Expose service health status.
+- Enforce input validation and deterministic response contracts.
+
+All persistence operations are performed through the dedicated S3 persistence service boundary (no direct persistence bypass).
+
+## 3) Required endpoints (Section 7)
+
+### 3.1 `POST /messages`
+
+Purpose:
+- Submit a single message for processing.
+
+Request body (minimum required fields):
+- `to`: string
+- `body`: string
+
+Response expectations:
+- Returns accepted message metadata (including `messageId`).
+- Response indicates initial lifecycle status (`pending`) or accepted processing state.
+
+Validation expectations:
+- Reject malformed or empty payload fields.
+- Enforce schema-level validation before persistence/activation.
+
+### 3.2 `POST /messages/repeat?count=N`
+
+Purpose:
+- Load-test helper endpoint to create `N` message copies.
+
+Query requirements:
+- `count` must be a positive integer.
+- API should enforce upper safety limits for `count` to prevent unbounded abuse.
+
+Behavior:
+- Creates `N` independent messages with distinct `messageId`s.
+- Each created message enters normal lifecycle flow.
+
+Response expectations:
+- Returns summary of accepted count and identifiers or aggregate acceptance metadata.
+
+### 3.3 `GET /messages/success`
+
+Purpose:
+- Return the most recent successful outcomes.
+
+Query parameters:
+- `limit` (optional): how many most-recent success records to return.
+  - If omitted, default **`limit=100`** (matches the architect’s documented example).
+  - If provided, must be a positive integer; API may enforce a configured **maximum** (e.g. cap at 100 or another agreed upper bound) and clamp or reject out-of-range values.
+
+Performance requirement:
+- Must serve from bounded recent-outcomes cache.
+- Must not list broad S3 prefixes to assemble response.
+
+### 3.4 `GET /messages/failed`
+
+Purpose:
+- Return the most recent failed outcomes.
+
+Query parameters:
+- `limit` (optional): how many most-recent failure records to return.
+  - If omitted, default **`limit=100`**.
+  - If provided, must be a positive integer; same maximum/clamp policy as success endpoint.
+
+Performance requirement:
+- Must serve from bounded recent-outcomes cache.
+- Must not list broad S3 prefixes to assemble response.
+
+### 3.5 `GET /healthz`
+
+Purpose:
+- Liveness/readiness style health signal for API service.
+
+**Why `/healthz` and not `/health`?**
+- The architect spec in `plans/PLAN.md` explicitly names **`GET /healthz`** for this exercise, so the contract matches that requirement.
+- Separately, `/healthz` is a widely used convention for simple “up” probes (historically common in Kubernetes/GCP-style examples); `/health` is also common but not interchangeable unless you document both—here we stick to **`/healthz`** as the canonical path.
+
+Response expectation:
+- Fast, lightweight response indicating service health status.
+- Clarify in implementation whether this is **liveness-only** (process up) vs **readiness** (dependencies OK); the exercise minimum is a lightweight liveness-style response unless you extend the spec.
+
+## 4) Recent outcomes cache requirements
+
+The API must maintain a bounded cache for recent outcomes:
+- Cache capacity must be at least large enough to serve the **maximum `limit`** the API allows (including the default of **100** when `limit` is omitted).
+- Supports both success and failed streams.
+
+Requirements:
+- New terminal outcomes update cache promptly.
+- Cache reads are used for `GET /messages/success` and `GET /messages/failed`.
+- Cache strategy may be in-memory deque or Redis-like list semantics.
+- Cache misses should not trigger expensive broad S3 listing scans.
+
+## 5) API contract consistency requirements
+
+### 5.1 Deterministic response shape
+
+For each endpoint:
+- Response schema must be stable and documented.
+- Error responses should use consistent structure with machine-readable code + message.
+
+### 5.2 Idempotency and duplicate-submission safety
+
+At API boundary:
+- Duplicate submissions should not create ambiguous response behavior.
+- Lifecycle idempotency guarantees must be preserved downstream.
+
+### 5.3 Validation and error handling
+
+Common invalid cases:
+- Missing required fields (`to`, `body`)
+- Invalid `count`/`limit` values
+- Unsupported types
+
+API should return clear client errors for invalid input and structured server errors for internal failures.
+
+## 6) Observability requirements (API-focused)
+
+Structured logs should include:
+- request id / correlation id
+- endpoint path + method
+- latency
+- status code
+- `messageId` where applicable
+- `count` or `limit` where applicable
+
+Minimum API metrics:
+- request rate per endpoint
+- response code distribution
+- p50/p95 latency per endpoint
+- recent-cache hit/miss ratio for outcomes endpoints
+- validation failure counts
+
+## 7) Security and operational guardrails
+
+Requirements:
+- Input bounds for `count` and `limit` to mitigate abuse.
+- Avoid returning sensitive/internal persistence details in responses.
+- Keep health endpoint lightweight and safe for frequent probing.
+
+## 8) Validation checklist
+
+The REST API plan is considered complete when:
+
+1. All required endpoints are defined and scoped.
+2. Input validation expectations are explicit for each endpoint class.
+3. Recent outcomes cache behavior is specified and bounded.
+4. No-broad-S3-listing performance rule is explicit.
+5. Response/error contract consistency is defined.
+6. API observability and operational guardrails are included.
+
+## 9) Conceptual endpoint flow
+
+```mermaid
+flowchart LR
+  Client[Client] --> PostMsg[POST /messages]
+  Client --> Repeat[POST /messages/repeat]
+  Client --> GetSuccess[GET /messages/success]
+  Client --> GetFailed[GET /messages/failed]
+  Client --> Health[GET /healthz]
+
+  PostMsg --> Persist[PersistenceService]
+  PostMsg --> Activate[newMessageActivation]
+  Repeat --> Persist
+  Repeat --> Activate
+
+  GetSuccess --> Cache[RecentOutcomesCache]
+  GetFailed --> Cache
+```
+
