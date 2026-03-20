@@ -225,6 +225,7 @@ All normative detail lives in these files; keep them **consistent** with this se
 | REST API, `GET` outcomes path | [`REST_API.md`](REST_API.md) |
 | Recent outcomes: Redis + notification + S3 log | [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) |
 | Mock SMS provider | [`MOCK_SMS.md`](MOCK_SMS.md) |
+| Local file-backed mock S3 (`PersistencePort`) | [`LOCAL_S3.md`](LOCAL_S3.md) |
 | Health monitor (mock audit vs S3) | [`HEALTH_MONITOR.md`](HEALTH_MONITOR.md) |
 | Testing strategy | [`TESTS.md`](TESTS.md) |
 | Enumerated test cases | [`TEST_LIST.md`](TEST_LIST.md) |

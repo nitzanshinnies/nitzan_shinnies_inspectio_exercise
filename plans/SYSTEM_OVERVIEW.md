@@ -22,7 +22,7 @@ The system is composed of logical services/services-with-containers:
    - All S3 reads/writes from **API and workers** MUST go through this service (they do not talk to S3 directly).
    - **Exception (read-only):** the **health monitor** may use the persistence service’s **read** API or a **read-only** direct S3 client for lifecycle prefixes only—see [`HEALTH_MONITOR.md`](HEALTH_MONITOR.md) §2.2.
    - **AWS mode**: uses `aioboto3` for async S3 operations.
-   - **Local dev mode**: uses an in-process mock S3 implementation that performs file reader/writer semantics on a local directory while presenting the same persistence interface.
+   - **Local dev mode**: uses an in-process mock S3 implementation that performs file reader/writer semantics on a local directory while presenting the same persistence interface — **detailed spec and tests:** [`plans/LOCAL_S3.md`](LOCAL_S3.md).
 
 4. **Redis (dedicated container — outcomes hot cache)**
    - Runs as its **own container** (e.g. official Redis image).
@@ -208,7 +208,7 @@ Optional simulated latency:
 
 ## 7) Local development mapping (required)
 
-- **Mock S3 provider**: in-process file reader/writer that implements the same persistence interface as the dedicated S3 persistence service.
+- **Mock S3 provider**: in-process file reader/writer that implements the same persistence interface as the dedicated S3 persistence service — see [`plans/LOCAL_S3.md`](LOCAL_S3.md) (interface, on-disk layout, test plan).
 - **Redis**: dedicated container with `REDIS_URL` wired into the **notification service** (see [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) §12).
 - **Notification service**: dedicated container (or local run) talking to Redis + persistence layer.
 - **Mock SMS provider**: runs as a separate container (single container) calling `POST /send`.

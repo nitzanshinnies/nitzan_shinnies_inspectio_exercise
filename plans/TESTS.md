@@ -36,7 +36,7 @@ A branch may land **only** the **expanded unit test suite** (and keep **`src/`**
 
 - **pytest** + **pytest-asyncio** for async units and integration hooks.
 - **time control**: fake clocks or injectable `now()` / monotonic time source so wakeup, `nextDueAt`, and **`state/success|failed/<yyyy>/<MM>/<dd>/<hh>/...`** path generation are not flaky.
-- **S3 simulation**: **moto** or **LocalStack**, **or** the planned **file-backed mock S3** behind the persistence service interface (preferred for speed if available).
+- **S3 simulation**: **moto** or **LocalStack**, **or** the **file-backed mock S3** behind the persistence service interface (preferred for speed if available) — spec + dedicated provider tests: [`LOCAL_S3.md`](LOCAL_S3.md).
 - **HTTP**: **httpx** `AsyncClient` + **ASGI lifespans** for in-process API tests; **respx** or transport doubles for outbound mock-SMS calls.
 - **Spies / fakes**: assert the persistence interface is the only module performing S3-like I/O from API/worker code paths.
 
