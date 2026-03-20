@@ -1,6 +1,6 @@
 """Public REST API — skeleton routes only (plans/REST_API.md).
 
-TDD: implement validation + handlers in a follow-up; `tests/unit/test_rest_handlers.py` is the contract.
+TDD: `tests/unit/test_rest_handlers.py` + integration API tests assert the contract; implement in a follow-up.
 """
 
 from __future__ import annotations

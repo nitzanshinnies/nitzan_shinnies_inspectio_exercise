@@ -1,8 +1,6 @@
 """PersistencePort adapter in src (plans/TESTS.md §4.10).
 
-TDD: this module fails until `inspectio_exercise.persistence` exposes a real adapter;
-replace `pytest.fail` with contract tests against that implementation.
-`tests/fakes.RecordingPersistence` remains for spies in integration tests only.
+TDD: fails until `inspectio_exercise.persistence` exposes a real adapter; then replace with contract tests.
 """
 
 from __future__ import annotations
