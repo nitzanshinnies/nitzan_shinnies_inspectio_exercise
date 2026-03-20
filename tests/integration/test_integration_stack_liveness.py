@@ -1,4 +1,7 @@
-"""Multi-service liveness smoke (TESTS.md §5 — in-process compose without Docker)."""
+"""All services expose liveness GET /healthz (plans/TESTS.md §5, REST_API.md §3.5 minimum).
+
+Integration-only wiring check — does not assert business logic.
+"""
 
 from __future__ import annotations
 
@@ -14,8 +17,7 @@ pytestmark = pytest.mark.integration
 
 
 @pytest.mark.parametrize("factory,service", SERVICE_FACTORIES)
-def test_each_service_healthz(factory: Callable[[], FastAPI], service: str) -> None:
-    """All microservices expose GET /healthz for orchestration probes."""
+def test_service_exposes_healthz(factory: Callable[[], FastAPI], service: str) -> None:
     client = TestClient(factory())
     response = client.get("/healthz")
     assert response.status_code == 200

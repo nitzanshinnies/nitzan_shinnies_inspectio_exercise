@@ -26,13 +26,18 @@ SERVICE_FACTORIES: list[tuple[Callable[[], FastAPI], str]] = [
 
 
 @pytest.fixture
+def api_client() -> TestClient:
+    return TestClient(create_api())
+
+
+@pytest.fixture
 def persistence_client() -> TestClient:
     return TestClient(create_persistence())
 
 
 @pytest.fixture
-def api_client() -> TestClient:
-    return TestClient(create_api())
+def notification_client() -> TestClient:
+    return TestClient(create_notification())
 
 
 @pytest.fixture
