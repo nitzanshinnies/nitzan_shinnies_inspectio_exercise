@@ -1,35 +1,15 @@
 services:
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-
-  persistence:
+  api:
     build: .
-    command: ["inspectio-persistence"]
-    environment:
-      INSPECTIO_PERSISTENCE_PORT: "8001"
-    ports:
-      - "8001:8001"
-
-  notification:
-    build: .
-    command: ["inspectio-notification"]
-    environment:
-      INSPECTIO_NOTIFICATION_PORT: "8002"
-      REDIS_URL: redis://redis:6379/0
-    ports:
-      - "8002:8002"
+    command: ["inspectio-api"]
     depends_on:
-      - redis
-
-  mock-sms:
-    build: .
-    command: ["inspectio-mock-sms"]
+      - mock-sms
+      - notification
+      - persistence
     environment:
-      INSPECTIO_MOCK_SMS_PORT: "8080"
+      INSPECTIO_API_PORT: "8000"
     ports:
-      - "8080:8080"
+      - "8000:8000"
 
   health-monitor:
     build: .
@@ -39,6 +19,38 @@ services:
     ports:
       - "8003:8003"
 
+  mock-sms:
+    build: .
+    command: ["inspectio-mock-sms"]
+    environment:
+      INSPECTIO_MOCK_SMS_PORT: "8080"
+    ports:
+      - "8080:8080"
+
+  notification:
+    build: .
+    command: ["inspectio-notification"]
+    depends_on:
+      - redis
+    environment:
+      INSPECTIO_NOTIFICATION_PORT: "8002"
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "8002:8002"
+
+  persistence:
+    build: .
+    command: ["inspectio-persistence"]
+    environment:
+      INSPECTIO_PERSISTENCE_PORT: "8001"
+    ports:
+      - "8001:8001"
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
   worker:
     build: .
     command: ["inspectio-worker"]
@@ -46,15 +58,3 @@ services:
       INSPECTIO_WORKER_PORT: "8004"
     ports:
       - "8004:8004"
-
-  api:
-    build: .
-    command: ["inspectio-api"]
-    environment:
-      INSPECTIO_API_PORT: "8000"
-    ports:
-      - "8000:8000"
-    depends_on:
-      - persistence
-      - notification
-      - mock-sms

@@ -13,19 +13,11 @@ def run_api() -> None:
     )
 
 
-def run_persistence() -> None:
+def run_health_monitor() -> None:
     uvicorn.run(
-        "inspectio_exercise.persistence.app:app",
+        "inspectio_exercise.health_monitor.app:app",
         host="0.0.0.0",
-        port=int(os.environ.get("INSPECTIO_PERSISTENCE_PORT", "8001")),
-    )
-
-
-def run_notification() -> None:
-    uvicorn.run(
-        "inspectio_exercise.notification.app:app",
-        host="0.0.0.0",
-        port=int(os.environ.get("INSPECTIO_NOTIFICATION_PORT", "8002")),
+        port=int(os.environ.get("INSPECTIO_HEALTH_MONITOR_PORT", "8003")),
     )
 
 
@@ -37,11 +29,19 @@ def run_mock_sms() -> None:
     )
 
 
-def run_health_monitor() -> None:
+def run_notification() -> None:
     uvicorn.run(
-        "inspectio_exercise.health_monitor.app:app",
+        "inspectio_exercise.notification.app:app",
         host="0.0.0.0",
-        port=int(os.environ.get("INSPECTIO_HEALTH_MONITOR_PORT", "8003")),
+        port=int(os.environ.get("INSPECTIO_NOTIFICATION_PORT", "8002")),
+    )
+
+
+def run_persistence() -> None:
+    uvicorn.run(
+        "inspectio_exercise.persistence.app:app",
+        host="0.0.0.0",
+        port=int(os.environ.get("INSPECTIO_PERSISTENCE_PORT", "8001")),
     )
 
 

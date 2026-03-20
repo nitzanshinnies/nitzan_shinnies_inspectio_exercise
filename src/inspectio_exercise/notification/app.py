@@ -14,16 +14,16 @@ def create_app() -> FastAPI:
     )
     register_healthz(app, "notification")
 
-    @app.post("/internal/v1/outcomes", tags=["internal"], status_code=501)
-    async def post_outcomes() -> dict[str, str]:
+    @app.get("/internal/v1/outcomes/failed", tags=["internal"], status_code=501)
+    async def get_outcomes_failed() -> dict[str, str]:
         return {"detail": "not implemented — skeleton only"}
 
     @app.get("/internal/v1/outcomes/success", tags=["internal"], status_code=501)
     async def get_outcomes_success() -> dict[str, str]:
         return {"detail": "not implemented — skeleton only"}
 
-    @app.get("/internal/v1/outcomes/failed", tags=["internal"], status_code=501)
-    async def get_outcomes_failed() -> dict[str, str]:
+    @app.post("/internal/v1/outcomes", tags=["internal"], status_code=501)
+    async def post_outcomes() -> dict[str, str]:
         return {"detail": "not implemented — skeleton only"}
 
     return app

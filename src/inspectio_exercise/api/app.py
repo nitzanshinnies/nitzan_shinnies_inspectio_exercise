@@ -14,20 +14,20 @@ def create_app() -> FastAPI:
     )
     register_healthz(app, "api")
 
-    @app.post("/messages", tags=["messages"], status_code=501)
-    async def post_messages() -> dict[str, str]:
-        return {"detail": "not implemented — skeleton only"}
-
-    @app.post("/messages/repeat", tags=["messages"], status_code=501)
-    async def post_messages_repeat() -> dict[str, str]:
+    @app.get("/messages/failed", tags=["messages"], status_code=501)
+    async def get_messages_failed() -> dict[str, str]:
         return {"detail": "not implemented — skeleton only"}
 
     @app.get("/messages/success", tags=["messages"], status_code=501)
     async def get_messages_success() -> dict[str, str]:
         return {"detail": "not implemented — skeleton only"}
 
-    @app.get("/messages/failed", tags=["messages"], status_code=501)
-    async def get_messages_failed() -> dict[str, str]:
+    @app.post("/messages", tags=["messages"], status_code=501)
+    async def post_messages() -> dict[str, str]:
+        return {"detail": "not implemented — skeleton only"}
+
+    @app.post("/messages/repeat", tags=["messages"], status_code=501)
+    async def post_messages_repeat() -> dict[str, str]:
         return {"detail": "not implemented — skeleton only"}
 
     return app

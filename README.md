@@ -7,10 +7,10 @@ Distributed **SMS retry scheduler** per `plans/` (S3 truth, workers, notificatio
 | Python package / app | Role | Default port |
 |---------------------|------|--------------|
 | `inspectio_exercise.api` | Public REST API | 8000 |
-| `inspectio_exercise.persistence` | Dedicated S3 persistence boundary | 8001 |
-| `inspectio_exercise.notification` | Outcomes publish + query (Redis + S3 log) | 8002 |
-| `inspectio_exercise.mock_sms` | Simulated provider + audit | 8080 |
 | `inspectio_exercise.health_monitor` | On-demand audit vs S3 reconcile | 8003 |
+| `inspectio_exercise.mock_sms` | Simulated provider + audit | 8080 |
+| `inspectio_exercise.notification` | Outcomes publish + query (Redis + S3 log) | 8002 |
+| `inspectio_exercise.persistence` | Dedicated S3 persistence boundary | 8001 |
 | `inspectio_exercise.worker` | Shard worker (background loop placeholder + health) | 8004 |
 
 **Infrastructure (not Python):** Redis container for hot outcomes cache; S3 (AWS or LocalStack) behind persistence.
@@ -28,10 +28,10 @@ Console scripts (ports overridable via env vars in `inspectio_exercise/cli.py`):
 
 ```bash
 inspectio-api
-inspectio-persistence
-inspectio-notification
-inspectio-mock-sms
 inspectio-health-monitor
+inspectio-mock-sms
+inspectio-notification
+inspectio-persistence
 inspectio-worker
 ```
 

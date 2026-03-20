@@ -1,0 +1,13 @@
+---
+description: Interview skills — code-order-alphabetical + interview-coding-standards (see ~/.cursor/skills)
+alwaysApply: true
+---
+
+# Cursor skills for this repo
+
+Apply these personal skills (full text under your home directory):
+
+- **`~/.cursor/skills/interview-coding-standards/SKILL.md`** — atomic functions, composition, layering, tests-first, no unsolicited code, type hints, import groups, repository vs domain vs orchestration, test planning.
+- **`~/.cursor/skills/code-order-alphabetical/SKILL.md`** — alphabetical declarations and within-group import order.
+
+Regenerate global User Rules after skill edits: `python3 ~/.cursor/scripts/sync_global_user_rules.py`.

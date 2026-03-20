@@ -14,20 +14,20 @@ def create_app() -> FastAPI:
     )
     register_healthz(app, "persistence")
 
-    @app.post("/internal/v1/put-object", tags=["persistence"], status_code=501)
-    async def put_object_stub() -> dict[str, str]:
+    @app.post("/internal/v1/delete-object", tags=["persistence"], status_code=501)
+    async def delete_object_stub() -> dict[str, str]:
         return {"detail": "not implemented — skeleton only"}
 
     @app.post("/internal/v1/get-object", tags=["persistence"], status_code=501)
     async def get_object_stub() -> dict[str, str]:
         return {"detail": "not implemented — skeleton only"}
 
-    @app.post("/internal/v1/delete-object", tags=["persistence"], status_code=501)
-    async def delete_object_stub() -> dict[str, str]:
-        return {"detail": "not implemented — skeleton only"}
-
     @app.post("/internal/v1/list-prefix", tags=["persistence"], status_code=501)
     async def list_prefix_stub() -> dict[str, str]:
+        return {"detail": "not implemented — skeleton only"}
+
+    @app.post("/internal/v1/put-object", tags=["persistence"], status_code=501)
+    async def put_object_stub() -> dict[str, str]:
         return {"detail": "not implemented — skeleton only"}
 
     @app.get("/internal/v1/ready", tags=["persistence"], include_in_schema=False)

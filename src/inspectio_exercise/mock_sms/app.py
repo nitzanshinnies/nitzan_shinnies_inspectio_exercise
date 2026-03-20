@@ -14,12 +14,12 @@ def create_app() -> FastAPI:
     )
     register_healthz(app, "mock_sms")
 
-    @app.post("/send", tags=["sms"], status_code=501)
-    async def post_send() -> dict[str, str]:
-        return {"detail": "not implemented — skeleton only"}
-
     @app.get("/audit/sends", tags=["audit"], status_code=501)
     async def get_audit_sends() -> dict[str, str]:
+        return {"detail": "not implemented — skeleton only"}
+
+    @app.post("/send", tags=["sms"], status_code=501)
+    async def post_send() -> dict[str, str]:
         return {"detail": "not implemented — skeleton only"}
 
     return app

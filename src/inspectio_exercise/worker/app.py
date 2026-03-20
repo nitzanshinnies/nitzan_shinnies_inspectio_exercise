@@ -2,15 +2,12 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import logging
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
 from fastapi import FastAPI
 
 from inspectio_exercise.common.health import register_healthz
-
-logger = logging.getLogger(__name__)
 
 
 async def _placeholder_wakeup_loop() -> None:
