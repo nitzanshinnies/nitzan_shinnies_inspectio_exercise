@@ -188,6 +188,8 @@ Optional simulated latency:
 
 ## 8) Testing plan (requirements-first)
 
+**Detailed plan:** [`plans/TESTS.md`](TESTS.md).
+
 Before meaningful implementation:
 
 - Unit tests should cover:
