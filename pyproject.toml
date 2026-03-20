@@ -1,0 +1,36 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "inspectio-exercise"
+version = "0.1.0"
+description = "High-Throughput SMS Retry Scheduler (interview exercise)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "aioboto3>=13.0.0",
+    "fastapi>=0.115.0",
+    "redis>=5.0.0",
+    "uvicorn[standard]>=0.32.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[project.scripts]
+inspectio-api = "inspectio_exercise.cli:run_api"
+inspectio-health-monitor = "inspectio_exercise.cli:run_health_monitor"
+inspectio-mock-sms = "inspectio_exercise.cli:run_mock_sms"
+inspectio-notification = "inspectio_exercise.cli:run_notification"
+inspectio-persistence = "inspectio_exercise.cli:run_persistence"
+inspectio-worker = "inspectio_exercise.cli:run_worker"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/inspectio_exercise"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
