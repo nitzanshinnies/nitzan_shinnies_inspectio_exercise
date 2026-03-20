@@ -1,4 +1,4 @@
-# TEST_LIST.md - Full enumerated test cases (Section 9.1)
+# TEST_LIST.md - Full enumerated test cases (Section 10.1)
 
 Companion to [`plans/TESTS.md`](TESTS.md): a **concrete checklist** of test cases, including **edge cases**, for implementation and review. Each case should map to one or more automated tests (or a documented manual step).
 
@@ -69,8 +69,8 @@ Companion to [`plans/TESTS.md`](TESTS.md): a **concrete checklist** of test case
 | ID | Layer | Test case | Edge / notes |
 |----|-------|-----------|--------------|
 | TC-PV-01 | U / I | Pending: `state/pending/shard-<shard_id>/<messageId>.json`. | `shard-0`, `shard-10`. |
-| TC-PV-02 | U / I | Success: `state/success/<yyyy>/<MM>/<dd>/<hh>/<messageId>.json` per clock at transition. | **UTC midnight**, **year/month rollover**, **DST** if local TZ. |
-| TC-PV-03 | U / I | Failed: same partition rule as success. | |
+| TC-PV-02 | U / I | Success: `state/success/<yyyy>/<MM>/<dd>/<hh>/<messageId>.json` per clock at transition. | Segments **UTC** ([`PLAN.md`](PLAN.md) §3); **midnight**, **year/month rollover**, **hh** 00–23. |
+| TC-PV-03 | U / I | Failed: same partition rule as success. | **UTC** only. |
 | TC-PV-04 | I | After success: pending **gone or ignored**—single source of truth. | |
 | TC-PV-05 | I | **Idempotent** terminal write on client retry. | |
 | TC-PV-06 | I | **Partial failure** (terminal written, pending delete fails or vice versa): **recovery** converges to one state. | Order of operations documented. |
@@ -187,6 +187,7 @@ Companion to [`plans/TESTS.md`](TESTS.md): a **concrete checklist** of test case
 | TC-SMS-09 | U | **`FAILURE_RATE = 1`** → always **5xx** (unless `shouldFail` override unnecessary). | |
 | TC-SMS-10 | U | **`UNAVAILABLE_FRACTION` ∈ {0,1}`** → only one failure **family** used. | |
 | TC-SMS-11 | I | **Concurrent** `POST /send` to mock—**thread-safe** RNG / no crashes. | |
+| TC-SMS-12 | U / I | **Integrity audit:** each handled `POST /send` appears in **stdout JSONL** and in **`GET /audit/sends`** (when `EXPOSE_AUDIT_ENDPOINT`); fields include `http_status` / `outcome_kind`; optional **`attemptIndex`** round-trips. | |
 
 ---
 
@@ -194,7 +195,7 @@ Companion to [`plans/TESTS.md`](TESTS.md): a **concrete checklist** of test case
 
 | ID | Layer | Test case | Edge / notes |
 |----|-------|-----------|--------------|
-| TC-WS-01 | I | Request includes `to`, `body`; optional `messageId`. | |
+| TC-WS-01 | I | Request includes `to`, `body`; **`messageId`** and **`attemptIndex`** per integrity guidance ([`MOCK_SMS.md`](MOCK_SMS.md) §8). | |
 | TC-WS-02 | I | **Timeout** / **connection refused** → failed send / retry. | |
 | TC-WS-03 | I | **5xx** variants **501, 599** → retry per **any 5xx** rule. | |
 | TC-WS-04 | I | **204 No Content** → success. | |
@@ -217,6 +218,7 @@ Companion to [`plans/TESTS.md`](TESTS.md): a **concrete checklist** of test case
 | TC-E2E-07 | E | **API only** (worker stopped): pending **remains**; no phantom success._timeout optional. | |
 | TC-E2E-08 | E | **SMS down** then up: messages eventually succeed or terminal-fail per timeline. | |
 | TC-E2E-09 | E | **`shouldFail: true`** on payload (if wired) forces failure path every time until terminal. | |
+| TC-E2E-10 | E | **Mock audit vs lifecycle:** after a deterministic scenario, **mock send log** (`GET /audit/sends` or **stdout JSONL**) matches expected **attempt count / order** per `messageId` ([`MOCK_SMS.md`](MOCK_SMS.md) §8). | |
 
 ---
 
@@ -257,13 +259,26 @@ When implementing, map cases to spec checklists:
 - **Sharding:** TC-SH-* ↔ [`SHARDING.md`](SHARDING.md) §8
 - **Lifecycle:** TC-RT-*, TC-WU-*, TC-NM-* ↔ [`CORE_LIFECYCLE.md`](CORE_LIFECYCLE.md) §8
 - **Resilience:** TC-RQ-* ↔ [`RESILIENCE.md`](RESILIENCE.md) §8
-- **REST / outcomes:** TC-API-*, TC-CA-*, TC-NTF-* ↔ [`REST_API.md`](REST_API.md) §8, [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) §9
-- **Mock:** TC-SMS-* ↔ [`MOCK_SMS.md`](MOCK_SMS.md) §10
+- **REST / outcomes:** TC-API-*, TC-CA-*, TC-NTF-* ↔ [`REST_API.md`](REST_API.md) §8, [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) §10
+- **Mock:** TC-SMS-* ↔ [`MOCK_SMS.md`](MOCK_SMS.md) §11
+- **Health monitor:** TC-HM-* ↔ [`HEALTH_MONITOR.md`](HEALTH_MONITOR.md) §7
 - **Security notes:** TC-SE-* ↔ [`REST_API.md`](REST_API.md) §7
 
 ---
 
-## 17) Summary counts (for planning)
+## 17) Health monitor (mock audit vs S3)
+
+| ID | Layer | Test case | Edge / notes |
+|----|-------|-----------|--------------|
+| TC-HM-01 | U | **Reconciliation logic:** fixture S3 terminal **success** + audit with **≥1** matching **`2xx`** for `messageId` → **pass**; missing **2xx** → **fail**. | [`HEALTH_MONITOR.md`](HEALTH_MONITOR.md) §3.3 |
+| TC-HM-02 | U | **Terminal failed** vs audit: persisted **`attemptCount == 6`** and audit rows match documented rule (strict mode if **`attemptIndex`** present). | [`HEALTH_MONITOR.md`](HEALTH_MONITOR.md) §3.3–3.4 |
+| TC-HM-03 | I | **`GET /healthz`** on monitor → **2xx** (liveness) **without** requiring a prior integrity run. | No full S3/mock scan |
+| TC-HM-04 | I | **`POST` integrity-check** after happy-path E2E slice → **2xx** + body `ok` (or equivalent per [`HEALTH_MONITOR.md`](HEALTH_MONITOR.md) §4.2). | Compose or harness |
+| TC-HM-05 | I | **Induced drift** then **`POST` integrity-check** → **503** / **422** or violation JSON (not **2xx** `ok`). | Fail-closed default |
+
+---
+
+## 18) Summary counts (for planning)
 
 | Section | Count |
 |---------|-------|
@@ -276,22 +291,23 @@ When implementing, map cases to spec checklists:
 | 7 Bootstrap / malformed | 13 |
 | 8 REST | 18 |
 | 9 Cache | 10 |
-| 10 Mock SMS | 11 |
+| 10 Mock SMS | 12 |
 | 11 Worker↔SMS | 7 |
-| 12 E2E | 9 |
+| 12 E2E | 10 |
 | 13 Scaling | 4 |
 | 14 Observability | 3 |
 | 15 Security | 2 |
+| 17 Health monitor | 5 |
 
-**Total enumerated:** **127** test case rows (some U+I overlap; adjust per pyramid).
+**Total enumerated:** **134** test case rows (some U+I overlap; adjust per pyramid).
 
 ---
 
-## 18) Resolved architecture: outcomes notification service + Redis
+## 19) Resolved architecture: outcomes notification service + Redis
 
 **Spec:** [`plans/NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md). Workers **publish** after durable terminal S3 writes; a **notification service** (dedicated container) writes **`state/notifications/...`** and updates **Redis** (dedicated container); the **REST API** queries the notification service only. On startup the notification service **hydrates ~10k** newest records from S3 **into Redis**.
 
-### 18.1 Integration tests (normative)
+### 19.1 Integration tests (normative)
 
 | ID | Layer | Test case | Notes |
 |----|-------|-----------|-------|
@@ -300,24 +316,24 @@ When implementing, map cases to spec checklists:
 | TC-NTF-03 | I | **Order:** if publish is stubbed to fail, S3 terminal still exists; retry publish succeeds → GET reflects outcome. | |
 | TC-NTF-04 | I | **Notification service restart:** after terminal events persisted to `state/notifications/...`, restart service (Redis **empty** or flushed) → hydration fills **Redis** → **GET** returns recent rows up to **`HYDRATION_MAX`**. | |
 | TC-NTF-07 | I | **Redis unavailable:** notification service **readiness** / publish behavior per [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) §7; API outcomes **503** or degraded—**document + test**. | |
-| TC-NTF-05 | U / I | **Dedupe / idempotency:** duplicate publish same `messageId`+outcome does **not** corrupt GET ordering per documented policy ([`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) §3). | |
-| TC-NTF-06 | I | **`HYDRATION_MAX` boundary:** with >10k notifications in S3, memory holds **at most** cap; **newest** bias preserved. | |
+| TC-NTF-05 | U / I | **Dedupe / idempotency:** duplicate publish same `messageId`+outcome does **not** corrupt GET ordering per documented policy ([`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) §4). | |
+| TC-NTF-06 | I | **`HYDRATION_MAX` boundary:** with >10k notifications in S3, **Redis** holds **at most** cap after hydration; **newest** bias preserved. | |
 
-### 18.2 Remaining implementation choices (test when decided)
+### 19.2 Remaining implementation choices (test when decided)
 
 | Topic | Suggested test |
 |-------|----------------|
 | **“Promptly”** after publish | **I:** bound latency (same process vs HTTP hop)—document. |
 | **Readiness vs `GET /healthz`** | [`REST_API.md`](REST_API.md) §3.5—**I:** readiness includes notification service dependency if split-process. |
 
-### 18.3 Persistence layer (contract tests)
+### 19.3 Persistence layer (contract tests)
 
 | Gap | Suggested coverage |
 |-----|-------------------|
 | **Dedicated persistence service surface** | Matrix over **put / get / delete / list-prefix** (owned paths only), **error mapping**, and **async** cancellation behavior if using `aioboto3`. |
 | **Strong vs eventual consistency** | **moto/file-backend:** usually strong. **Real S3** optional stage: put + immediate get/list visibility. |
 
-### 18.4 Lifecycle / ops edge cases (optional depth)
+### 19.4 Lifecycle / ops edge cases (optional depth)
 
 | Gap | Suggested coverage |
 |-----|-------------------|
@@ -325,15 +341,15 @@ When implementing, map cases to spec checklists:
 | **In-flight send when SIGTERM** | Define: still count attempt outcome vs discard—**test matches policy**. |
 | **SOAK / memory** | Long run of 500ms loop + many messages: RSS stable (optional, not CI-gated). |
 
-### 18.5 Test methodology (not duplicate case IDs)
+### 19.5 Test methodology (not duplicate case IDs)
 
 | Gap | Note |
 |-----|------|
 | **Property-based / fuzz** | `hypothesis` for `nextDueAt` recurrence, shard id range, JSON parse robustness. |
 | **Contract / OpenAPI** | If schema published, **schemathesis** or Dredd against running API. |
-| **Multi-container E2E** | **docker-compose** (API + worker + mock SMS + LocalStack) optional; **in-process** tests remain baseline per [`TESTS.md`](TESTS.md). |
+| **Multi-container E2E** | **docker-compose** (API + worker + mock SMS + **health monitor** + LocalStack/Redis/notification as needed) optional; **in-process** tests remain baseline per [`TESTS.md`](TESTS.md). |
 
-### 18.6 Explicit non-goals (no test required unless you extend spec)
+### 19.6 Explicit non-goals (no test required unless you extend spec)
 
 - Multi-region S3, IAM least-privilege proofs, KMS, per-tenant isolation, cost budgets, mobile clients/CORS, chaos in production.
 
@@ -341,4 +357,4 @@ When implementing, map cases to spec checklists:
 
 ### Coverage confidence
 
-With **§18** resolved via [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md), the enumerated list + **§18** tracks all **normative** behaviors in [`PLAN.md`](PLAN.md), [`CORE_LIFECYCLE.md`](CORE_LIFECYCLE.md), [`SHARDING.md`](SHARDING.md), [`RESILIENCE.md`](RESILIENCE.md), [`REST_API.md`](REST_API.md), [`MOCK_SMS.md`](MOCK_SMS.md), and **notification** flows. Remaining work is **operational depth** (§18.4–18.5) and **extended** security/scale (§15, §13).
+With **§19** below resolved via [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md), **§19** tracks **recent-outcomes** behavior. **§17** (TC-HM-*) + [`HEALTH_MONITOR.md`](HEALTH_MONITOR.md) cover **mock-audit vs S3** integrity. Together these align with [`PLAN.md`](PLAN.md), [`CORE_LIFECYCLE.md`](CORE_LIFECYCLE.md), [`SHARDING.md`](SHARDING.md), [`RESILIENCE.md`](RESILIENCE.md), [`REST_API.md`](REST_API.md), and [`MOCK_SMS.md`](MOCK_SMS.md). Remaining work is **operational depth** (§19.4–19.5) and **extended** security/scale (§15, §13).

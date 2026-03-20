@@ -1,5 +1,7 @@
 # NOTIFICATION_SERVICE.md - Outcomes notification service (architecture)
 
+Aligned with [`plans/PLAN.md`](PLAN.md) §3/§7, [`plans/SYSTEM_OVERVIEW.md`](SYSTEM_OVERVIEW.md), [`plans/REST_API.md`](REST_API.md), [`plans/CORE_LIFECYCLE.md`](CORE_LIFECYCLE.md) §5.3, [`plans/RESILIENCE.md`](RESILIENCE.md) §7, and (orthogonal) [`plans/HEALTH_MONITOR.md`](HEALTH_MONITOR.md) for **mock-audit vs S3**—**not** for Redis/notification correctness.
+
 This document **closes the API recent-outcomes gap**: workers perform terminal `success` / `failed` writes in S3, while `GET /messages/success` and `GET /messages/failed` must **not** scan broad `state/success/` or `state/failed/` trees on every request ([`REST_API.md`](REST_API.md), [`PLAN.md`](PLAN.md) §7).
 
 **Chosen approach:** two runtime pieces:
@@ -44,6 +46,7 @@ The **REST API** does **not** connect to Redis directly; it **queries the notifi
 
 `state/notifications/<yyyy>/<MM>/<dd>/<hh>/<notificationId>.json`
 
+- **Partition segments:** **`yyyy` / `MM` / `dd` / `hh`** from **UTC**, **24-hour** `hh`, zero-padded—derived from the notification’s **`recordedAt`** (or the wall-clock instant of the S3 put if you align them). Same rule as terminal success/failed keys in [`PLAN.md`](PLAN.md) §3.
 - **`notificationId`**: **ULID** or **UUID** (ULID preferred for **sortable** ids within an hour).
 - **One object per** terminal publish event.
 
@@ -60,7 +63,7 @@ The **REST API** does **not** connect to Redis directly; it **queries the notifi
 ```
 
 - `outcome`: **`success`** | **`failed`**
-- `recordedAt`: epoch **milliseconds**
+- `recordedAt`: epoch **milliseconds** (UTC instant); **must** be consistent with the **UTC** key segments above (same moment).
 
 **Why this log exists:** **Hydration** after Redis flush / cold start / notification service redeploy without requiring scans of `state/success/` or `state/failed/`.
 

@@ -102,7 +102,7 @@ The worker should enter normal processing only after owned shard bootstrap has c
 The **notification service** ([`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md)) must:
 
 - On process start, after **Redis** is reachable, run **hydration**: load up to **`HYDRATION_MAX`** (default **10,000**) **newest** notification records from `state/notifications/...` via the persistence service and **write them into Redis**—**before** treating the service as **ready** (or document degraded mode).
-- Use **bounded** pagination when listing hour prefixes; **do not** assume unbounded memory on the notification service JVM/process (Redis holds the hot cache).
+- Use **bounded** pagination when listing hour prefixes; **do not** assume unbounded RAM in the notification service **process** (Redis holds the hot cache).
 - If **Redis** is unavailable: **readiness** fails or **degraded** mode (no publish / query)—**document**.
 - If hydration fails after retries: emit **startup-degraded** telemetry; outcome `GET` endpoints may **503** or return **empty** until recovered—**document** the choice.
 

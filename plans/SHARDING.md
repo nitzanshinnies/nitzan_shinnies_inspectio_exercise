@@ -3,6 +3,8 @@
 This document defines the detailed sharding requirements for the SMS retry scheduler.
 It extends the requirements in `PLAN.md` and `SYSTEM_OVERVIEW.md` and focuses only on shard assignment, worker ownership, contention avoidance, and sharding operations.
 
+**Note:** Recent outcomes (`GET /messages/*`) use **Redis + notification service** and **`state/notifications/...`**—**not** pending shard keys; see [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md).
+
 ## 1) Scope
 
 In scope:
@@ -43,6 +45,7 @@ Requirements:
 - Success/failed transitions preserve the original `messageId` while moving to terminal prefixes:
   - `state/success/<yyyy>/<MM>/<dd>/<hh>/<messageId>.json`
   - `state/failed/<yyyy>/<MM>/<dd>/<hh>/<messageId>.json`
+- Terminal path segments are **UTC** per [`PLAN.md`](PLAN.md) §3 (all writers and tools must agree).
 
 ## 3) Worker ownership model
 

@@ -6,11 +6,13 @@ This document expands **Section 8** of [`plans/PLAN.md`](PLAN.md): the **mock SM
 
 **Purpose:**
 - Simulate an external SMS gateway so workers can exercise **retry**, **backoff**, and **terminal failure** paths under load without a real provider.
+- Act as the **integrity witness** for outbound sends: every **planned** worker→provider `POST /send` is **recorded** so you can prove **what actually left the system** matches expectations (counts, ordering per `messageId`, and HTTP outcome), in **tests** and in **deployed** exercise environments (compose/K8s) that still use the mock instead of a real carrier.
 
 **In scope:**
 - HTTP contract for `POST /send`
 - **Intermittent** (probabilistic) failure behavior plus explicit test hooks
 - **Module-level constants** for all mock **behavior** parameters (failure rate, failure-kind mix, optional RNG seed, optional latency, listen port)
+- **Send audit log** (structured + queryable as below) and guidance for **validating** it against lifecycle/S3 expectations
 - Success/failure signaling compatible with worker expectations
 - Container/run expectations and minimal observability
 
@@ -23,7 +25,7 @@ This document expands **Section 8** of [`plans/PLAN.md`](PLAN.md): the **mock SM
 
 - **Single small service** in its **own container** (one replica is enough for the exercise; scale only if you need HA for demos).
 - Workers call it over HTTP using a **base URL** from **worker** configuration (e.g. env on the worker side only: `MOCK_SMS_URL=http://mock-sms:8080`). The **mock service itself** does not read env vars for behavior—only **module constants** (see §5).
-- No shared state with workers; the mock may be **stateless** except for optional in-memory RNG state.
+- No shared state with workers; the mock holds **bounded in-memory state** for the RNG (if any) and the **audit ring buffer** (§8); workers never depend on that state for correctness.
 
 ## 3) Endpoint: `POST /send`
 
@@ -34,7 +36,8 @@ This document expands **Section 8** of [`plans/PLAN.md`](PLAN.md): the **mock SM
 | `to`           | string  | yes      | Destination (opaque for the mock). |
 | `body`         | string  | yes      | Message body (opaque for the mock). |
 | `shouldFail`   | boolean | no       | If `true`, request **must** fail (deterministic), regardless of intermittent rate. |
-| `messageId`    | string  | no       | Optional pass-through for logs/tracing (worker may include it). |
+| `messageId`    | string  | no       | Optional pass-through for logs/tracing (worker **should** include it for integrity validation). |
+| `attemptIndex` | int     | no       | Optional **0-based** attempt index (e.g. worker’s `attemptCount` at send time). Improves audit matching vs inferring order from timestamps alone. |
 
 Validation:
 - Reject missing `to` or `body` with **4xx** (e.g. `400`) and a small JSON error body.
@@ -136,11 +139,51 @@ Not mandated in `PLAN.md`, but useful for Docker/Kubernetes:
 
 - `GET /healthz` → `200` when process is up.
 
-## 8) Observability
+## 8) Send integrity: audit log and validation
+
+**Goal:** Treat the mock as the **system of record for “a send was attempted to the provider”** (not whether the *simulated carrier* delivered). Tests and **production-like** deployments (still using this mock) can **compare** the audit trail to expected schedules derived from pending state, retry timeline, and terminal S3 outcomes.
+
+### 8.1 Audit record (per request)
+
+For **every** `POST /send` that passes JSON validation (including those that return **`4xx`** if you validate after body parse—recommended: record **after** deciding the HTTP response, one row per request):
+
+| Field | Description |
+|-------|-------------|
+| `receivedAt_ms` | Server timestamp when the decision was made (epoch ms). |
+| `messageId` | From request if present; else `null`. |
+| `attemptIndex` | From request if present; else `null`. |
+| `http_status` | HTTP status returned (`2xx`, `4xx`, `5xx`). |
+| `outcome_kind` | e.g. `success`, `failed_to_send`, `service_unavailable`, `forced_fail`, `validation_error` (for **`4xx`**). |
+| `to_ref` | **Truncated or hashed** `to` in stdout/log export if you want to avoid PII in shared logs; full value optional in dev-only mode. |
+
+Do **not** require workers for correctness; integrity tooling **consumes** the log.
+
+### 8.2 Emission channels
+
+1. **Structured stdout (required for exercise):** append **one JSON object per line** per request (e.g. field `"event":"mock_sms_audit"`). Enables validation in CI and in running stacks via **`docker logs`** / log aggregation **without** an extra store.
+2. **In-memory ring (required):** keep the last **`AUDIT_LOG_MAX_ENTRIES`** records (module constant; e.g. `100_000`); drop oldest on overflow.
+3. **Read API (recommended):** `GET /audit/sends?limit=<n>` returns the **most recent** `n` audit rows (newest first), capped by a small server maximum. Gate with module constant **`EXPOSE_AUDIT_ENDPOINT`** (**default `True`** for this exercise so tests and ops scripts can assert easily; set **`False`** to rely on stdout only). This is **read-only diagnostics**, not a tuning UI.
+
+### 8.3 Validation patterns
+
+- **Tests (unit/integration):** drive the mock in-process or via HTTP; read `/audit/sends` or capture stdout; assert **sequence** and **counts** per `messageId` (e.g. success after *k* failures matches *k+1* audit rows with matching `attemptIndex` if the worker sends it).
+- **E2E / load:** sample or post-process JSONL from container logs; reconcile against **worker metrics** or **S3 terminal + pending** counts for “no phantom sends / no missing sends” under the test scenario.
+- **Deployed exercise environment (“production” with mock):** the **health monitor** container ([`HEALTH_MONITOR.md`](HEALTH_MONITOR.md)) is the **normative** reconciler: operators or CI **`POST`** its **integrity-check** endpoint to run **`GET /audit/sends`** (or a documented log path) and **compare to S3**; the monitor’s **`GET /healthz`** is **liveness only**. Tests and ad-hoc scripts may still call **`/audit/sends`** directly.
+
+### 8.4 Module constants (audit)
+
+| Constant | Meaning |
+|----------|---------|
+| `AUDIT_LOG_MAX_ENTRIES` | Ring buffer size; must be > 0. |
+| `EXPOSE_AUDIT_ENDPOINT` | If `True`, serve `GET /audit/sends`; if `False`, stdout-only. |
+| `AUDIT_REDACT_TO` | If `True`, use `to_ref` hashing/truncation in emitted records. |
+
+## 9) Observability
 
 Structured logs (stdout):
 
 - Each `POST /send`: `messageId` (if present), outcome (`success` / `failed_to_send` / `service_unavailable` / `forced_fail`), HTTP status returned, effective `FAILURE_RATE` / `UNAVAILABLE_FRACTION` from module (for debugging).
+- **Audit JSONL** (§8) is the **authoritative per-send line** for integrity checks; keep human-oriented logs compatible with it.
 - Log level: avoid logging full `body` if it can be large; truncate or omit in production-like settings.
 
 Metrics (optional for exercise):
@@ -148,12 +191,12 @@ Metrics (optional for exercise):
 - Counter: `mock_sms_requests_total{result}`
 - Histogram: `mock_sms_latency_seconds`
 
-## 9) Tech stack suggestion
+## 10) Tech stack suggestion
 
 - **FastAPI** + **uvicorn** (matches rest of exercise) or a minimal **aiohttp**/Starlette app.
 - Single file or small module; Dockerfile **non-root** user if easy.
 
-## 10) Validation checklist
+## 11) Validation checklist
 
 The mock SMS plan is complete when:
 
@@ -163,15 +206,16 @@ The mock SMS plan is complete when:
 4. Simulated send failures use **`5xx` only** (split between **failed-to-send** vs **service unavailable** per §4.2); **`4xx`** appears only for **invalid mock requests** (§3.1).
 5. **Module constants** for **failure rate**, **unavailable vs failed-to-send mix**, optional **RNG seed**, **latency**, and **listen port** are documented in code and defaults are sensible for load tests; **no env-driven or web-UI** tuning of these parameters.
 6. Container runs isolated from workers and is reachable at a **configurable base URL**.
+7. **Integrity:** every handled `POST /send` produces an **audit record** (§8); **JSONL on stdout** is enabled; ring buffer + **`GET /audit/sends`** behave as documented when **`EXPOSE_AUDIT_ENDPOINT`** is `True`.
 
-## 11) Conceptual flow
+## 12) Conceptual flow
 
 ```mermaid
 sequenceDiagram
   participant Worker
   participant MockSMS as MockSMS_PostSend
 
-  Worker->>MockSMS: POST /send JSON(to,body,shouldFail?,messageId?)
+  Worker->>MockSMS: POST /send JSON(to,body,shouldFail?,messageId?,attemptIndex?)
   alt shouldFail true
     MockSMS-->>Worker: 5xx
   else intermittent failure

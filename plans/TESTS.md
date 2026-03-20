@@ -1,6 +1,6 @@
-# TESTS.md - Detailed Plan (Section 9)
+# TESTS.md - Detailed Plan (Section 10)
 
-This document expands **Section 9** of [`plans/PLAN.md`](PLAN.md): **testing** for the SMS retry scheduler exercise. It aligns with [`plans/SYSTEM_OVERVIEW.md`](SYSTEM_OVERVIEW.md), [`plans/CORE_LIFECYCLE.md`](CORE_LIFECYCLE.md), [`plans/SHARDING.md`](SHARDING.md), [`plans/RESILIENCE.md`](RESILIENCE.md), [`plans/REST_API.md`](REST_API.md), [`plans/MOCK_SMS.md`](MOCK_SMS.md), and [`plans/NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md).
+This document expands **Section 10** of [`plans/PLAN.md`](PLAN.md): **testing** for the SMS retry scheduler exercise. It aligns with [`plans/SYSTEM_OVERVIEW.md`](SYSTEM_OVERVIEW.md), [`plans/CORE_LIFECYCLE.md`](CORE_LIFECYCLE.md), [`plans/SHARDING.md`](SHARDING.md), [`plans/RESILIENCE.md`](RESILIENCE.md), [`plans/REST_API.md`](REST_API.md), [`plans/MOCK_SMS.md`](MOCK_SMS.md), [`plans/HEALTH_MONITOR.md`](HEALTH_MONITOR.md), and [`plans/NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md).
 
 **Enumerated checklist:** [`plans/TEST_LIST.md`](TEST_LIST.md) (full test case IDs, edge cases, 9.1 companion).
 
@@ -60,10 +60,10 @@ Cover [`CORE_LIFECYCLE.md`](CORE_LIFECYCLE.md) §4:
 
 Test persistence orchestration (via fakes/moto):
 
-- **Success**: pending no longer authoritative; **success** key under `state/success/<yyyy>/<MM>/<dd>/<hh>/<messageId>.json` ([`SHARDING.md`](SHARDING.md) §2.2).
-- **Retry**: pending under `state/pending/shard-<shard_id>/` updated with new `attemptCount` / `nextDueAt`.
-- **Terminal failure**: **failed** key under `state/failed/<yyyy>/<MM>/<dd>/<hh>/<messageId>.json`.
-- **Clock injection**: for a fixed “now”, assert path segments **`yyyy/MM/dd/hh`** match the implementation’s documented timezone rule (UTC vs local—pick one and test it).
+- **Success**: pending no longer authoritative; **success** key under `state/success/<yyyy>/<MM>/<dd>/<hh>/<messageId>.json` ([`SHARDING.md`](SHARDING.md) §2.2); terminal JSON **`status`** is **`success`** ([`PLAN.md`](PLAN.md) §3).
+- **Retry**: pending under `state/pending/shard-<shard_id>/` updated with new `attemptCount` / `nextDueAt`; JSON **`status`** remains **`pending`** ([`PLAN.md`](PLAN.md) §3).
+- **Terminal failure**: **failed** key under `state/failed/<yyyy>/<MM>/<dd>/<hh>/<messageId>.json`; body **`status`** is **`failed`**.
+- **Clock injection**: for a fixed “now”, assert path segments **`yyyy/MM/dd/hh`** match **UTC** per [`PLAN.md`](PLAN.md) §3 (including **DST** non-issues in UTC and **year/month rollover**).
 
 ### 4.5 Recent outcomes (notification service + API)
 
@@ -84,6 +84,7 @@ Cover [`MOCK_SMS.md`](MOCK_SMS.md):
 - **`shouldFail: true`** (if worker forwards it in tests) ⇒ **always `5xx`**.
 - **Failure kinds**: optionally assert the mock (when exercised) can return **`503`** vs **`500`/`502`** per module constants—worker still retries either ([`MOCK_SMS.md`](MOCK_SMS.md) §3.3).
 - **`RNG_SEED`** set in mock module ⇒ intermittent outcomes **reproducible** for tests.
+- **Send integrity / audit** ([`MOCK_SMS.md`](MOCK_SMS.md) §8): each handled `POST /send` produces an audit row (**JSONL** on stdout and/or **`GET /audit/sends`**); assert **expected sequence** (per `messageId` / optional `attemptIndex`) in unit/integration; E2E may reconcile **send counts** vs terminal outcomes where feasible.
 
 ### 4.7 REST handlers and contracts
 
@@ -96,7 +97,7 @@ Cover [`REST_API.md`](REST_API.md):
 
 ### 4.8 Idempotency and duplicate handling
 
-Cover [`CORE_LIFECYCLE.md`](CORE_LIFECYCLE.md) §6.2 and §8 checklist item 7:
+Cover [`CORE_LIFECYCLE.md`](CORE_LIFECYCLE.md) §6.2 and §8 checklist item 8:
 
 - **Duplicate `newMessage` / activation** for the same `messageId` must not create duplicate **terminal** keys or inconsistent state.
 - **Replay** after success or terminal failed: no second terminal write; side effects remain **monotonic**.
@@ -147,16 +148,25 @@ Cover [`RESILIENCE.md`](RESILIENCE.md) §5:
 
 - Under a changed **`shards_per_pod` or replica count** configuration in a **single-process multi-worker test**, each “pod” instance only processes **currently owned** shards ([`SHARDING.md`](SHARDING.md) §6.1). Deep multi-pod e2e optional.
 
+### 5.6 Health monitor (mock audit vs S3)
+
+Cover [`HEALTH_MONITOR.md`](HEALTH_MONITOR.md):
+
+- **Unit:** pure reconciliation on **fixture** audit JSON + **fixture** S3 object map—**terminal success** must imply **≥1** mock **`2xx`**; **terminal failed** vs **audit** per documented counting rule; **no** duplicate success+failed.
+- **Integration / compose:** run **mock SMS** + **persistence/S3** + **health monitor**; **`GET /healthz`** returns **2xx** without running full reconcile; **`POST`** **integrity-check** after a deterministic scenario returns **2xx** + `ok`; inject **phantom** audit or **stub S3** drift and assert **`POST`** returns **non-2xx** or violation JSON per §4.2.
+
 ## 6) End-to-end tests (strongly recommended)
 
 Compose **API + worker scheduler + persistence (mock S3) + mock SMS HTTP** where feasible:
 
 - **Happy path**: SMS **`2xx`** → **success** terminal key; **`GET /messages/success`** reflects outcome per cache rules.
 - **Retry path**: SMS **`5xx`** then **`2xx`** → pending updates until success.
+- **Send integrity (recommended):** where the real mock HTTP service runs, validate **mock audit log** vs expected attempts (e.g. **`GET /audit/sends`** or container **stdout JSONL** per [`MOCK_SMS.md`](MOCK_SMS.md) §8).
 - **Terminal failure**: SMS always **`5xx`** until **`attemptCount == 6`** → **failed** key; **`GET /messages/failed`** reflects outcome per cache rules.
-- **Restart**: persist mid-retry pending; **restart worker** / rerun bootstrap → retry resumes per **`nextDueAt`** ([`CORE_LIFECYCLE.md`](CORE_LIFECYCLE.md) §8 item 6).
+- **Restart**: persist mid-retry pending; **restart worker** / rerun bootstrap → retry resumes per **`nextDueAt`** ([`CORE_LIFECYCLE.md`](CORE_LIFECYCLE.md) §8 item 7).
 - **`POST /messages/repeat?count=N`**: **`N`** distinct `messageId`s and **`N`** durable pendings.
 - **`GET /healthz`**: **2xx** from API process.
+- **Health monitor (when compose includes it):** **`GET /healthz`** **2xx** (liveness); after steady-state, **`POST` integrity-check** **2xx** ([`HEALTH_MONITOR.md`](HEALTH_MONITOR.md) §4); optional negative **`POST`** with induced drift.
 
 ## 7) Determinism and flakiness guardrails
 
@@ -172,8 +182,9 @@ Map suites to spec checklists:
 - **Sharding**: `SHARDING.md` §8 checklist.
 - **Lifecycle / 500ms / concurrency / idempotency**: `CORE_LIFECYCLE.md` §8 checklist.
 - **Bootstrap / degraded startup / terminal safety**: `RESILIENCE.md` §8 checklist.
-- **REST / recent outcomes**: `REST_API.md` §8 checklist, `NOTIFICATION_SERVICE.md` §9 checklist.
-- **Mock SMS**: `MOCK_SMS.md` §10 checklist.
+- **REST / recent outcomes**: `REST_API.md` §8 checklist, `NOTIFICATION_SERVICE.md` §10 validation checklist.
+- **Mock SMS**: `MOCK_SMS.md` §11 checklist (includes audit/integrity).
+- **Health monitor**: `HEALTH_MONITOR.md` §7 checklist; **TC-HM-*** in [`TEST_LIST.md`](TEST_LIST.md).
 
 ## 9) CI expectations (exercise)
 
@@ -183,7 +194,7 @@ Map suites to spec checklists:
 
 ## 10) Validation checklist (this testing plan)
 
-Section 9 testing work is complete when:
+Section 10 testing work is complete when:
 
 1. Unit tests cover **sharding**, **ownership**, **`HOSTNAME` mapping** (if applicable), **retry timeline**, **500ms cadence**, **wakeup due selection**, and **terminal rules**.
 2. Tests prove **pending / success / failed** key paths including **date-partitioned** terminal keys under an injectable clock.
@@ -195,6 +206,8 @@ Section 9 testing work is complete when:
 8. At least one test proves **bootstrap after restart** restores due work from owned pending shards.
 9. **`GET /healthz`** smoke is present for the API.
 10. How to run suites is documented in **README** (or **`CONTRIBUTING`**) once implementation exists.
+11. **Mock SMS send audit** ([`MOCK_SMS.md`](MOCK_SMS.md) §8) is exercised: audit records + **JSONL** (and **`GET /audit/sends`** when enabled), aligned with **TC-SMS-12** / **TC-E2E-10** in [`TEST_LIST.md`](TEST_LIST.md).
+12. **Health monitor** reconciliation is covered per **§5.6** and **TC-HM-*** ([`HEALTH_MONITOR.md`](HEALTH_MONITOR.md)).
 
 ## 11) Conceptual test layers
 

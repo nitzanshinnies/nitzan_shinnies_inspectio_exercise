@@ -8,6 +8,7 @@ It is aligned with:
 - `plans/CORE_LIFECYCLE.md`
 - `plans/RESILIENCE.md`
 - `plans/NOTIFICATION_SERVICE.md`
+- `plans/HEALTH_MONITOR.md` (separate service; **not** part of this API surface unless you explicitly add an internal proxy—document if so)
 
 ## 1) Scope
 
@@ -21,6 +22,7 @@ Out of scope:
 - Worker internals and retry scheduler implementation details
 - Shard ownership math details
 - UI behavior beyond API contract expectations
+- **SMS/S3 integrity `POST`** on the **health monitor** container ([`HEALTH_MONITOR.md`](HEALTH_MONITOR.md) §4)—that endpoint is **not** required on the public REST API unless you choose to forward it (then document auth and coupling)
 
 ## 2) API responsibilities
 
@@ -32,6 +34,8 @@ The REST API service must:
 - Enforce input validation and deterministic response contracts.
 
 All persistence operations are performed through the dedicated S3 persistence service boundary (no direct persistence bypass).
+
+**S3 path time rule:** any date-partitioned keys written on behalf of the API (pending creation is not date-partitioned; terminal moves are worker-owned) follow **UTC** segments for success/failed/notification paths per [`PLAN.md`](PLAN.md) §3—implementations must not introduce local-TZ terminal keys.
 
 ## 3) Required endpoints (Section 7)
 
