@@ -9,23 +9,43 @@ The system is composed of logical services/services-with-containers:
 1. **Backend / REST API service** (Python, FastAPI, run with `uvicorn`)
    - Exposes the REST endpoints required by the architect.
    - Creates the durable pending message state in S3 (through the dedicated persistence service).
-   - Maintains/serves “recent outcomes” via a bounded cache to avoid S3 listing overhead.
+   - Serves `GET /messages/success` and `GET /messages/failed` by **querying the notification service** (not by listing `state/success/` or `state/failed/` on each request).
    - Triggers the worker “newMessage” flow for attempt #1 (0s delay).
 
 2. **Worker scheduler** (Kubernetes StatefulSet; pods `worker-0`, `worker-1`, …)
    - Provides deterministic sharding by claiming an exclusive contiguous shard range in S3 based on `HOSTNAME` (`pod_index`) and configured `shards_per_pod`.
    - Bootstraps on startup by scanning the worker-owned pending shards in S3 and reconstructing the due-work view from persisted `nextDueAt`.
-   - Runs a wakeup loop with a cadence of ~500ms reliably.
+   - Runs a wakeup loop with a cadence of **exactly every 500ms** (same as [`plans/PLAN.md`](PLAN.md) §5).
    - Executes due message sends concurrently within each tick and applies the exact retry timeline transitions.
 
 3. **Dedicated S3 persistence service (required boundary)**
-   - All S3 reads/writes MUST go through this service (API and workers do not talk to S3 directly).
+   - All S3 reads/writes from **API and workers** MUST go through this service (they do not talk to S3 directly).
+   - **Exception (read-only):** the **health monitor** may use the persistence service’s **read** API or a **read-only** direct S3 client for lifecycle prefixes only—see [`HEALTH_MONITOR.md`](HEALTH_MONITOR.md) §2.2.
    - **AWS mode**: uses `aioboto3` for async S3 operations.
    - **Local dev mode**: uses an in-process mock S3 implementation that performs file reader/writer semantics on a local directory while presenting the same persistence interface.
 
-4. **Mock SMS provider (separate single container)**
+4. **Redis (dedicated container — outcomes hot cache)**
+   - Runs as its **own container** (e.g. official Redis image).
+   - Holds **bounded** recent-outcome structures for **success** and **failed** streams (**LIST**/ZSET pattern—see [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) §4).
+   - Accessed **only** by the **notification service** (not directly by the REST API or workers).
+
+5. **Outcomes notification service (dedicated container)**
+   - Accepts **publish** requests from workers after terminal S3 writes.
+   - Writes the **durable** log to `state/notifications/...` in S3 (via persistence service) and **updates Redis**.
+   - Exposes **query** endpoints (or internal HTTP) used by the **REST API** for `GET /messages/success` and `GET /messages/failed`.
+   - On startup, **hydrates Redis** from S3 with up to **`HYDRATION_MAX`** records (default **10,000**), walking **recent hour prefixes** backward (acceptable **cold-start** listing; not per user request).
+   - **Detailed plan:** [`plans/NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md).
+
+6. **Mock SMS provider (separate single container)**
    - Exposes `POST /send`.
    - Fails some requests to exercise retry behavior (including a request-controlled `shouldFail` switch).
+   - Maintains a **send audit** (stdout JSONL + **`GET /audit/sends`**) per [`MOCK_SMS.md`](MOCK_SMS.md) §8.
+
+7. **Health monitor (separate single container)**
+   - **On demand:** a **`POST`** endpoint runs **one** reconciliation—**fetches** mock SMS **audit** and **reads** S3 lifecycle keys (`pending` / `success` / `failed`) to compare “what the mock saw” vs “what S3 says.”
+   - **`GET /healthz`:** **liveness only** (no full audit/S3 scan on each probe).
+   - **Read-only** toward lifecycle state; **not** on the worker hot path.
+   - **Detailed plan:** [`plans/HEALTH_MONITOR.md`](HEALTH_MONITOR.md).
 
 ## 2) Persistence interface & required S3 key layout
 
@@ -33,12 +53,16 @@ The system is composed of logical services/services-with-containers:
 
 All message state is persisted in S3 under the architect-required prefixes:
 
-- **Pending**
-  - `state/pending/<shard>/<messageId>.json`
+- **Pending** (canonical folder segment: **`shard-<shard_id>`**; see [`SHARDING.md`](SHARDING.md))
+  - `state/pending/shard-<shard_id>/<messageId>.json`
 - **Success**
   - `state/success/<yyyy>/<MM>/<dd>/<hh>/<messageId>.json`
 - **Failed (terminal)**
   - `state/failed/<yyyy>/<MM>/<dd>/<hh>/<messageId>.json`
+- **Outcome notifications (durable log for recent-outcomes service)**
+  - `state/notifications/<yyyy>/<MM>/<dd>/<hh>/<notificationId>.json`
+
+**Date partitions (`yyyy` / `MM` / `dd` / `hh`):** **UTC**, 24-hour **`hh`**, zero-padded—same instant semantics as [`PLAN.md`](PLAN.md) §3 (terminal write time or notification **`recordedAt`**).
 
 ### 2.2 Pending JSON schema (required)
 
@@ -57,8 +81,8 @@ The persisted pending object follows:
 
 Field constraints:
 - `attemptCount`: integer in range `0..6` (attempt #1 corresponds to `attemptCount = 0`)
-- `nextDueAt`: epoch milliseconds
-- `status`: `pending | success | failed`
+- `nextDueAt`: epoch milliseconds (UTC instant)
+- `status`: while the object lives under **`state/pending/shard-*/`**, **must** be **`pending`**. Terminal objects under **`state/success/...`** or **`state/failed/...`** **must** use **`success`** or **`failed`** respectively ([`PLAN.md`](PLAN.md) §3).
 - `payload`: `{ "to": "...", "body": "..." }`
 - `history`: optional array (timestamps/outcomes)
 
@@ -87,13 +111,13 @@ StatefulSet pods must deterministically own an exclusive contiguous shard range:
   - `range(pod_index * shards_per_pod, (pod_index + 1) * shards_per_pod)`
 
 Contention avoidance requirement:
-- Exactly one worker pod is responsible for reading/writing `state/pending/<shard>/` for any given `shard_id`.
+- Exactly one worker pod is responsible for reading/writing `state/pending/shard-<shard_id>/` for any given `shard_id`.
 
 ### 3.3 Crash resilience bootstrap (required)
 
 On startup, each worker pod must:
 - Scan the worker-owned pending shards in S3:
-  - `state/pending/<shard>/` (commonly expressed as `state/pending/shard-<X>/` in naming)
+  - `state/pending/shard-<shard_id>/`
 - Re-populate its due-work view from persisted `nextDueAt` values for all pending messages it owns.
 - Continue retry processing without losing retry ordering/eligibility.
 
@@ -106,7 +130,7 @@ When a message is activated for processing:
 1. **Idempotency check**
    - Verify whether `messageId` already exists in the local cache or in S3 (via the persistence service).
 2. **Ensure durable pending state**
-   - The pending message must already be durably persisted in `state/pending/<shard>/<messageId>.json` by the API.
+   - The pending message must already be durably persisted in `state/pending/shard-<shard_id>/<messageId>.json` by the API.
    - The worker’s activation must validate the persisted pending state exists and is consistent for attempt #1 (attemptCount=0) before sending.
 3. **Attempt #1**
    - Call `send(m)` immediately (0s delay).
@@ -146,27 +170,29 @@ Implement:
   - Send a single message.
 - `POST /messages/repeat?count=N`
   - Load test endpoint: create `N` copies.
-- `GET /messages/success?limit=100`
-  - Return last 100 successful attempts.
-- `GET /messages/failed?limit=100`
-  - Return last 100 failed attempts.
+- `GET /messages/success` (`limit` optional, default **100**—[`REST_API.md`](REST_API.md))
+  - Return most recent successful outcomes (notification service → Redis).
+- `GET /messages/failed` (same)
+  - Return most recent failed outcomes (notification service → Redis).
 - `GET /healthz`
   - Health endpoints.
 
 Recent outcomes performance requirement:
-- Avoid listing large S3 prefixes for recent outcomes.
-- Serve recent outcomes from a bounded cache (e.g., maxlen=100 deque or Redis list semantics).
+- Avoid listing large `state/success/` / `state/failed/` trees on **each** `GET`.
+- Serve `GET /messages/success` and `GET /messages/failed` via the **notification service**, which reads **Redis** (hot cache) with **S3 `state/notifications/...`** as durable log and **hydration** source—see [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md).
 
 ## 6) Mock SMS provider contract (required)
 
 The mock SMS provider is a separate single container with:
 
 - Endpoint: `POST /send`
+- **Integrity:** records **every** handled send for validation (stdout **JSONL**, ring buffer, optional **`GET /audit/sends`**)—see [`MOCK_SMS.md`](MOCK_SMS.md) §8. Use this in **tests** and in **deployed** exercise stacks to verify **all outbound attempts** match expectations.
 - Request JSON:
   - `to`: string
   - `body`: string
   - `shouldFail`: optional boolean
-  - `messageId`: optional string (logging/tracing)
+  - `messageId`: optional string (worker **should** set for audit)
+  - `attemptIndex`: optional int (recommended; aligns audit with lifecycle)
 
 Failure behavior:
 - If `shouldFail=true`, always fail ( **`5xx`** send outcome).
@@ -183,7 +209,10 @@ Optional simulated latency:
 ## 7) Local development mapping (required)
 
 - **Mock S3 provider**: in-process file reader/writer that implements the same persistence interface as the dedicated S3 persistence service.
+- **Redis**: dedicated container with `REDIS_URL` wired into the **notification service** (see [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) §12).
+- **Notification service**: dedicated container (or local run) talking to Redis + persistence layer.
 - **Mock SMS provider**: runs as a separate container (single container) calling `POST /send`.
+- **Health monitor**: **specified** in [`PLAN.md`](PLAN.md) §1/§9 (include in compose/K8s for the exercise); `MOCK_SMS_URL` + read-only S3/persistence access; callers **`POST`** the integrity-check route to run **`GET /audit/sends`** + S3 compare ([`HEALTH_MONITOR.md`](HEALTH_MONITOR.md) §4).
 - **State ownership**: worker pods still use `HOSTNAME` and shard-range ownership semantics so the same code paths apply in local and cluster environments.
 
 ## 8) Testing plan (requirements-first)
@@ -199,8 +228,9 @@ Before meaningful implementation:
   - wakeup due-selection behavior: only process messages with `nextDueAt <= now`
   - retry timeline mapping from `attemptCount` to `nextDueAt`
   - terminal transition correctness: `pending -> success` and `pending -> failed`
-  - recent outcomes bounded-cache behavior (no S3 listing dependency)
+  - recent outcomes via **notification service + Redis** (no per-GET broad terminal-prefix listing)
 - Integration tests should cover:
   - S3 persistence via local mock S3 and/or an AWS simulator
-  - end-to-end: API creates pending -> worker activation triggers attempt #1 -> due retries proceed -> terminal success/failed keys are written
+  - end-to-end: API creates pending → worker activation → retries → terminal S3 keys → **notification publish + Redis** → `GET` outcomes (see [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md))
+  - **Health monitor:** **`POST`** integrity-check reconciles mock audit vs S3; **`GET /healthz`** liveness only ([`HEALTH_MONITOR.md`](HEALTH_MONITOR.md) §4)
 

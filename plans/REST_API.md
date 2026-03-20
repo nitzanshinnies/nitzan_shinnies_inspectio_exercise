@@ -7,6 +7,8 @@ It is aligned with:
 - `plans/SYSTEM_OVERVIEW.md`
 - `plans/CORE_LIFECYCLE.md`
 - `plans/RESILIENCE.md`
+- `plans/NOTIFICATION_SERVICE.md`
+- `plans/HEALTH_MONITOR.md` (separate service; **not** part of this API surface unless you explicitly add an internal proxy—document if so)
 
 ## 1) Scope
 
@@ -20,17 +22,20 @@ Out of scope:
 - Worker internals and retry scheduler implementation details
 - Shard ownership math details
 - UI behavior beyond API contract expectations
+- **SMS/S3 integrity `POST`** on the **health monitor** container ([`HEALTH_MONITOR.md`](HEALTH_MONITOR.md) §4)—that endpoint is **not** required on the public REST API unless you choose to forward it (then document auth and coupling)
 
 ## 2) API responsibilities
 
 The REST API service must:
 - Accept message submission requests.
 - Trigger message activation flow (attempt #1 immediate path is handled by lifecycle flow).
-- Expose recent successful and failed outcomes.
+- Expose recent successful and failed outcomes by **querying the outcomes notification service** ([`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md))—**not** by listing broad `state/success/` or `state/failed/` prefixes on each request.
 - Expose service health status.
 - Enforce input validation and deterministic response contracts.
 
 All persistence operations are performed through the dedicated S3 persistence service boundary (no direct persistence bypass).
+
+**S3 path time rule:** any date-partitioned keys written on behalf of the API (pending creation is not date-partitioned; terminal moves are worker-owned) follow **UTC** segments for success/failed/notification paths per [`PLAN.md`](PLAN.md) §3—implementations must not introduce local-TZ terminal keys.
 
 ## 3) Required endpoints (Section 7)
 
@@ -78,8 +83,8 @@ Query parameters:
   - If provided, must be a positive integer; API may enforce a configured **maximum** (e.g. cap at 100 or another agreed upper bound) and clamp or reject out-of-range values.
 
 Performance requirement:
-- Must serve from bounded recent-outcomes cache.
-- Must not list broad S3 prefixes to assemble response.
+- Must serve from the **notification service**, which reads **Redis** (see [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) §4, §6).
+- Must not list broad `state/success/` or `state/failed/` prefixes to assemble the response.
 
 ### 3.4 `GET /messages/failed`
 
@@ -92,8 +97,8 @@ Query parameters:
   - If provided, must be a positive integer; same maximum/clamp policy as success endpoint.
 
 Performance requirement:
-- Must serve from bounded recent-outcomes cache.
-- Must not list broad S3 prefixes to assemble response.
+- Must serve from the **notification service** (same as §3.3).
+- Must not list broad `state/success/` or `state/failed/` prefixes to assemble the response.
 
 ### 3.5 `GET /healthz`
 
@@ -108,17 +113,15 @@ Response expectation:
 - Fast, lightweight response indicating service health status.
 - Clarify in implementation whether this is **liveness-only** (process up) vs **readiness** (dependencies OK); the exercise minimum is a lightweight liveness-style response unless you extend the spec.
 
-## 4) Recent outcomes cache requirements
+## 4) Recent outcomes (notification service + Redis)
 
-The API must maintain a bounded cache for recent outcomes:
-- Cache capacity must be at least large enough to serve the **maximum `limit`** the API allows (including the default of **100** when `limit` is omitted).
-- Supports both success and failed streams.
+Recent outcomes are **not** stored in the **API** process. They live in **Redis** (dedicated container), updated by the **outcomes notification service** ([`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md)):
 
-Requirements:
-- New terminal outcomes update cache promptly.
-- Cache reads are used for `GET /messages/success` and `GET /messages/failed`.
-- Cache strategy may be in-memory deque or Redis-like list semantics.
-- Cache misses should not trigger expensive broad S3 listing scans.
+- **Redis** holds **bounded** **success** and **failed** streams (e.g. **LIST** or **ZSET**, **~10,000** entries cap)—large enough for the API’s **maximum `limit`** (including default **100** when `limit` is omitted).
+- Workers **publish** to the **notification service** **after** durable terminal S3 writes; the service **puts** `state/notifications/...` and **updates Redis**.
+- The API **queries the notification service** (HTTP) for `GET /messages/success` and `GET /messages/failed`—the API **must not** use a Redis client for outcomes.
+- **Startup:** the notification service **hydrates Redis** from **`state/notifications/...`** in S3 (up to **`HYDRATION_MAX`**, default 10k). That **cold-start** scan is **not** executed per `GET` request.
+- **Per-request rule:** outcome endpoints must **not** list broad `state/success/` or `state/failed/` trees to build the response.
 
 ## 5) API contract consistency requirements
 
@@ -173,8 +176,8 @@ The REST API plan is considered complete when:
 
 1. All required endpoints are defined and scoped.
 2. Input validation expectations are explicit for each endpoint class.
-3. Recent outcomes cache behavior is specified and bounded.
-4. No-broad-S3-listing performance rule is explicit.
+3. Recent outcomes are served via the **notification service** + **Redis** ([`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md)) with bounded streams and documented **S3 → Redis** hydration on notification service startup.
+4. No-broad-`state/success/` / `state/failed/` listing on each `GET` for outcomes is explicit.
 5. Response/error contract consistency is defined.
 6. API observability and operational guardrails are included.
 
@@ -193,7 +196,8 @@ flowchart LR
   Repeat --> Persist
   Repeat --> Activate
 
-  GetSuccess --> Cache[RecentOutcomesCache]
-  GetFailed --> Cache
+  GetSuccess --> NotifyQ[NotificationServiceQuery]
+  GetFailed --> NotifyQ
+  NotifyQ --> Redis[(Redis)]
 ```
 

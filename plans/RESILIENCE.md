@@ -97,7 +97,18 @@ The worker should enter normal processing only after owned shard bootstrap has c
 - Treated as migration events, not dynamic runtime toggles.
 - Must include explicit remapping strategy and compatibility plan.
 
-## 7) Observability requirements for resilience
+## 7) Outcomes notification service — startup / recovery
+
+The **notification service** ([`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md)) must:
+
+- On process start, after **Redis** is reachable, run **hydration**: load up to **`HYDRATION_MAX`** (default **10,000**) **newest** notification records from `state/notifications/...` via the persistence service and **write them into Redis**—**before** treating the service as **ready** (or document degraded mode).
+- Use **bounded** pagination when listing hour prefixes; **do not** assume unbounded RAM in the notification service **process** (Redis holds the hot cache).
+- If **Redis** is unavailable: **readiness** fails or **degraded** mode (no publish / query)—**document**.
+- If hydration fails after retries: emit **startup-degraded** telemetry; outcome `GET` endpoints may **503** or return **empty** until recovered—**document** the choice.
+
+**Note:** Worker pods follow the existing pending-shard bootstrap rules in §3; this section applies to the **notification service process**, not worker scheduling.
+
+## 8) Observability requirements for resilience
 
 Startup and recovery telemetry must include:
 - `hostname`, `pod_index`, owned shard range
@@ -112,7 +123,7 @@ Recovery health indicators:
 - time-to-recovery metric
 - backlog-at-recovery metric (pending count at startup)
 
-## 8) Validation checklist
+## 9) Validation checklist
 
 A resilience implementation is valid when:
 
@@ -123,8 +134,9 @@ A resilience implementation is valid when:
 5. Malformed records are skipped safely with diagnostics.
 6. Recovery metrics/logs are sufficient to diagnose startup behavior.
 7. Scale/restart events do not cause silent pending message loss.
+8. After notification service restart, **hydration** restores **Redis** up to **`HYDRATION_MAX`** per [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) §7 (or documented degraded behavior).
 
-## 9) Conceptual resilience flow
+## 10) Conceptual resilience flow
 
 ```mermaid
 flowchart LR
