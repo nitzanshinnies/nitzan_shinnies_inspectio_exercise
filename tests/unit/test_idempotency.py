@@ -1,4 +1,4 @@
-"""Idempotency — `ActivationLedger` must mirror `tests/reference_spec.ActivationLedgerRef`."""
+"""Idempotency — `ActivationLedger` must mirror `tests/reference_spec.ActivationLedgerRef` (TESTS.md §4.8, CORE_LIFECYCLE §6.2)."""
 
 from __future__ import annotations
 

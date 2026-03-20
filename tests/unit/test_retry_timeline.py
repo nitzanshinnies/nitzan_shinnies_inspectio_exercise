@@ -1,4 +1,4 @@
-"""Retry timeline — production must match `tests/reference_spec.py` (PLAN, CORE_LIFECYCLE §4)."""
+"""Retry timeline — production must match `tests/reference_spec.py` (TESTS.md §4.2, PLAN.md §5)."""
 
 from __future__ import annotations
 

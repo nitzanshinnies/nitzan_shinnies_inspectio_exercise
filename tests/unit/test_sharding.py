@@ -1,4 +1,4 @@
-"""Sharding — production must match `tests/reference_spec.py` (SHARDING.md)."""
+"""Sharding — production must match `tests/reference_spec.py` (TESTS.md §4.1, SHARDING.md)."""
 
 from __future__ import annotations
 

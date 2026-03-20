@@ -1,4 +1,4 @@
-"""UTC terminal keys — production must match `tests/reference_spec.py` (PLAN.md §3)."""
+"""UTC terminal keys — production must match `tests/reference_spec.py` (TESTS.md §4.4, PLAN.md §3)."""
 
 from __future__ import annotations
 

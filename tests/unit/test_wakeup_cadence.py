@@ -1,4 +1,4 @@
-"""Wakeup / due selection — production must match `tests/reference_spec.py`."""
+"""Wakeup / due selection — production must match `tests/reference_spec.py` (TESTS.md §4.3)."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Mock SMS outcome classification — production must match `tests/reference_spec.py` + mock config bounds."""
+"""Mock SMS outcome classification — production must match `tests/reference_spec.py` (TESTS.md §4.6, MOCK_SMS.md)."""
 
 from __future__ import annotations
 

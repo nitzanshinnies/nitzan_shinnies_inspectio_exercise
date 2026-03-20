@@ -1,4 +1,4 @@
-"""Smoke: `GET /healthz` on all FastAPI services (plans/TESTS.md §4.7)."""
+"""Smoke: `GET /healthz` on all FastAPI services (plans/TESTS.md §4.7, §9)."""
 
 from __future__ import annotations
 
