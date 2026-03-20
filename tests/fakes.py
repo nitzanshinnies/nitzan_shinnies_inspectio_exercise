@@ -27,10 +27,12 @@ class RecordingPersistence:
 
     async def list_prefix(self, prefix: str, max_keys: int | None = None) -> list[dict[str, Any]]:
         self.listed.append(prefix)
-        keys = [k for k in self._objects if k.startswith(prefix)]
+        if max_keys is not None and max_keys < 1:
+            raise ValueError("max_keys must be >= 1 when set")
+        keys = sorted(k for k in self._objects if k.startswith(prefix))
         if max_keys is not None:
             keys = keys[:max_keys]
-        return [{"Key": k} for k in sorted(keys)]
+        return [{"Key": k} for k in keys]
 
     async def put_object(self, key: str, body: bytes, content_type: str = "application/json") -> None:
         self.puts.append((key, body))
