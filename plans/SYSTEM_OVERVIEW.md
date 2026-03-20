@@ -166,17 +166,19 @@ The mock SMS provider is a separate single container with:
   - `to`: string
   - `body`: string
   - `shouldFail`: optional boolean
+  - `messageId`: optional string (logging/tracing)
 
 Failure behavior:
 - If `shouldFail=true`, always fail ( **`5xx`** send outcome).
-- Otherwise, fail a fixed fraction of requests using a configurable failure rate to ensure some messages fail during tests/load.
+- Otherwise, fail a fixed fraction of requests per **module-level constants** in the mock (e.g. `FAILURE_RATE`) so some messages fail during tests/load.
 - Failure kind for intermittent/`shouldFail` **`5xx`**: **failed to send** vs **service unavailable** (both **`5xx`**; see `MOCK_SMS.md`).
+- **No web UI** for mock behavior; tune constants in source and redeploy.
 
 Failure signal (send outcome):
 - Success → **`2xx`**; simulated send failure → **`5xx`**. **4xx** only for invalid requests to the mock.
 
-Optional:
-- The provider may simulate configurable latency to emulate slow/unreliable delivery.
+Optional simulated latency:
+- Governed by module constants (see `MOCK_SMS.md`).
 
 ## 7) Local development mapping (required)
 

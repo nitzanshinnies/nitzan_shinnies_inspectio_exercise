@@ -10,18 +10,19 @@ This document expands **Section 8** of [`plans/PLAN.md`](PLAN.md): the **mock SM
 **In scope:**
 - HTTP contract for `POST /send`
 - **Intermittent** (probabilistic) failure behavior plus explicit test hooks
-- Configuration (failure rate, optional seed, optional latency)
+- **Module-level constants** for all mock **behavior** parameters (failure rate, failure-kind mix, optional RNG seed, optional latency, listen port)
 - Success/failure signaling compatible with worker expectations
 - Container/run expectations and minimal observability
 
 **Out of scope:**
+- **Web UI** or runtime admin API for changing mock behavior (tune constants in source and redeploy).
 - Worker scheduler logic, S3 layout, API surface (covered elsewhere)
 - Real provider integrations (Twilio, SNS, etc.)
 
 ## 2) Deployment model
 
 - **Single small service** in its **own container** (one replica is enough for the exercise; scale only if you need HA for demos).
-- Workers call it over HTTP using a **base URL** from configuration (e.g. `MOCK_SMS_URL=http://mock-sms:8080`).
+- Workers call it over HTTP using a **base URL** from **worker** configuration (e.g. env on the worker side only: `MOCK_SMS_URL=http://mock-sms:8080`). The **mock service itself** does not read env vars for behavior—only **module constants** (see §5).
 - No shared state with workers; the mock may be **stateless** except for optional in-memory RNG state.
 
 ## 3) Endpoint: `POST /send`
@@ -69,32 +70,32 @@ Optional JSON body (either kind): `{ "error": "human readable", "code": "<machin
 
 1. If `shouldFail === true` → **always** respond with a **`5xx`** (implementation may alternate or fix a kind; see §4.2).
 2. Else:
-   - With probability **`failure_rate`** (configurable, see §5), return a **`5xx`**.
-   - With probability **`1 - failure_rate`**, return **`2xx`**.
+   - With probability **`FAILURE_RATE`** (module constant, see §5), return a **`5xx`**.
+   - With probability **`1 - FAILURE_RATE`**, return **`2xx`**.
 
 When returning a simulated failure **`5xx`**, pick **which kind** (**failed-to-send** vs **service unavailable**) using a second draw (§4.2).
 
-Each request is an **independent** trial unless a **deterministic mode** is enabled (§4.4). This yields **intermittent**, provider-like unreliability.
+Each request is an **independent** trial unless a **deterministic RNG seed** is set (§4.4). This yields **intermittent**, provider-like unreliability.
 
-### 4.2 Mix of failure kinds (optional configuration)
+### 4.2 Mix of failure kinds (configurable split via constant)
 
 When a request is chosen to **fail** (intermittent or `shouldFail`):
 
-- With probability **`unavailable_fraction`** (configurable, e.g. env **`MOCK_SMS_UNAVAILABLE_FRACTION`**, default **`0.5`**) return **`503`** with `code: SERVICE_UNAVAILABLE` (or equivalent).
+- With probability **`UNAVAILABLE_FRACTION`** (module constant, default suggestion **`0.5`**) return **`503`** with `code: SERVICE_UNAVAILABLE` (or equivalent).
 - Otherwise return **`500`** or **`502`** with `code: FAILED_TO_SEND` (or equivalent).
 
 This ensures load tests see **both** “hard” send failures and transient unavailability-style failures, all still **`5xx`**.
 
-### 4.3 Suggested default `failure_rate`
+### 4.3 Suggested default `FAILURE_RATE`
 
 - **Exercise default:** e.g. **`0.15`–`0.30`** (15%–30%) so retries and load tests show mixed outcomes without starving successes.
-- Exact default must be **documented** and **overridable** via environment variable.
+- **`FAILURE_RATE`** is a **module constant**; document the chosen value in code comments next to the constant.
 
 ### 4.4 Determinism for tests
 
 Optional but recommended for CI/reproducibility:
 
-- **`MOCK_SMS_SEED`**: if set (integer), initialize RNG so the same sequence of outcomes repeats for a given order of requests (same process).
+- **`RNG_SEED`**: module-level constant; if set to an `int`, initialize the RNG so the same sequence of outcomes repeats for a given order of requests (same process). Use `None` (or omit) for non-deterministic behavior.
 - **`shouldFail`** remains the **highest-priority** override (always fail when true).
 
 Document clearly that multi-worker or concurrent tests may interleave requests, which changes ordering vs single-threaded replay.
@@ -104,23 +105,27 @@ Document clearly that multi-worker or concurrent tests may interleave requests, 
 - Baseline spec: **do not** require per-`messageId` failure memory; intermittent behavior is **per request**.
 - Optional extension (not required): “poison” IDs that always fail—only if you need it for targeted demos.
 
-## 5) Configuration (environment variables)
+## 5) Behavior parameters (module constants)
 
-| Variable | Meaning | Example |
-|----------|---------|---------|
-| `MOCK_SMS_FAILURE_RATE` | Probability of failure when `shouldFail` is not true; `0.0`–`1.0`. | `0.2` |
-| `MOCK_SMS_UNAVAILABLE_FRACTION` | Of simulated **`5xx`** outcomes, fraction that are **service unavailable** (`503`); remainder are **failed-to-send** (`500`/`502`). `0.0`–`1.0`. | `0.5` |
-| `MOCK_SMS_SEED` | Optional RNG seed for reproducible intermittent sequences. | `42` |
-| `MOCK_SMS_PORT` / `PORT` | Listen port inside container. | `8080` |
-| `MOCK_SMS_LATENCY_MS` | Optional injected delay before processing (§6). | `0` or `50` |
+Define **all** mock **behavior** tuning as **named constants at the top of the mock’s Python module** (or a dedicated `config.py` imported by the app). **Do not** read OS environment variables for these values. **No web UI** to change them at runtime.
 
-Invalid `MOCK_SMS_FAILURE_RATE` or `MOCK_SMS_UNAVAILABLE_FRACTION` (NaN, negative, >1) → fail fast at startup with a clear error log.
+| Constant | Meaning | Example / suggestion |
+|----------|---------|---------------------|
+| `FAILURE_RATE` | Probability of **`5xx`** when `shouldFail` is not true; must satisfy `0.0 <= FAILURE_RATE <= 1.0`. | `0.2` |
+| `UNAVAILABLE_FRACTION` | Of simulated **`5xx`** outcomes, fraction that are **service unavailable** (`503`); remainder are **failed-to-send** (`500`/`502`). `0.0`–`1.0`. | `0.5` |
+| `RNG_SEED` | Optional `int` for reproducible intermittent sequences; `None` for non-deterministic. | `42` or `None` |
+| `LISTEN_PORT` | TCP port the mock binds to (still a constant in module; Dockerfile/`uvicorn` CLI should match). | `8080` |
+| `LATENCY_MS` | Milliseconds to sleep before evaluating success/failure (§6); use `0` to disable. | `0` or `50` |
+
+Requirements:
+- Validate ranges at **import/startup** (e.g. assert or explicit check): invalid `FAILURE_RATE` / `UNAVAILABLE_FRACTION` → **fail fast** with a clear error before serving traffic.
+- Changing behavior = **edit constants** and **rebuild/redeploy** the container.
 
 ## 6) Optional latency / slow path
 
 To simulate slow or flaky networks:
 
-- **Fixed delay:** sleep `MOCK_SMS_LATENCY_MS` before evaluating success/failure.
+- **Fixed delay:** sleep **`LATENCY_MS`** (module constant) before evaluating success/failure.
 - **Optional jitter:** e.g. uniform `0..JITTER_MS`—document if implemented.
 
 Workers should already tolerate slow responses; keep defaults **low** so the **500ms wakeup** cadence remains meaningful in tests.
@@ -135,7 +140,7 @@ Not mandated in `PLAN.md`, but useful for Docker/Kubernetes:
 
 Structured logs (stdout):
 
-- Each `POST /send`: `messageId` (if present), outcome (`success` / `failed_to_send` / `service_unavailable` / `forced_fail`), HTTP status returned, optional `failure_rate` effective at request time.
+- Each `POST /send`: `messageId` (if present), outcome (`success` / `failed_to_send` / `service_unavailable` / `forced_fail`), HTTP status returned, effective `FAILURE_RATE` / `UNAVAILABLE_FRACTION` from module (for debugging).
 - Log level: avoid logging full `body` if it can be large; truncate or omit in production-like settings.
 
 Metrics (optional for exercise):
@@ -154,9 +159,9 @@ The mock SMS plan is complete when:
 
 1. `POST /send` validates required fields and returns **2xx** only on simulated success.
 2. **`shouldFail=true`** always yields **`5xx`** (never **`2xx`** on the send outcome path).
-3. With `shouldFail` absent/false, outcomes are **`2xx`** vs **`5xx`** at approximately the configured **failure rate** over many requests.
+3. With `shouldFail` absent/false, outcomes are **`2xx`** vs **`5xx`** at approximately **`FAILURE_RATE`** over many requests.
 4. Simulated send failures use **`5xx` only** (split between **failed-to-send** vs **service unavailable** per §4.2); **`4xx`** appears only for **invalid mock requests** (§3.1).
-5. Configuration for **failure rate**, **unavailable vs failed-to-send mix**, (and optional **seed**, **latency**) is documented and defaults are sensible for load tests.
+5. **Module constants** for **failure rate**, **unavailable vs failed-to-send mix**, optional **RNG seed**, **latency**, and **listen port** are documented in code and defaults are sensible for load tests; **no env-driven or web-UI** tuning of these parameters.
 6. Container runs isolated from workers and is reachable at a **configurable base URL**.
 
 ## 11) Conceptual flow

@@ -143,9 +143,9 @@ Recent outcomes performance requirement:
 
 ## 8) Mock SMS provider container (requirements)
 
-**Detailed plan:** [`plans/MOCK_SMS.md`](MOCK_SMS.md) (intermittent/probabilistic failures, config, and validation checklist).
+**Detailed plan:** [`plans/MOCK_SMS.md`](MOCK_SMS.md) (intermittent/probabilistic failures, **module-level behavior constants**, and validation checklist).
 
-The mock SMS provider must be a separate container (single service) with the sole purpose of simulating SMS sends for the worker.
+The mock SMS provider must be a separate container (single service) with the sole purpose of simulating SMS sends for the worker. **No web UI** for tuning behavior; all tunable **behavior** parameters are **named constants in the mock’s Python module** (change by editing code / redeploy).
 
 - Endpoint:
   - `POST /send`
@@ -153,15 +153,16 @@ The mock SMS provider must be a separate container (single service) with the sol
   - `to`: string
   - `body`: string
   - `shouldFail`: optional boolean
+  - `messageId`: optional string (logging/tracing; worker may include it)
 - Failure behavior:
   - If `shouldFail=true`, the provider must always fail the request.
-  - Otherwise, the provider must fail a fixed fraction of requests using a configurable failure rate for the exercise (so that some messages fail during load).
+  - Otherwise, the provider must fail a fixed fraction of requests per the module’s **`FAILURE_RATE`** constant (so that some messages fail during load).
   - Simulated failures should reflect realistic categories: **failed to send** (e.g. invalid recipient, line error) vs **service unavailable** (transient outage); both are returned as **`5xx`** (see `MOCK_SMS.md`).
 - Success/failure signal (send outcome):
   - Success → HTTP **`2xx`**.
   - Simulated send failure → HTTP **`5xx`** (not **`4xx`** on the normal send path; **`4xx`** reserved for bad requests to the mock).
-- Optional:
-  - The provider may support configurable latency to simulate slow/unreliable SMS delivery.
+- Optional simulated latency:
+  - Governed by module constants (e.g. **`LATENCY_MS`**) per `MOCK_SMS.md`—not a separate admin UI.
 
 ## 9) Testing plan (requirements-first)
 

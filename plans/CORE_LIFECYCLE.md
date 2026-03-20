@@ -126,7 +126,7 @@ Worker send behavior must align with mock SMS contract:
 - Success indication: HTTP **`2xx`**
 - Simulated send failure: HTTP **`5xx`** (includes **failed-to-send** vs **service-unavailable** flavors; worker treats any **`5xx`** as a failed send for retry purposes)
 - `shouldFail=true` should always yield **`5xx`**
-- Otherwise use configured fixed failure rate (intermittent **`2xx`** vs **`5xx`**)
+- Otherwise the mock applies its module-level **`FAILURE_RATE`** (intermittent **`2xx`** vs **`5xx`**)
 
 ### 6.2 Idempotency requirements
 
