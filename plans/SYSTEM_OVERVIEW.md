@@ -168,11 +168,12 @@ The mock SMS provider is a separate single container with:
   - `shouldFail`: optional boolean
 
 Failure behavior:
-- If `shouldFail=true`, always fail.
+- If `shouldFail=true`, always fail ( **`5xx`** send outcome).
 - Otherwise, fail a fixed fraction of requests using a configurable failure rate to ensure some messages fail during tests/load.
+- Failure kind for intermittent/`shouldFail` **`5xx`**: **failed to send** vs **service unavailable** (both **`5xx`**; see `MOCK_SMS.md`).
 
-Failure signal:
-- Worker observes failures via HTTP **non-2xx** responses.
+Failure signal (send outcome):
+- Success → **`2xx`**; simulated send failure → **`5xx`**. **4xx** only for invalid requests to the mock.
 
 Optional:
 - The provider may simulate configurable latency to emulate slow/unreliable delivery.

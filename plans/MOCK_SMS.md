@@ -37,20 +37,29 @@ This document expands **Section 8** of [`plans/PLAN.md`](PLAN.md): the **mock SM
 
 Validation:
 - Reject missing `to` or `body` with **4xx** (e.g. `400`) and a small JSON error body.
-- Ignore unknown fields or reject with **400**—pick one and document in implementation (prefer **ignore** for forward compatibility in exercises).
+  - **Note:** **4xx** is reserved for **bad requests to the mock itself** (schema/validation). It is **not** used for simulated SMS outcomes once the request is accepted for processing.
 
-### 3.2 Success response
+### 3.2 Success response (simulated send succeeded)
 
-- **2xx** status (e.g. `200 OK` or `204 No Content`).
+- **`2xx`** only (e.g. `200 OK` or `204 No Content`).
 - Optional JSON body, e.g. `{ "ok": true }`—must not be required for workers to treat as success.
 
-### 3.3 Failure response
+### 3.3 Failure responses (simulated SMS did not succeed)
 
-- **Non-2xx** HTTP status (per architect requirement so workers treat as send failure).
-- Recommended: **`503 Service Unavailable`** or **`502 Bad Gateway`** to resemble transient provider errors; **`500`** is acceptable.
-- Optional JSON body: `{ "error": "...", "code": "SEND_FAILED" }` for debugging.
+For **simulated send outcomes**, the mock uses **only `2xx` (success) or `5xx` (failure)**—no **`4xx`** on the happy validation path.
 
-Workers **must not** depend on a specific failure status code—only on **non-2xx**.
+Two **failure kinds** (both returned as **`5xx`**) so workers can optionally distinguish logging/metrics while still treating any **`5xx`** as a failed send for lifecycle/retry purposes:
+
+| Failure kind | Meaning (examples) | Suggested HTTP | Optional JSON `code` |
+|--------------|-------------------|----------------|------------------------|
+| **Failed to send** | Provider accepted the call but could not deliver: invalid recipient, line error, upstream rejection, etc. | **`500 Internal Server Error`** or **`502 Bad Gateway`** | e.g. `FAILED_TO_SEND` |
+| **Service unavailable** | Transient outage / overload: circuit open, throttling, gateway timeout | **`503 Service Unavailable`** | e.g. `SERVICE_UNAVAILABLE` |
+
+Optional JSON body (either kind): `{ "error": "human readable", "code": "<machine code>" }` for debugging.
+
+**Worker contract:**
+- Treat **any `5xx`** from `POST /send` as a **failed send** (retry per lifecycle rules).
+- **Must not** depend on **which** `5xx` or **`code`** for correctness—only for observability; **`shouldFail`** and intermittent logic may pick either failure kind.
 
 ## 4) Intermittent failure behavior (core requirement)
 
@@ -58,19 +67,30 @@ Workers **must not** depend on a specific failure status code—only on **non-2x
 
 ### 4.1 Default semantics
 
-1. If `shouldFail === true` → **always** respond with failure (non-2xx).
+1. If `shouldFail === true` → **always** respond with a **`5xx`** (implementation may alternate or fix a kind; see §4.2).
 2. Else:
-   - With probability **`failure_rate`** (configurable, see §5), return failure.
-   - With probability **`1 - failure_rate`**, return success.
+   - With probability **`failure_rate`** (configurable, see §5), return a **`5xx`**.
+   - With probability **`1 - failure_rate`**, return **`2xx`**.
 
-Each request is an **independent** trial unless a **deterministic mode** is enabled (§4.3). This yields **intermittent**, provider-like unreliability.
+When returning a simulated failure **`5xx`**, pick **which kind** (**failed-to-send** vs **service unavailable**) using a second draw (§4.2).
 
-### 4.2 Suggested default `failure_rate`
+Each request is an **independent** trial unless a **deterministic mode** is enabled (§4.4). This yields **intermittent**, provider-like unreliability.
+
+### 4.2 Mix of failure kinds (optional configuration)
+
+When a request is chosen to **fail** (intermittent or `shouldFail`):
+
+- With probability **`unavailable_fraction`** (configurable, e.g. env **`MOCK_SMS_UNAVAILABLE_FRACTION`**, default **`0.5`**) return **`503`** with `code: SERVICE_UNAVAILABLE` (or equivalent).
+- Otherwise return **`500`** or **`502`** with `code: FAILED_TO_SEND` (or equivalent).
+
+This ensures load tests see **both** “hard” send failures and transient unavailability-style failures, all still **`5xx`**.
+
+### 4.3 Suggested default `failure_rate`
 
 - **Exercise default:** e.g. **`0.15`–`0.30`** (15%–30%) so retries and load tests show mixed outcomes without starving successes.
 - Exact default must be **documented** and **overridable** via environment variable.
 
-### 4.3 Determinism for tests
+### 4.4 Determinism for tests
 
 Optional but recommended for CI/reproducibility:
 
@@ -79,7 +99,7 @@ Optional but recommended for CI/reproducibility:
 
 Document clearly that multi-worker or concurrent tests may interleave requests, which changes ordering vs single-threaded replay.
 
-### 4.4 No “sticky” failure per `messageId` (unless explicitly added)
+### 4.5 No “sticky” failure per `messageId` (unless explicitly added)
 
 - Baseline spec: **do not** require per-`messageId` failure memory; intermittent behavior is **per request**.
 - Optional extension (not required): “poison” IDs that always fail—only if you need it for targeted demos.
@@ -89,11 +109,12 @@ Document clearly that multi-worker or concurrent tests may interleave requests, 
 | Variable | Meaning | Example |
 |----------|---------|---------|
 | `MOCK_SMS_FAILURE_RATE` | Probability of failure when `shouldFail` is not true; `0.0`–`1.0`. | `0.2` |
+| `MOCK_SMS_UNAVAILABLE_FRACTION` | Of simulated **`5xx`** outcomes, fraction that are **service unavailable** (`503`); remainder are **failed-to-send** (`500`/`502`). `0.0`–`1.0`. | `0.5` |
 | `MOCK_SMS_SEED` | Optional RNG seed for reproducible intermittent sequences. | `42` |
 | `MOCK_SMS_PORT` / `PORT` | Listen port inside container. | `8080` |
 | `MOCK_SMS_LATENCY_MS` | Optional injected delay before processing (§6). | `0` or `50` |
 
-Invalid `MOCK_SMS_FAILURE_RATE` (NaN, negative, >1) → fail fast at startup with a clear error log.
+Invalid `MOCK_SMS_FAILURE_RATE` or `MOCK_SMS_UNAVAILABLE_FRACTION` (NaN, negative, >1) → fail fast at startup with a clear error log.
 
 ## 6) Optional latency / slow path
 
@@ -114,7 +135,7 @@ Not mandated in `PLAN.md`, but useful for Docker/Kubernetes:
 
 Structured logs (stdout):
 
-- Each `POST /send`: `messageId` (if present), outcome (`success`/`fail`/`forced_fail`), HTTP status returned, optional `failure_rate` effective at request time.
+- Each `POST /send`: `messageId` (if present), outcome (`success` / `failed_to_send` / `service_unavailable` / `forced_fail`), HTTP status returned, optional `failure_rate` effective at request time.
 - Log level: avoid logging full `body` if it can be large; truncate or omit in production-like settings.
 
 Metrics (optional for exercise):
@@ -132,10 +153,10 @@ Metrics (optional for exercise):
 The mock SMS plan is complete when:
 
 1. `POST /send` validates required fields and returns **2xx** only on simulated success.
-2. **`shouldFail=true`** always yields **non-2xx**.
-3. With `shouldFail` absent/false, failures occur **intermittently** at approximately the configured **failure rate** over many requests.
-4. Failures are visible to workers **only** via **non-2xx** (no special success body meaning “failed”).
-5. Configuration for **failure rate** (and optional **seed**, **latency**) is documented and defaults are sensible for load tests.
+2. **`shouldFail=true`** always yields **`5xx`** (never **`2xx`** on the send outcome path).
+3. With `shouldFail` absent/false, outcomes are **`2xx`** vs **`5xx`** at approximately the configured **failure rate** over many requests.
+4. Simulated send failures use **`5xx` only** (split between **failed-to-send** vs **service unavailable** per §4.2); **`4xx`** appears only for **invalid mock requests** (§3.1).
+5. Configuration for **failure rate**, **unavailable vs failed-to-send mix**, (and optional **seed**, **latency**) is documented and defaults are sensible for load tests.
 6. Container runs isolated from workers and is reachable at a **configurable base URL**.
 
 ## 11) Conceptual flow
@@ -147,9 +168,9 @@ sequenceDiagram
 
   Worker->>MockSMS: POST /send JSON(to,body,shouldFail?,messageId?)
   alt shouldFail true
-    MockSMS-->>Worker: non-2xx
-  else random trial failure
-    MockSMS-->>Worker: non-2xx
+    MockSMS-->>Worker: 5xx
+  else intermittent failure
+    MockSMS-->>Worker: 5xx failed_to_send or 503 unavailable
   else success
     MockSMS-->>Worker: 2xx
   end

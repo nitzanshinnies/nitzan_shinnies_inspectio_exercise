@@ -123,9 +123,10 @@ After success/failed transition:
 
 Worker send behavior must align with mock SMS contract:
 - Endpoint: `POST /send`
-- Failure indication: HTTP non-2xx
-- `shouldFail=true` should always fail
-- Otherwise use configured fixed failure rate
+- Success indication: HTTP **`2xx`**
+- Simulated send failure: HTTP **`5xx`** (includes **failed-to-send** vs **service-unavailable** flavors; worker treats any **`5xx`** as a failed send for retry purposes)
+- `shouldFail=true` should always yield **`5xx`**
+- Otherwise use configured fixed failure rate (intermittent **`2xx`** vs **`5xx`**)
 
 ### 6.2 Idempotency requirements
 

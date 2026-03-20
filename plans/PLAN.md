@@ -156,8 +156,10 @@ The mock SMS provider must be a separate container (single service) with the sol
 - Failure behavior:
   - If `shouldFail=true`, the provider must always fail the request.
   - Otherwise, the provider must fail a fixed fraction of requests using a configurable failure rate for the exercise (so that some messages fail during load).
-- Failure signal:
-  - Failures are signaled to the worker via HTTP non-2xx responses.
+  - Simulated failures should reflect realistic categories: **failed to send** (e.g. invalid recipient, line error) vs **service unavailable** (transient outage); both are returned as **`5xx`** (see `MOCK_SMS.md`).
+- Success/failure signal (send outcome):
+  - Success → HTTP **`2xx`**.
+  - Simulated send failure → HTTP **`5xx`** (not **`4xx`** on the normal send path; **`4xx`** reserved for bad requests to the mock).
 - Optional:
   - The provider may support configurable latency to simulate slow/unreliable SMS delivery.
 
