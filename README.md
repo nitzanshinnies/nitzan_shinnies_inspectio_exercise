@@ -47,7 +47,9 @@ docker compose up --build
 
 ## Tests
 
-**Unit** tests live under `tests/unit/` and target **`inspectio_exercise.domain`** (pure sharding, retry, wakeup, UTC keys, idempotency, SMS outcome helpers) plus REST/persistence fakes and **`GET /healthz`** smoke — see **`plans/TESTS.md` §4**.
+**TDD:** Canonical behavior is documented in **`tests/reference_spec.py`** (with notes tying to **`plans/`**). **`inspectio_exercise.domain`** is implemented to match that spec; production functions are **`NotImplementedError` stubs** until you fill them in — **`pytest tests/unit`** stays **red** until domain matches the reference.
+
+Smoke / wiring tests (**`GET /healthz`**, REST **501** skeleton, **`RecordingPersistence`**) should pass without domain logic.
 
 ```bash
 pytest
@@ -57,4 +59,4 @@ pytest -m unit
 
 ## Status
 
-Skeleton only: **`GET /healthz`** on each service; business routes return **501** until implemented per plan documents. **Domain** logic and **unit** tests are in place for deterministic behavior (sharding, retry timeline, due selection, UTC terminal paths).
+Skeleton only: **`GET /healthz`** on each service; business routes return **501** until implemented per plan documents. **Domain** package: implement to satisfy **`tests/reference_spec.py`** (see **`plans/TESTS.md` §4**).

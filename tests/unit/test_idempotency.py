@@ -1,29 +1,34 @@
-"""Idempotency (plans/CORE_LIFECYCLE.md §6.2, REST_API.md §5.2)."""
+"""Idempotency — `ActivationLedger` must mirror `tests/reference_spec.ActivationLedgerRef`."""
 
 from __future__ import annotations
 
 import pytest
 
 from inspectio_exercise.domain.idempotency import ActivationLedger
+from tests.reference_spec import ActivationLedgerRef
 
 
 @pytest.mark.unit
-def test_duplicate_activation_rejected() -> None:
-    ledger = ActivationLedger()
-    assert ledger.try_activate("m1") is True
-    assert ledger.try_activate("m1") is False
+def test_duplicate_activation_rejected_matches_ref() -> None:
+    ref = ActivationLedgerRef()
+    impl = ActivationLedger()
+    assert impl.try_activate("m1") == ref.try_activate("m1")
+    assert impl.try_activate("m1") == ref.try_activate("m1")
 
 
 @pytest.mark.unit
-def test_replay_after_terminal_rejected() -> None:
-    ledger = ActivationLedger()
-    assert ledger.try_activate("m1") is True
-    ledger.mark_terminal("m1")
-    assert ledger.try_activate("m1") is False
+def test_replay_after_terminal_rejected_matches_ref() -> None:
+    ref = ActivationLedgerRef()
+    impl = ActivationLedger()
+    assert impl.try_activate("m1") == ref.try_activate("m1")
+    impl.mark_terminal("m1")
+    ref.mark_terminal("m1")
+    assert impl.try_activate("m1") == ref.try_activate("m1")
 
 
 @pytest.mark.unit
-def test_distinct_messages_independent() -> None:
-    ledger = ActivationLedger()
-    assert ledger.try_activate("a") is True
-    assert ledger.try_activate("b") is True
+def test_distinct_messages_independent_matches_ref() -> None:
+    ref = ActivationLedgerRef()
+    impl = ActivationLedger()
+    assert impl.try_activate("a") == ref.try_activate("a")
+    assert impl.try_activate("b") == ref.try_activate("b")

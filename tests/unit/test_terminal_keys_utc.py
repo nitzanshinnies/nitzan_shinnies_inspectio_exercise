@@ -1,40 +1,28 @@
-"""UTC terminal key paths (plans/PLAN.md §3, TESTS.md §4.4)."""
+"""UTC terminal keys — production must match `tests/reference_spec.py` (PLAN.md §3)."""
 
 from __future__ import annotations
 
 import pytest
 
-from inspectio_exercise.domain.utc_paths import (
-    terminal_failed_key,
-    terminal_success_key,
-    utc_segments_for_instant_ms,
-)
+from inspectio_exercise.domain import utc_paths as utc_mod
+from tests import reference_spec as spec
 
 
 @pytest.mark.unit
-def test_utc_segments_zero_padded() -> None:
-    # 2024-01-15 14:30:00 UTC
+def test_utc_segments_match_spec() -> None:
     ms = 1_705_329_000_000
-    assert utc_segments_for_instant_ms(ms) == ("2024", "01", "15", "14")
+    assert utc_mod.utc_segments_for_instant_ms(ms) == spec.utc_segments_for_instant_ms(ms)
 
 
 @pytest.mark.unit
-def test_year_rollover_utc() -> None:
-    ms = 1_704_024_000_000  # 2023-12-31 12:00 UTC
-    yyyy, mm, dd, hh = utc_segments_for_instant_ms(ms)
-    assert yyyy == "2023"
-    assert mm == "12"
-    assert dd == "31"
-    assert hh == "12"
+def test_year_boundary_segments_match_spec() -> None:
+    ms = 1_704_024_000_000
+    assert utc_mod.utc_segments_for_instant_ms(ms) == spec.utc_segments_for_instant_ms(ms)
 
 
 @pytest.mark.unit
-def test_success_key_shape() -> None:
-    k = terminal_success_key("msg-1", 1_705_329_000_000)
-    assert k.startswith("state/success/2024/01/15/14/msg-1.json")
-
-
-@pytest.mark.unit
-def test_failed_key_shape() -> None:
-    k = terminal_failed_key("msg-1", 1_705_329_000_000)
-    assert k.startswith("state/failed/2024/01/15/14/msg-1.json")
+def test_terminal_keys_match_spec() -> None:
+    instant = 1_705_329_000_000
+    mid = "msg-1"
+    assert utc_mod.terminal_success_key(mid, instant) == spec.terminal_success_key(mid, instant)
+    assert utc_mod.terminal_failed_key(mid, instant) == spec.terminal_failed_key(mid, instant)
