@@ -1,0 +1,227 @@
+:root {
+    --bg: #0f1210;
+    --panel: #171b18;
+    --text: #e8ebe6;
+    --muted: #9aa399;
+    --accent: #c4a35a;
+    --accent-dim: #8a7340;
+    --error: #e07a6e;
+    --border: #2a312b;
+    --font-display: "DM Serif Display", Georgia, serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+    --font-sans: "Source Sans 3", system-ui, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    color: var(--text);
+    background:
+        radial-gradient(1200px 600px at 10% -10%, #1f2a22 0%, transparent 55%),
+        radial-gradient(900px 500px at 100% 0%, #1a1c24 0%, transparent 50%),
+        var(--bg);
+    font-family: var(--font-sans);
+    line-height: 1.5;
+}
+
+a {
+    color: var(--accent);
+}
+
+.page {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 2.5rem 1.25rem 4rem;
+}
+
+header.hero {
+    margin-bottom: 2.5rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 1.5rem;
+}
+
+header.hero h1 {
+    margin: 0 0 0.5rem;
+    font-family: var(--font-display);
+    font-size: clamp(1.75rem, 4vw, 2.35rem);
+    font-weight: 400;
+    letter-spacing: 0.02em;
+}
+
+header.hero p {
+    margin: 0;
+    color: var(--muted);
+    max-width: 52ch;
+}
+
+#banner {
+    margin-bottom: 1.5rem;
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    font-size: 0.95rem;
+}
+
+#banner[data-kind="error"] {
+    border-color: color-mix(in srgb, var(--error) 55%, var(--border));
+    color: var(--error);
+}
+
+#banner[hidden] {
+    display: none;
+}
+
+.grid {
+    display: grid;
+    gap: 1.5rem;
+}
+
+@media (min-width: 720px) {
+    .grid.two {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+.panel {
+    background: color-mix(in srgb, var(--panel) 92%, transparent);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem 1.35rem;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.25);
+}
+
+.panel h2 {
+    margin: 0 0 1rem;
+    font-size: 1.05rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--accent);
+}
+
+label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-bottom: 0.35rem;
+}
+
+input[type="text"],
+input[type="number"],
+textarea {
+    width: 100%;
+    padding: 0.55rem 0.65rem;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: #0c0f0d;
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: 1rem;
+}
+
+textarea {
+    min-height: 5.5rem;
+    resize: vertical;
+}
+
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    margin-top: 1rem;
+    align-items: center;
+}
+
+button {
+    cursor: pointer;
+    border-radius: 6px;
+    border: 1px solid var(--accent-dim);
+    background: linear-gradient(180deg, #3a3428 0%, #26231c 100%);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: 0.95rem;
+    padding: 0.5rem 1rem;
+}
+
+button:hover {
+    border-color: var(--accent);
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.hint {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-top: 0.35rem;
+}
+
+.result {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border-radius: 6px;
+    border: 1px dashed color-mix(in srgb, var(--muted) 45%, var(--border));
+    background: rgba(0, 0, 0, 0.2);
+    overflow: auto;
+    max-height: 280px;
+}
+
+.result pre {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.outcomes-scroll {
+    overflow: auto;
+    max-height: 360px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+}
+
+.outcomes-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+}
+
+.outcomes-table th,
+.outcomes-table td {
+    border-bottom: 1px solid var(--border);
+    padding: 0.45rem 0.55rem;
+    text-align: left;
+    vertical-align: top;
+}
+
+.outcomes-table th {
+    position: sticky;
+    top: 0;
+    background: #121612;
+    z-index: 1;
+}
+
+.outcomes-table tr:hover td {
+    background: rgba(196, 163, 90, 0.06);
+}
+
+footer.note {
+    margin-top: 2.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.85rem;
+}

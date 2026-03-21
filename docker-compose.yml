@@ -1,4 +1,11 @@
 services:
+  web:
+    build: ./frontend
+    depends_on:
+      - api
+    ports:
+      - "3000:80"
+
   api:
     build: .
     command: ["inspectio-api"]

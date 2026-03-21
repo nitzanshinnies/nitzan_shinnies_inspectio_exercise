@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="inspectio-api-base" content="" />
+        <title>Inspectio — SMS retry demo</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=IBM+Plex+Mono:wght@400;500&family=Source+Sans+3:wght@400;600&display=swap"
+            rel="stylesheet"
+        />
+        <link rel="stylesheet" href="/css/app.css" />
+    </head>
+    <body>
+        <div class="page">
+            <header class="hero">
+                <h1>Inspectio operational UI</h1>
+                <p>
+                    Submit messages, run repeat load tests, and inspect recent outcomes via the public
+                    REST API (<code>plans/REST_API.md</code>). Served as a separate container; JSON
+                    routes are proxied to the API service in Docker Compose.
+                </p>
+            </header>
+
+            <div id="banner" role="status" hidden></div>
+
+            <div class="grid two">
+                <section class="panel" aria-labelledby="send-heading">
+                    <h2 id="send-heading">Send one message</h2>
+                    <form id="form-send" novalidate>
+                        <label for="message-to">To (optional)</label>
+                        <input
+                            id="message-to"
+                            name="to"
+                            type="text"
+                            autocomplete="tel"
+                            placeholder="+10000000000"
+                        />
+                        <label for="message-body">Body</label>
+                        <textarea id="message-body" name="body" required placeholder="SMS text"></textarea>
+                        <div class="actions">
+                            <button type="submit">POST /messages</button>
+                        </div>
+                    </form>
+                    <div id="send-result" class="result" aria-live="polite"></div>
+                </section>
+
+                <section class="panel" aria-labelledby="repeat-heading">
+                    <h2 id="repeat-heading">Repeat template</h2>
+                    <form id="form-repeat" novalidate>
+                        <label for="repeat-count">Count</label>
+                        <input
+                            id="repeat-count"
+                            name="count"
+                            type="number"
+                            min="1"
+                            step="1"
+                            value="5"
+                            required
+                        />
+                        <p class="hint">Uses the same <strong>To</strong> / <strong>Body</strong> fields as above.</p>
+                        <div class="actions">
+                            <button type="submit">POST /messages/repeat?count=N</button>
+                        </div>
+                    </form>
+                    <div id="repeat-result" class="result" aria-live="polite"></div>
+                </section>
+            </div>
+
+            <section class="panel" style="margin-top: 1.5rem" aria-labelledby="outcomes-heading">
+                <h2 id="outcomes-heading">Recent outcomes</h2>
+                <label for="outcomes-limit">Limit (default 100)</label>
+                <div class="actions">
+                    <input
+                        id="outcomes-limit"
+                        name="limit"
+                        type="number"
+                        min="1"
+                        max="1000"
+                        step="1"
+                        style="max-width: 8rem"
+                    />
+                    <button id="btn-success-refresh" type="button">GET /messages/success</button>
+                    <button id="btn-failed-refresh" type="button">GET /messages/failed</button>
+                </div>
+                <div class="grid two" style="margin-top: 1rem">
+                    <div>
+                        <h3 class="hint" style="margin: 0 0 0.5rem">Success</h3>
+                        <div id="success-outcomes" class="outcomes-scroll"></div>
+                    </div>
+                    <div>
+                        <h3 class="hint" style="margin: 0 0 0.5rem">Failed</h3>
+                        <div id="failed-outcomes" class="outcomes-scroll"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="panel" style="margin-top: 1.5rem" aria-labelledby="health-heading">
+                <h2 id="health-heading">API liveness</h2>
+                <div class="actions">
+                    <button id="btn-health" type="button">GET /healthz</button>
+                </div>
+                <div id="health-result" class="result" aria-live="polite"></div>
+            </section>
+
+            <footer class="note">
+                Override API base URL with
+                <code>&lt;meta name="inspectio-api-base" content="http://localhost:8000" /&gt;</code>
+                when not using the Compose nginx proxy (same-origin).
+            </footer>
+        </div>
+        <script type="module" src="/js/app.js"></script>
+    </body>
+</html>
