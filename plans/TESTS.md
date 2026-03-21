@@ -105,7 +105,7 @@ Cover [`REST_API.md`](REST_API.md):
 
 - `POST /messages`: reject empty/malformed `body` / `to`; stable **4xx** body shape (**machine-readable code + message**) where implemented ([`REST_API.md`](REST_API.md) §5.1–5.3).
 - `POST /messages/repeat?count=…`: same body as **`POST /messages`**, reused **`count`** times; reject invalid `count`; enforce **upper bound**; response reflects **`N`** distinct `messageId`s when successful.
-- `GET /messages/*`: invalid `limit` handling; optional **`to`** query (defaults documented in [`REST_API.md`](REST_API.md)).
+- `GET /messages/*`: invalid `limit` handling (exercise: **`?limit=100`** defaults when omitted).
 - `GET /healthz`: returns **2xx** quickly (lightweight liveness; may run as integration smoke).
 
 ### 4.8 Idempotency and duplicate handling

@@ -8,8 +8,10 @@ from typing import Annotated, Any
 
 import httpx
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from fastapi.responses import HTMLResponse
 
 from inspectio_exercise.api import config
+from inspectio_exercise.api.operational_ui import OPERATIONAL_HTML
 from inspectio_exercise.api.schemas import MessageCreate
 from inspectio_exercise.api.use_cases import submit_message
 from inspectio_exercise.common.health import register_healthz
@@ -34,19 +36,6 @@ def _repeat_count(
     ],
 ) -> int:
     return count
-
-
-def _message_to_query(
-    to: Annotated[
-        str,
-        Query(
-            description=(
-                "Default SMS destination for this request scope; reserved for future outcome filtering."
-            ),
-        ),
-    ] = config.DEFAULT_MESSAGE_TO,
-) -> str:
-    return to
 
 
 def create_app(
@@ -89,6 +78,11 @@ def create_app(
         lifespan=lifespan,
     )
     register_healthz(app, "api")
+
+    @app.get("/", include_in_schema=False)
+    async def operational_page() -> HTMLResponse:
+        """Minimal HTML hitting the exercise REST routes (optional operational surface)."""
+        return HTMLResponse(OPERATIONAL_HTML)
 
     def get_persistence(request: Request) -> PersistenceHttpClient:
         return request.app.state.persistence
@@ -141,10 +135,9 @@ def create_app(
     @app.get("/messages/success", tags=["messages"])
     async def get_messages_success(
         limit: int = Depends(_outcome_query_limit),
-        to: str = Depends(_message_to_query),
         client: httpx.AsyncClient = Depends(get_notification_http),
     ) -> dict[str, Any]:
-        logger.debug("outcomes.success", extra={"to": to, "limit": limit})
+        logger.debug("outcomes.success", extra={"limit": limit})
         try:
             response = await client.get(
                 "/internal/v1/outcomes/success",
@@ -163,10 +156,9 @@ def create_app(
     @app.get("/messages/failed", tags=["messages"])
     async def get_messages_failed(
         limit: int = Depends(_outcome_query_limit),
-        to: str = Depends(_message_to_query),
         client: httpx.AsyncClient = Depends(get_notification_http),
     ) -> dict[str, Any]:
-        logger.debug("outcomes.failed", extra={"to": to, "limit": limit})
+        logger.debug("outcomes.failed", extra={"limit": limit})
         try:
             response = await client.get(
                 "/internal/v1/outcomes/failed",

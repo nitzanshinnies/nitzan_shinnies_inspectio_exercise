@@ -39,6 +39,11 @@ All persistence operations are performed through the dedicated S3 persistence se
 
 ## 3) Required endpoints (Section 7)
 
+### 3.0 `GET /` (optional operational UI)
+
+Purpose:
+- Minimal **HTML** page (same process) that uses `fetch` to call **`POST /messages`**, **`POST /messages/repeat?count=N`**, and **`GET /messages/success|failed?limit=…`**, matching the exercise operational surface.
+
 ### 3.1 `POST /messages`
 
 Purpose:
@@ -51,8 +56,7 @@ Request body (JSON):
 The persisted pending object uses **`payload.to`** / **`payload.body`** in S3 (see [`PLAN.md`](PLAN.md) §3); the REST field **`to`** is stored as **`payload.to`**.
 
 Response expectations:
-- Returns accepted message metadata (including `messageId`).
-- Response indicates initial lifecycle status (`pending`) or accepted processing state.
+- JSON including assigned **`messageId`** (exercise minimum). Implementations may also return **`status`** (e.g. **`pending`**) and other stable fields.
 
 Validation expectations:
 - Reject malformed or empty payload fields.
@@ -74,7 +78,7 @@ Behavior:
 - Each created message enters normal lifecycle flow.
 
 Response expectations:
-- Returns summary of accepted count and identifiers or aggregate acceptance metadata.
+- JSON including **`accepted`** (equals **`count`**) and **`messageIds`** (length **`count`**, distinct UUIDs), or an equivalent summary plus identifiers.
 
 ### 3.3 `GET /messages/success`
 
@@ -83,9 +87,8 @@ Purpose:
 
 Query parameters:
 - `limit` (optional): how many most-recent success records to return.
-  - If omitted, default **`limit=100`** (matches the architect’s documented example).
-  - If provided, must be a positive integer; API may enforce a configured **maximum** (e.g. cap at 100 or another agreed upper bound) and clamp or reject out-of-range values.
-- `to` (optional): defaults to **`+10000000000`**. Reserved for future filtering; responses are unchanged until the notification/query layer supports it.
+  - If omitted, default **`limit=100`** (exercise example: **`GET /messages/success?limit=100`**).
+  - If provided, must be a positive integer; API may enforce a configured **maximum** (e.g. cap at 1000) and reject out-of-range values.
 
 Performance requirement:
 - Must serve from the **notification service**, which reads **Redis** (see [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) §4, §6).
@@ -98,9 +101,8 @@ Purpose:
 
 Query parameters:
 - `limit` (optional): how many most-recent failure records to return.
-  - If omitted, default **`limit=100`**.
-  - If provided, must be a positive integer; same maximum/clamp policy as success endpoint.
-- `to` (optional): defaults to **`+10000000000`**. Same semantics as §3.3.
+  - If omitted, default **`limit=100`** (exercise example: **`GET /messages/failed?limit=100`**).
+  - If provided, must be a positive integer; same maximum policy as success endpoint.
 
 Performance requirement:
 - Must serve from the **notification service** (same as §3.3).
