@@ -156,7 +156,7 @@ async def test_run_tick_failed_send_schedules_retry() -> None:
             sms_client=sms,
             tick_interval_sec=0.01,
         )
-        with mock.patch("inspectio_exercise.worker.runtime._now_ms", return_value=now_ms):
+        with mock.patch("inspectio_exercise.worker.clocks.now_ms", return_value=now_ms):
             await runtime.run_tick()
 
     pending_puts = [p for p in persistence.puts if p[0] == key]
@@ -336,9 +336,9 @@ async def test_invalid_payload_deletes_pending_and_drops_scheduler_state() -> No
             sms_client=sms,
             tick_interval_sec=0.01,
         )
-        await runtime._handle_one(mid, bad_rec, key)
+        await runtime._dispatch.handle_one(mid, bad_rec, key)
 
     assert send_hits == 0
     assert key in persistence.deleted
-    async with runtime._lock:
-        assert mid not in runtime._records
+    async with runtime._queue.lock:
+        assert mid not in runtime._queue.records
