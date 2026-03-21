@@ -14,7 +14,7 @@ Distributed **SMS retry scheduler** per `plans/` (S3 truth, workers, notificatio
 | `inspectio_exercise.worker` | Shard worker (background loop placeholder + health) | 8004 |
 | `frontend/` (nginx) | Operational / demo UI — static assets + reverse proxy to API | 3000 → 80 |
 
-**Infrastructure (not Python):** Redis container for hot outcomes cache; S3 (AWS or LocalStack) behind persistence.
+**Infrastructure (not Python):** Redis container for hot outcomes cache; object storage is accessed only through the **persistence** service (local directory or AWS S3).
 
 ## Install
 
@@ -42,18 +42,35 @@ Or `uvicorn` directly, e.g. `uvicorn inspectio_exercise.api.app:app --host 0.0.0
 
 **Message routes (see `plans/REST_API.md`):** `POST /messages` — JSON `body` (required), `to` optional (default `+10000000000`). `POST /messages/repeat?count=N` — same JSON body as `/messages`, reused **`N`** times; response includes **`messageIds`** (and **`accepted`**). `GET /messages/success|failed` — optional **`limit`** (default **100**, e.g. `?limit=100`). Demo/operational UI is a **separate frontend container** (not served by this API).
 
-### Local file-backed S3 (dev)
+### Persistence service backend (local dev vs AWS)
 
-The persistence service writes through **`LocalS3Provider`** when **`LOCAL_S3_ROOT`** is set (`plans/LOCAL_S3.md`). This repository includes **`.local-s3/`** at the project root; object files under it are **gitignored** (only **`.local-s3/.gitkeep`** is tracked so the directory exists in clones).
+The HTTP routes are unchanged; **`build_persistence_backend()`** picks a **`PersistencePort`** plugin from the environment (`plans/LOCAL_S3.md` §5, `SYSTEM_OVERVIEW.md` §1.3).
 
-From this directory:
+| Mode | When it is selected | Required env |
+|------|---------------------|--------------|
+| **Local** (file tree) | `INSPECTIO_PERSISTENCE_BACKEND=local`, **or** implicit if **`LOCAL_S3_ROOT`** is set and backend is not forced to AWS | **`LOCAL_S3_ROOT`** — directory for `root/<s3-key>` files |
+| **AWS** (S3) | `INSPECTIO_PERSISTENCE_BACKEND=aws`, **or** implicit if **`INSPECTIO_S3_BUCKET`** or **`S3_BUCKET`** is set (and no `LOCAL_S3_ROOT` / explicit local) | Bucket name; standard **`AWS_*`** credentials and optional **`AWS_REGION`** / **`AWS_DEFAULT_REGION`**; optional **`AWS_ENDPOINT_URL`** (e.g. LocalStack) |
+
+Optional tuning: **`INSPECTIO_S3_CONNECT_TIMEOUT_SEC`**, **`INSPECTIO_S3_READ_TIMEOUT_SEC`**, **`INSPECTIO_S3_MAX_RETRY_ATTEMPTS`**.
+
+**Local dev** from this directory:
 
 ```bash
 export LOCAL_S3_ROOT="$(pwd)/.local-s3"
+# optional: export INSPECTIO_PERSISTENCE_BACKEND=local
 inspectio-persistence
 ```
 
-Then create keys via **`POST /internal/v1/put-object`** or by running the API against this persistence service — files appear as **`LOCAL_S3_ROOT/<s3-key>`** (e.g. `state/pending/shard-0/<messageId>.json`).
+Object files appear as **`LOCAL_S3_ROOT/<s3-key>`** (e.g. `state/pending/shard-0/<messageId>.json`). The repo includes **`.local-s3/`** with **`.gitkeep`**; other files there are **gitignored**.
+
+**Production-shaped AWS** example:
+
+```bash
+export INSPECTIO_PERSISTENCE_BACKEND=aws
+export INSPECTIO_S3_BUCKET=your-bucket
+export AWS_REGION=us-east-1
+inspectio-persistence
+```
 
 ## Docker Compose
 

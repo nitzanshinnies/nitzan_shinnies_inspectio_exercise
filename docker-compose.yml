@@ -53,6 +53,7 @@ services:
     build: .
     command: ["inspectio-persistence"]
     environment:
+      INSPECTIO_PERSISTENCE_BACKEND: local
       INSPECTIO_PERSISTENCE_PORT: "8001"
       LOCAL_S3_ROOT: /data/local-s3
     ports:
