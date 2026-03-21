@@ -39,6 +39,8 @@ Or `uvicorn` directly, e.g. `uvicorn inspectio_exercise.api.app:app --host 0.0.0
 
 **Public API env (defaults match default ports above):** `PERSISTENCE_SERVICE_URL` (`http://127.0.0.1:8001`), `NOTIFICATION_SERVICE_URL` (`http://127.0.0.1:8002`), `TOTAL_SHARDS` (`256`, must align with workers).
 
+**Message routes (see `plans/REST_API.md`):** `POST /messages` — JSON `body` (required), `recipient` optional (default `+10000000000`). `POST /messages/repeat` — JSON `count` (required), optional `recipient` / `body` (defaults `+10000000000` / `load-test`). `GET /messages/success|failed` — optional `limit` and `recipient` query (defaults documented in the plan).
+
 ### Local file-backed S3 (dev)
 
 The persistence service writes through **`LocalS3Provider`** when **`LOCAL_S3_ROOT`** is set (`plans/LOCAL_S3.md`). This repository includes **`.local-s3/`** at the project root; object files under it are **gitignored** (only **`.local-s3/.gitkeep`** is tracked so the directory exists in clones).

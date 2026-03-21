@@ -14,7 +14,7 @@ pytestmark = pytest.mark.integration
 
 def test_post_messages_returns_accepted_metadata(api_client) -> None:
     """§5.3 / REST_API §3.1 — accepted message metadata including messageId; pending (or accepted) state."""
-    response = api_client.post("/messages", json={"to": "+1", "body": "hi"})
+    response = api_client.post("/messages", json={"recipient": "+1", "body": "hi"})
     assert response.status_code == 202
     data = response.json()
     assert "messageId" in data
@@ -32,7 +32,7 @@ def test_get_outcomes_return_200_with_items(api_client) -> None:
 
 def test_post_repeat_returns_summary(api_client) -> None:
     """REST_API §3.2 — summary with accepted count and distinct messageIds."""
-    response = api_client.post("/messages/repeat?count=1")
+    response = api_client.post("/messages/repeat", json={"count": 1})
     assert response.status_code == 200
     body = response.json()
     assert body.get("accepted") == 1

@@ -168,11 +168,11 @@ Terminal failure:
 Implement:
 - `POST /messages`
   - Send a single message.
-- `POST /messages/repeat?count=N`
-  - Load test endpoint: create `N` copies.
-- `GET /messages/success` (`limit` optional, default **100**—[`REST_API.md`](REST_API.md))
+- `POST /messages/repeat`
+  - Load test endpoint: JSON body with **`count`** (optional **`recipient`** / **`body`**); create `N` copies.
+- `GET /messages/success` (`limit` optional, default **100**; `recipient` optional—[`REST_API.md`](REST_API.md))
   - Return most recent successful outcomes (notification service → Redis).
-- `GET /messages/failed` (same)
+- `GET /messages/failed` (same `limit` / `recipient` rules)
   - Return most recent failed outcomes (notification service → Redis).
 - `GET /healthz`
   - Health endpoints.

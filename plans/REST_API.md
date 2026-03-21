@@ -44,9 +44,11 @@ All persistence operations are performed through the dedicated S3 persistence se
 Purpose:
 - Submit a single message for processing.
 
-Request body (minimum required fields):
-- `to`: string
-- `body`: string
+Request body (JSON):
+- `body` (required): string — SMS text (non-empty).
+- `recipient` (optional): string — destination phone or E.164 address; defaults to **`+10000000000`** when omitted.
+
+The persisted pending object still uses **`payload.to`** / **`payload.body`** in S3 (see [`PLAN.md`](PLAN.md) §3); the REST field **`recipient`** maps to **`payload.to`**.
 
 Response expectations:
 - Returns accepted message metadata (including `messageId`).
@@ -56,17 +58,18 @@ Validation expectations:
 - Reject malformed or empty payload fields.
 - Enforce schema-level validation before persistence/activation.
 
-### 3.2 `POST /messages/repeat?count=N`
+### 3.2 `POST /messages/repeat`
 
 Purpose:
-- Load-test helper endpoint to create `N` message copies.
+- Load-test helper endpoint to create **`count`** message copies with shared template content.
 
-Query requirements:
-- `count` must be a positive integer.
-- API should enforce upper safety limits for `count` to prevent unbounded abuse.
+Request body (JSON):
+- `count` (required): positive integer, bounded by a configured **maximum** (e.g. `REPEAT_COUNT_MAX`) to prevent abuse.
+- `recipient` (optional): defaults to **`+10000000000`**.
+- `body` (optional): defaults to **`load-test`**.
 
 Behavior:
-- Creates `N` independent messages with distinct `messageId`s.
+- Creates **`count`** independent messages with distinct `messageId`s.
 - Each created message enters normal lifecycle flow.
 
 Response expectations:
@@ -81,6 +84,7 @@ Query parameters:
 - `limit` (optional): how many most-recent success records to return.
   - If omitted, default **`limit=100`** (matches the architect’s documented example).
   - If provided, must be a positive integer; API may enforce a configured **maximum** (e.g. cap at 100 or another agreed upper bound) and clamp or reject out-of-range values.
+- `recipient` (optional): defaults to **`+10000000000`**. Reserved for future filtering; responses are unchanged until the notification/query layer supports it.
 
 Performance requirement:
 - Must serve from the **notification service**, which reads **Redis** (see [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) §4, §6).
@@ -95,6 +99,7 @@ Query parameters:
 - `limit` (optional): how many most-recent failure records to return.
   - If omitted, default **`limit=100`**.
   - If provided, must be a positive integer; same maximum/clamp policy as success endpoint.
+- `recipient` (optional): defaults to **`+10000000000`**. Same semantics as §3.3.
 
 Performance requirement:
 - Must serve from the **notification service** (same as §3.3).
@@ -140,7 +145,8 @@ At API boundary:
 ### 5.3 Validation and error handling
 
 Common invalid cases:
-- Missing required fields (`to`, `body`)
+- Missing required fields (`body` on `POST /messages`; `count` on `POST /messages/repeat`)
+- Empty `recipient` when provided
 - Invalid `count`/`limit` values
 - Unsupported types
 

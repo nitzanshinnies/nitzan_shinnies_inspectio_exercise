@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from contextlib import asynccontextmanager
 from typing import Annotated, Any
 
@@ -9,10 +10,12 @@ import httpx
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 
 from inspectio_exercise.api import config
-from inspectio_exercise.api.schemas import MessageCreate
+from inspectio_exercise.api.schemas import MessageCreate, RepeatMessagesCreate
 from inspectio_exercise.api.use_cases import submit_message
 from inspectio_exercise.common.health import register_healthz
 from inspectio_exercise.notification.persistence_client import PersistenceHttpClient
+
+logger = logging.getLogger(__name__)
 
 
 def _outcome_query_limit(
@@ -24,12 +27,17 @@ def _outcome_query_limit(
     return limit
 
 
-def _repeat_count(
-    count: Annotated[
-        int, Query(ge=1, le=config.REPEAT_COUNT_MAX, description="Messages to create")
-    ],
-) -> int:
-    return count
+def _message_recipient_query(
+    recipient: Annotated[
+        str,
+        Query(
+            description=(
+                "Default SMS recipient for this request scope; reserved for future outcome filtering."
+            ),
+        ),
+    ] = config.DEFAULT_MESSAGE_RECIPIENT,
+) -> str:
+    return recipient
 
 
 def create_app(
@@ -92,7 +100,7 @@ def create_app(
             message_id = await submit_message(
                 persistence_client,
                 total_shards=total_shards,
-                to=body.to,
+                recipient=body.recipient,
                 body=body.body,
             )
         except (httpx.HTTPError, OSError) as exc:
@@ -101,31 +109,31 @@ def create_app(
 
     @app.post("/messages/repeat", tags=["messages"])
     async def post_messages_repeat(
-        count: int = Depends(_repeat_count),
+        repeat: RepeatMessagesCreate,
         persistence_client: PersistenceHttpClient = Depends(get_persistence),
         total_shards: int = Depends(get_total_shards),
     ) -> dict[str, Any]:
-        to = "+10000000000"
-        body = "load-test"
         ids: list[str] = []
         try:
-            for _ in range(count):
+            for _ in range(repeat.count):
                 mid = await submit_message(
                     persistence_client,
                     total_shards=total_shards,
-                    to=to,
-                    body=body,
+                    recipient=repeat.recipient,
+                    body=repeat.body,
                 )
                 ids.append(mid)
         except (httpx.HTTPError, OSError) as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
-        return {"accepted": count, "messageIds": ids}
+        return {"accepted": repeat.count, "messageIds": ids}
 
     @app.get("/messages/success", tags=["messages"])
     async def get_messages_success(
         limit: int = Depends(_outcome_query_limit),
+        recipient: str = Depends(_message_recipient_query),
         client: httpx.AsyncClient = Depends(get_notification_http),
     ) -> dict[str, Any]:
+        logger.debug("outcomes.success", extra={"recipient": recipient, "limit": limit})
         try:
             response = await client.get(
                 "/internal/v1/outcomes/success",
@@ -144,8 +152,10 @@ def create_app(
     @app.get("/messages/failed", tags=["messages"])
     async def get_messages_failed(
         limit: int = Depends(_outcome_query_limit),
+        recipient: str = Depends(_message_recipient_query),
         client: httpx.AsyncClient = Depends(get_notification_http),
     ) -> dict[str, Any]:
+        logger.debug("outcomes.failed", extra={"recipient": recipient, "limit": limit})
         try:
             response = await client.get(
                 "/internal/v1/outcomes/failed",

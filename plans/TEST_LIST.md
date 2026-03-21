@@ -91,7 +91,7 @@ Companion to [`plans/TESTS.md`](TESTS.md): a **concrete checklist** of test case
 | TC-NM-05 | U / I | **`Content-Type`** missing/wrong → **4xx** where applicable. | |
 | TC-NM-06 | U / I | **Unknown JSON fields** → ignore vs **400** per policy. | |
 | TC-NM-07 | U / I | **Oversized** body/request → **413**/4xx or limit—document. | |
-| TC-NM-08 | I | `POST /messages/repeat?count=1` behaves like single create. | |
+| TC-NM-08 | I | `POST /messages/repeat` with body `{"count":1}` behaves like single create. | |
 | TC-NM-09 | I | Worker **does not** create pending if API never did. | |
 
 ---
@@ -137,7 +137,7 @@ Companion to [`plans/TESTS.md`](TESTS.md): a **concrete checklist** of test case
 | TC-API-01 | U / I | Missing `to` or `body` → **4xx**. | **Whitespace-only** string—define. |
 | TC-API-02 | U / I | Wrong types for fields → **4xx**. | |
 | TC-API-03 | U / I | Valid `POST /messages` → **2xx** + stable response shape incl. `messageId`. | |
-| TC-API-04 | U / I | `repeat?count=N`, N≥1 integer → **N** distinct ids. | |
+| TC-API-04 | U / I | `POST /messages/repeat` JSON `{"count":N}`, N≥1 integer → **N** distinct ids. | |
 | TC-API-05 | U / I | `count` 0, negative, float, **> cap** → **4xx**. | |
 | TC-API-06 | U / I | `GET /messages/success` no `limit` → default **100** (or less if fewer items). | |
 | TC-API-07 | U / I | `GET /messages/failed` same as TC-API-06. | |
