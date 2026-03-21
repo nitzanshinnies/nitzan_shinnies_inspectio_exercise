@@ -1,0 +1,9 @@
+# Install once per clone: pre-commit install
+# Runs Ruff lint + format on commit (see README.md § Lint).
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.7
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format

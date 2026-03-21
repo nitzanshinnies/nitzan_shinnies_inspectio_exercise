@@ -78,7 +78,9 @@ class LocalS3Provider:
         self._validate_max_keys(max_keys)
         return await asyncio.to_thread(self._list_prefix_sync, prefix, max_keys)
 
-    async def put_object(self, key: str, body: bytes, content_type: str = "application/json") -> None:
+    async def put_object(
+        self, key: str, body: bytes, content_type: str = "application/json"
+    ) -> None:
         del content_type  # LOCAL_S3.md §3 — bytes only on disk; ignored until sidecar exists
         path = self._object_path(key)
         await asyncio.to_thread(self._put_sync, path, body)

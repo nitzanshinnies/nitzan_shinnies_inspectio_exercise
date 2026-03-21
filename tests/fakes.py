@@ -34,6 +34,8 @@ class RecordingPersistence:
             keys = keys[:max_keys]
         return [{"Key": k} for k in keys]
 
-    async def put_object(self, key: str, body: bytes, content_type: str = "application/json") -> None:
+    async def put_object(
+        self, key: str, body: bytes, content_type: str = "application/json"
+    ) -> None:
         self.puts.append((key, body))
         self._objects[key] = body

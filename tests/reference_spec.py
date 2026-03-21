@@ -17,7 +17,7 @@ from __future__ import annotations
 import hashlib
 import heapq
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 
 def attempt_count_is_terminal(attempt_count: int) -> bool:
@@ -125,7 +125,7 @@ def tick_count_for_elapsed_ms(elapsed_ms: int, tick_interval_ms: int = 500) -> i
 
 
 def utc_segments_for_instant_ms(instant_ms: int) -> tuple[str, str, str, str]:
-    dt = datetime.fromtimestamp(instant_ms / 1000.0, tz=timezone.utc)
+    dt = datetime.fromtimestamp(instant_ms / 1000.0, tz=UTC)
     return (
         f"{dt.year:04d}",
         f"{dt.month:02d}",

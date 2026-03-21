@@ -21,11 +21,15 @@ def test_module_constants_are_valid() -> None:
 @pytest.mark.unit
 def test_2xx_classification_matches_spec(status: int) -> None:
     assert sms_outcome.is_successful_send(status) == spec.is_successful_send(status)
-    assert sms_outcome.is_failed_send_for_lifecycle(status) == spec.is_failed_send_for_lifecycle(status)
+    assert sms_outcome.is_failed_send_for_lifecycle(status) == spec.is_failed_send_for_lifecycle(
+        status
+    )
 
 
 @pytest.mark.parametrize("status", [500, 502, 503])
 @pytest.mark.unit
 def test_5xx_classification_matches_spec(status: int) -> None:
     assert sms_outcome.is_successful_send(status) == spec.is_successful_send(status)
-    assert sms_outcome.is_failed_send_for_lifecycle(status) == spec.is_failed_send_for_lifecycle(status)
+    assert sms_outcome.is_failed_send_for_lifecycle(status) == spec.is_failed_send_for_lifecycle(
+        status
+    )

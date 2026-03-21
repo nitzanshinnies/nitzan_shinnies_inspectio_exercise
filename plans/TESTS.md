@@ -35,6 +35,7 @@ A branch may land **only** the **expanded unit test suite** (and keep **`src/`**
 ## 3) Tooling assumptions (recommended)
 
 - **pytest** + **pytest-asyncio** for async units and integration hooks.
+- **Ruff** (`ruff check src tests`, `ruff format`) — configured in **`pyproject.toml`**; **`pre-commit`** runs **`ruff`** + **`ruff-format`** on commit (see **README.md** § Lint).
 - **time control**: fake clocks or injectable `now()` / monotonic time source so wakeup, `nextDueAt`, and **`state/success|failed/<yyyy>/<MM>/<dd>/<hh>/...`** path generation are not flaky.
 - **S3 simulation**: **moto** or **LocalStack**, **or** the **file-backed mock S3** behind the persistence service interface (preferred for speed if available) — spec + dedicated provider tests: [`LOCAL_S3.md`](LOCAL_S3.md).
 - **HTTP**: **httpx** `AsyncClient` + **ASGI lifespans** for in-process API tests; **respx** or transport doubles for outbound mock-SMS calls.
@@ -198,7 +199,7 @@ Map suites to spec checklists:
 - **Mock SMS**: `MOCK_SMS.md` §11 checklist (includes audit/integrity).
 - **Health monitor**: `HEALTH_MONITOR.md` §7 checklist; **TC-HM-*** in [`TEST_LIST.md`](TEST_LIST.md).
 
-## 9) CI expectations (exercise)
+## 9) Automation expectations (exercise)
 
 - **Unit** suite runs on every change (fast, no Docker dependency if possible).
 - **Integration** suite may use moto, LocalStack, or file-backed mock **in process**.

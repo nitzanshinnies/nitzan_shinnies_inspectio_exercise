@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import base64
-from contextlib import asynccontextmanager
 import os
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
@@ -69,7 +69,9 @@ def create_app() -> FastAPI:
         try:
             raw = await backend.get_object(body.key)
         except KeyError:
-            raise HTTPException(status_code=404, detail={"key": body.key, "reason": "not found"}) from None
+            raise HTTPException(
+                status_code=404, detail={"key": body.key, "reason": "not found"}
+            ) from None
         return GetObjectResponse(body_b64=base64.b64encode(raw).decode("ascii"))
 
     @app.post("/internal/v1/list-prefix", tags=["persistence"])

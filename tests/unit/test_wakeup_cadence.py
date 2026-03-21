@@ -17,8 +17,12 @@ def test_tick_and_elapsed_round_trip_matches_spec() -> None:
 @pytest.mark.unit
 def test_select_due_matches_spec() -> None:
     messages = [("c", 200), ("a", 100), ("b", 100)]
-    assert wakeup_mod.select_due_message_ids(messages, 250) == spec.select_due_message_ids(messages, 250)
-    assert wakeup_mod.select_due_message_ids([("a", 500)], 400) == spec.select_due_message_ids([("a", 500)], 400)
+    assert wakeup_mod.select_due_message_ids(messages, 250) == spec.select_due_message_ids(
+        messages, 250
+    )
+    assert wakeup_mod.select_due_message_ids([("a", 500)], 400) == spec.select_due_message_ids(
+        [("a", 500)], 400
+    )
 
 
 @pytest.mark.unit

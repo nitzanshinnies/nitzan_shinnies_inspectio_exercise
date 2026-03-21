@@ -10,6 +10,8 @@ import pytest
 pytestmark = pytest.mark.integration
 
 
-@pytest.mark.skip(reason="§5.6: compose mock SMS + persistence + POST integrity-check; assert 2xx + body contract")
+@pytest.mark.skip(
+    reason="§5.6: compose mock SMS + persistence + POST integrity-check; assert 2xx + body contract"
+)
 def test_integrity_check_post_resolves_audit_against_s3() -> None:
     """Deterministic scenario → ok; drift → non-2xx or violation JSON per HEALTH_MONITOR.md §4.2."""

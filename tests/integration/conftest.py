@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-import pytest
 
 from inspectio_exercise.api.app import create_app as create_api
 from inspectio_exercise.health_monitor.app import create_app as create_health_monitor

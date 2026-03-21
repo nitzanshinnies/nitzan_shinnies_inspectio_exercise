@@ -12,7 +12,9 @@ from tests import reference_spec as spec
 def test_shard_id_matches_spec_stable() -> None:
     mid = "550e8400-e29b-41d4-a716-446655440000"
     assert sharding_mod.shard_id_for_message(mid, 128) == spec.shard_id_for_message(mid, 128)
-    assert sharding_mod.shard_id_for_message(mid, 128) == sharding_mod.shard_id_for_message(mid, 128)
+    assert sharding_mod.shard_id_for_message(mid, 128) == sharding_mod.shard_id_for_message(
+        mid, 128
+    )
 
 
 @pytest.mark.unit
