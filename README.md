@@ -37,6 +37,8 @@ inspectio-worker
 
 Or `uvicorn` directly, e.g. `uvicorn inspectio_exercise.api.app:app --host 0.0.0.0 --port 8000`.
 
+**Public API env (defaults match default ports above):** `PERSISTENCE_SERVICE_URL` (`http://127.0.0.1:8001`), `NOTIFICATION_SERVICE_URL` (`http://127.0.0.1:8002`), `TOTAL_SHARDS` (`256`, must align with workers).
+
 ## Docker Compose
 
 Starts **Redis** plus all Python services (build from repo root containing this directory):

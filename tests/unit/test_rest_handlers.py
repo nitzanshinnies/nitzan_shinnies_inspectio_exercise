@@ -11,13 +11,6 @@ import uuid
 import pytest
 from fastapi.testclient import TestClient
 
-from inspectio_exercise.api.app import create_app
-
-
-@pytest.fixture
-def api_client() -> TestClient:
-    return TestClient(create_app())
-
 
 @pytest.mark.unit
 def test_post_messages_valid_body_returns_accepted_metadata(api_client: TestClient) -> None:
