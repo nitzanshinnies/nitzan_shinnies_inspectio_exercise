@@ -103,9 +103,9 @@ Cover [`MOCK_SMS.md`](MOCK_SMS.md):
 
 Cover [`REST_API.md`](REST_API.md):
 
-- `POST /messages`: reject empty/malformed `to`/`body`; stable **4xx** body shape (**machine-readable code + message**) where implemented ([`REST_API.md`](REST_API.md) §5.1–5.3).
-- `POST /messages/repeat`: reject invalid `count`; enforce **upper bound**; response reflects **`N`** distinct `messageId`s when successful.
-- `GET /messages/*`: invalid `limit` handling.
+- `POST /messages`: reject empty/malformed `body` / `to`; stable **4xx** body shape (**machine-readable code + message**) where implemented ([`REST_API.md`](REST_API.md) §5.1–5.3).
+- `POST /messages/repeat?count=…`: same body as **`POST /messages`**, reused **`count`** times; reject invalid `count`; enforce **upper bound**; response reflects **`N`** distinct `messageId`s when successful.
+- `GET /messages/*`: invalid `limit` handling (exercise: **`?limit=100`** defaults when omitted).
 - `GET /healthz`: returns **2xx** quickly (lightweight liveness; may run as integration smoke).
 
 ### 4.8 Idempotency and duplicate handling
@@ -177,7 +177,7 @@ Compose **API + worker scheduler + persistence (mock S3) + mock SMS HTTP** where
 - **Send integrity (recommended):** where the real mock HTTP service runs, validate **mock audit log** vs expected attempts (e.g. **`GET /audit/sends`** or container **stdout JSONL** per [`MOCK_SMS.md`](MOCK_SMS.md) §8).
 - **Terminal failure**: SMS always **`5xx`** until **`attemptCount == 6`** → **failed** key; **`GET /messages/failed`** reflects outcome per cache rules.
 - **Restart**: persist mid-retry pending; **restart worker** / rerun bootstrap → retry resumes per **`nextDueAt`** ([`CORE_LIFECYCLE.md`](CORE_LIFECYCLE.md) §8 item 7).
-- **`POST /messages/repeat?count=N`**: **`N`** distinct `messageId`s and **`N`** durable pendings.
+- **`POST /messages/repeat?count=N`** (body reused **`N`** times): **`N`** distinct `messageId`s and **`N`** durable pendings.
 - **`GET /healthz`**: **2xx** from API process.
 - **Health monitor (when compose includes it):** **`GET /healthz`** **2xx** (liveness); after steady-state, **`POST` integrity-check** **2xx** ([`HEALTH_MONITOR.md`](HEALTH_MONITOR.md) §4); optional negative **`POST`** with induced drift.
 

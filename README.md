@@ -37,6 +37,23 @@ inspectio-worker
 
 Or `uvicorn` directly, e.g. `uvicorn inspectio_exercise.api.app:app --host 0.0.0.0 --port 8000`.
 
+**Public API env (defaults match default ports above):** `PERSISTENCE_SERVICE_URL` (`http://127.0.0.1:8001`), `NOTIFICATION_SERVICE_URL` (`http://127.0.0.1:8002`), `TOTAL_SHARDS` (`256`, must align with workers).
+
+**Message routes (see `plans/REST_API.md`):** `POST /messages` — JSON `body` (required), `to` optional (default `+10000000000`). `POST /messages/repeat?count=N` — same JSON body as `/messages`, reused **`N`** times; response includes **`messageIds`** (and **`accepted`**). `GET /messages/success|failed` — optional **`limit`** (default **100**, e.g. `?limit=100`). Demo/operational UI is a **separate frontend container** (not served by this API).
+
+### Local file-backed S3 (dev)
+
+The persistence service writes through **`LocalS3Provider`** when **`LOCAL_S3_ROOT`** is set (`plans/LOCAL_S3.md`). This repository includes **`.local-s3/`** at the project root; object files under it are **gitignored** (only **`.local-s3/.gitkeep`** is tracked so the directory exists in clones).
+
+From this directory:
+
+```bash
+export LOCAL_S3_ROOT="$(pwd)/.local-s3"
+inspectio-persistence
+```
+
+Then create keys via **`POST /internal/v1/put-object`** or by running the API against this persistence service — files appear as **`LOCAL_S3_ROOT/<s3-key>`** (e.g. `state/pending/shard-0/<messageId>.json`).
+
 ## Docker Compose
 
 Starts **Redis** plus all Python services (build from repo root containing this directory):

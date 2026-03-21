@@ -169,10 +169,10 @@ Implement:
 - `POST /messages`
   - Send a single message.
 - `POST /messages/repeat?count=N`
-  - Load test endpoint: create `N` copies.
-- `GET /messages/success` (`limit` optional, default **100**—[`REST_API.md`](REST_API.md))
+  - Load test endpoint: same JSON body as **`POST /messages`**, reused **`N`** times.
+- `GET /messages/success` (`limit` optional, default **100** — e.g. **`?limit=100`**; [`REST_API.md`](REST_API.md))
   - Return most recent successful outcomes (notification service → Redis).
-- `GET /messages/failed` (same)
+- `GET /messages/failed` (same `limit` rules)
   - Return most recent failed outcomes (notification service → Redis).
 - `GET /healthz`
   - Health endpoints.

@@ -39,18 +39,23 @@ All persistence operations are performed through the dedicated S3 persistence se
 
 ## 3) Required endpoints (Section 7)
 
+### 3.0 Operational UI (separate frontend container)
+
+The public REST API does **not** serve HTML. Exercise **operational / demo UI** lives in a **dedicated frontend container** (see [`PLAN.md`](PLAN.md) deployment notes) and calls the JSON routes below over HTTP.
+
 ### 3.1 `POST /messages`
 
 Purpose:
 - Submit a single message for processing.
 
-Request body (minimum required fields):
-- `to`: string
-- `body`: string
+Request body (JSON):
+- `body` (required): string — SMS text (non-empty).
+- `to` (optional): string — destination phone or E.164 address; defaults to **`+10000000000`** when omitted.
+
+The persisted pending object uses **`payload.to`** / **`payload.body`** in S3 (see [`PLAN.md`](PLAN.md) §3); the REST field **`to`** is stored as **`payload.to`**.
 
 Response expectations:
-- Returns accepted message metadata (including `messageId`).
-- Response indicates initial lifecycle status (`pending`) or accepted processing state.
+- JSON including assigned **`messageId`** (exercise minimum). Implementations may also return **`status`** (e.g. **`pending`**) and other stable fields.
 
 Validation expectations:
 - Reject malformed or empty payload fields.
@@ -59,18 +64,20 @@ Validation expectations:
 ### 3.2 `POST /messages/repeat?count=N`
 
 Purpose:
-- Load-test helper endpoint to create `N` message copies.
+- Load-test helper endpoint to create **`N`** messages from **one** template.
 
-Query requirements:
-- `count` must be a positive integer.
-- API should enforce upper safety limits for `count` to prevent unbounded abuse.
+Query parameters:
+- `count` (required): positive integer, bounded by a configured **maximum** (e.g. `REPEAT_COUNT_MAX`) to prevent abuse.
+
+Request body (JSON):
+- Same fields as **`POST /messages`** (§3.1): **`to`** (optional, default **`+10000000000`**) and **`body`** (required, non-empty). This object is **reused `count` times**: each iteration creates an **independent** `messageId` and pending record with the same `to` / `body` payload.
 
 Behavior:
-- Creates `N` independent messages with distinct `messageId`s.
+- Creates **`count`** independent messages with distinct `messageId`s.
 - Each created message enters normal lifecycle flow.
 
 Response expectations:
-- Returns summary of accepted count and identifiers or aggregate acceptance metadata.
+- JSON including **`accepted`** (equals **`count`**) and **`messageIds`** (length **`count`**, distinct UUIDs), or an equivalent summary plus identifiers.
 
 ### 3.3 `GET /messages/success`
 
@@ -79,8 +86,8 @@ Purpose:
 
 Query parameters:
 - `limit` (optional): how many most-recent success records to return.
-  - If omitted, default **`limit=100`** (matches the architect’s documented example).
-  - If provided, must be a positive integer; API may enforce a configured **maximum** (e.g. cap at 100 or another agreed upper bound) and clamp or reject out-of-range values.
+  - If omitted, default **`limit=100`** (exercise example: **`GET /messages/success?limit=100`**).
+  - If provided, must be a positive integer; API may enforce a configured **maximum** (e.g. cap at 1000) and reject out-of-range values.
 
 Performance requirement:
 - Must serve from the **notification service**, which reads **Redis** (see [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) §4, §6).
@@ -93,8 +100,8 @@ Purpose:
 
 Query parameters:
 - `limit` (optional): how many most-recent failure records to return.
-  - If omitted, default **`limit=100`**.
-  - If provided, must be a positive integer; same maximum/clamp policy as success endpoint.
+  - If omitted, default **`limit=100`** (exercise example: **`GET /messages/failed?limit=100`**).
+  - If provided, must be a positive integer; same maximum policy as success endpoint.
 
 Performance requirement:
 - Must serve from the **notification service** (same as §3.3).
@@ -140,7 +147,8 @@ At API boundary:
 ### 5.3 Validation and error handling
 
 Common invalid cases:
-- Missing required fields (`to`, `body`)
+- Missing required fields (`body` on `POST /messages`; **`count`** query on `POST /messages/repeat?count=…`)
+- Empty `to` when provided
 - Invalid `count`/`limit` values
 - Unsupported types
 
@@ -186,7 +194,7 @@ The REST API plan is considered complete when:
 ```mermaid
 flowchart LR
   Client[Client] --> PostMsg[POST /messages]
-  Client --> Repeat[POST /messages/repeat]
+  Client --> Repeat[POST /messages/repeat?count=N]
   Client --> GetSuccess[GET /messages/success]
   Client --> GetFailed[GET /messages/failed]
   Client --> Health[GET /healthz]

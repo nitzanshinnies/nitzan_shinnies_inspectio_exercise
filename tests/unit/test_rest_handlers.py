@@ -11,23 +11,25 @@ import uuid
 import pytest
 from fastapi.testclient import TestClient
 
-from inspectio_exercise.api.app import create_app
-
-
-@pytest.fixture
-def api_client() -> TestClient:
-    return TestClient(create_app())
-
 
 @pytest.mark.unit
 def test_post_messages_valid_body_returns_accepted_metadata(api_client: TestClient) -> None:
     """REST_API.md §3.1 — accepted message metadata including messageId; pending or accepted state."""
-    response = api_client.post("/messages", json={"to": "+15551234567", "body": "hello"})
+    response = api_client.post("/messages", json={"body": "hello"})
     assert response.status_code == 202
     data = response.json()
     assert "messageId" in data
     uuid.UUID(str(data["messageId"]))
     assert data.get("status") == "pending"
+
+
+@pytest.mark.unit
+def test_post_messages_explicit_to(api_client: TestClient) -> None:
+    response = api_client.post(
+        "/messages",
+        json={"to": "+15551234567", "body": "hello"},
+    )
+    assert response.status_code == 202
 
 
 @pytest.mark.unit
@@ -75,8 +77,11 @@ def test_get_messages_failed_invalid_limit_rejected(api_client: TestClient) -> N
 
 @pytest.mark.unit
 def test_post_messages_repeat_returns_summary(api_client: TestClient) -> None:
-    """REST_API.md §3.2 — summary of accepted count and identifiers."""
-    response = api_client.post("/messages/repeat?count=3")
+    """REST_API.md §3.2 — ``?count=N`` with message body reused N times."""
+    response = api_client.post(
+        "/messages/repeat?count=3",
+        json={"body": "hello"},
+    )
     assert response.status_code == 200
     data = response.json()
     assert data.get("accepted") == 3
@@ -86,11 +91,11 @@ def test_post_messages_repeat_returns_summary(api_client: TestClient) -> None:
 
 @pytest.mark.unit
 def test_post_messages_repeat_missing_count_rejected(api_client: TestClient) -> None:
-    response = api_client.post("/messages/repeat")
+    response = api_client.post("/messages/repeat", json={"body": "x"})
     assert response.status_code == 422
 
 
 @pytest.mark.unit
 def test_post_messages_repeat_invalid_count_rejected(api_client: TestClient) -> None:
-    response = api_client.post("/messages/repeat?count=0")
+    response = api_client.post("/messages/repeat?count=0", json={"body": "x"})
     assert response.status_code == 422

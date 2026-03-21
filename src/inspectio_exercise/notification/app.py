@@ -16,6 +16,7 @@ from redis.asyncio import Redis
 from redis.exceptions import RedisError
 
 from inspectio_exercise.common.health import register_healthz
+from inspectio_exercise.common.http_client import HTTP_CLIENT_TIMEOUT_SEC
 from inspectio_exercise.notification import config
 from inspectio_exercise.notification.outcomes import hydrate_from_persistence, publish_outcome
 from inspectio_exercise.notification.persistence_client import PersistenceHttpClient
@@ -69,7 +70,7 @@ def create_app(
         client = (
             test_http_client
             if test_http_client is not None
-            else httpx.AsyncClient(base_url=persist_url, timeout=60.0)
+            else httpx.AsyncClient(base_url=persist_url, timeout=HTTP_CLIENT_TIMEOUT_SEC)
         )
         persistence = PersistenceHttpClient(client)
         try:

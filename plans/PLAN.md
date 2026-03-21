@@ -147,13 +147,15 @@ Implement the following endpoints:
 1. `POST /messages`
    - Send a single message.
 2. `POST /messages/repeat?count=N`
-   - Load test endpoint: create `N` copies.
-3. `GET /messages/success` (`limit` optional, default **100**; see [`plans/REST_API.md`](REST_API.md))
+   - Load test endpoint: query **`count`**, JSON body same as **`POST /messages`**; body reused **`N`** times.
+3. `GET /messages/success` (`limit` optional, default **100** — exercise: **`?limit=100`**; see [`plans/REST_API.md`](REST_API.md))
    - Return the most recent successful outcomes (via notification service + Redis).
-4. `GET /messages/failed` (same `limit` rules)
+4. `GET /messages/failed` (same `limit` rules as success)
    - Return the most recent failed outcomes (via notification service + Redis).
 5. `GET /healthz`
    - Basic health endpoint(s).
+
+Operational / demo UI is **not** part of this API process; use the **frontend container** described in deployment docs, calling the same JSON routes ([`plans/REST_API.md`](REST_API.md) §3.0).
 
 Recent outcomes performance requirement:
 
