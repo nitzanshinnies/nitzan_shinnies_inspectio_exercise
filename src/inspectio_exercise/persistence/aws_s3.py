@@ -53,13 +53,13 @@ class AwsS3Provider:
                 },
             )
             session = boto3.session.Session()
-            resolved_region = region_name or session.region_name
-            self._client = session.client(
-                "s3",
-                config=botocore_config,
-                endpoint_url=endpoint_url,
-                region_name=resolved_region,
-            )
+            resolved_region = region_name if region_name is not None else session.region_name
+            client_kw: dict[str, Any] = {"config": botocore_config}
+            if endpoint_url is not None:
+                client_kw["endpoint_url"] = endpoint_url
+            if resolved_region is not None:
+                client_kw["region_name"] = resolved_region
+            self._client = session.client("s3", **client_kw)
 
     def _delete_object_sync(self, key: str) -> None:
         self._client.delete_object(Bucket=self._bucket, Key=key)

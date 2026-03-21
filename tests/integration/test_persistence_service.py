@@ -91,6 +91,29 @@ def test_list_prefix_http_scoped_to_pending_shard_prefix(
     assert r.json()["keys"] == [{"Key": k7}]
 
 
+def test_put_object_rejects_invalid_key_and_malformed_base64(
+    persistence_local_client: TestClient,
+) -> None:
+    client = persistence_local_client
+    bad_key = client.post(
+        "/internal/v1/put-object",
+        json={
+            "key": "a/../b",
+            "body_b64": base64.b64encode(b"x").decode("ascii"),
+        },
+    )
+    assert bad_key.status_code == 422
+
+    bad_b64 = client.post(
+        "/internal/v1/put-object",
+        json={
+            "key": "ok.json",
+            "body_b64": "not-valid-base64!!!",
+        },
+    )
+    assert bad_b64.status_code == 422
+
+
 def test_ready_and_routes_503_when_backend_unconfigured(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

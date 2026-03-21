@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import binascii
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
@@ -83,7 +84,13 @@ def create_app() -> FastAPI:
         body: PutObjectRequest,
         backend: PersistencePort = Depends(require_backend),
     ) -> dict[str, str]:
-        raw = base64.b64decode(body.body_b64)
+        try:
+            raw = base64.b64decode(body.body_b64, validate=True)
+        except binascii.Error as exc:
+            raise HTTPException(
+                status_code=422,
+                detail="body_b64 is not valid base64",
+            ) from exc
         await backend.put_object(body.key, raw, content_type=body.content_type)
         return {"status": "ok"}
 
