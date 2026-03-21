@@ -218,6 +218,13 @@ textarea:focus-visible {
     background: rgba(196, 163, 90, 0.06);
 }
 
+.empty-outcomes {
+    margin: 0;
+    padding: 0.75rem;
+    font-size: 0.9rem;
+    color: var(--muted);
+}
+
 footer.note {
     margin-top: 2.5rem;
     padding-top: 1.25rem;

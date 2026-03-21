@@ -5,7 +5,13 @@ import {
     postMessage,
     postMessagesRepeat,
 } from "./api.js";
-import { DEFAULT_OUTCOME_LIMIT, OUTCOME_LIMIT_MAX, OUTCOME_LIMIT_MIN } from "./constants.js";
+import {
+    DEFAULT_OUTCOME_LIMIT,
+    OUTCOME_LIMIT_MAX,
+    OUTCOME_LIMIT_MIN,
+    REPEAT_COUNT_MAX,
+    REPEAT_COUNT_MIN,
+} from "./constants.js";
 
 /** @param {HTMLElement} el */
 function clearChildren(el) {
@@ -41,9 +47,15 @@ function formatError(err) {
 
 /**
  * @param {object[]} rows
- * @returns {HTMLTableElement}
+ * @returns {HTMLElement}
  */
 function buildOutcomesTable(rows) {
+    if (rows.length === 0) {
+        const p = document.createElement("p");
+        p.className = "empty-outcomes";
+        p.textContent = "No rows yet (notification stream may be empty).";
+        return p;
+    }
     const table = document.createElement("table");
     table.className = "outcomes-table";
     const thead = document.createElement("thead");
@@ -106,6 +118,9 @@ function readMessageCreate() {
         throw new Error("message body field missing");
     }
     const body = bodyEl.value.trim();
+    if (body.length === 0) {
+        throw new Error("Body is required and must be non-empty (plans/REST_API.md §3.1).");
+    }
     const toRaw = toEl?.value.trim() ?? "";
     return toRaw === "" ? { body } : { body, to: toRaw };
 }
@@ -140,8 +155,11 @@ async function onSubmitRepeat(ev) {
     }
     const countEl = inputById("repeat-count");
     const count = countEl ? Number.parseInt(countEl.value, 10) : NaN;
-    if (!Number.isFinite(count) || count < 1) {
-        setBanner("Count must be a positive integer.", "error");
+    if (!Number.isFinite(count) || count < REPEAT_COUNT_MIN || count > REPEAT_COUNT_MAX) {
+        setBanner(
+            `Count must be an integer between ${REPEAT_COUNT_MIN} and ${REPEAT_COUNT_MAX} (plans/REST_API.md §3.2).`,
+            "error",
+        );
         return;
     }
     try {
@@ -235,6 +253,11 @@ function wire() {
         limitEl.min = String(OUTCOME_LIMIT_MIN);
         limitEl.max = String(OUTCOME_LIMIT_MAX);
         limitEl.value = String(DEFAULT_OUTCOME_LIMIT);
+    }
+    const repeatEl = inputById("repeat-count");
+    if (repeatEl) {
+        repeatEl.min = String(REPEAT_COUNT_MIN);
+        repeatEl.max = String(REPEAT_COUNT_MAX);
     }
 }
 

@@ -19,6 +19,30 @@ function baseUrl() {
 }
 
 /**
+ * @param {unknown} detail
+ * @returns {string}
+ */
+function formatFastApiDetail(detail) {
+    if (typeof detail === "string") {
+        return detail;
+    }
+    if (Array.isArray(detail)) {
+        return detail
+            .map((item) => {
+                if (item && typeof item === "object" && "msg" in item) {
+                    return String(/** @type {{ msg: unknown }} */ (item).msg);
+                }
+                return JSON.stringify(item);
+            })
+            .join("; ");
+    }
+    if (detail && typeof detail === "object") {
+        return JSON.stringify(detail);
+    }
+    return String(detail);
+}
+
+/**
  * @param {Response} response
  * @returns {Promise<never>}
  */
@@ -28,7 +52,7 @@ async function throwForStatus(response) {
     try {
         const parsed = JSON.parse(text);
         if (parsed && typeof parsed === "object" && "detail" in parsed) {
-            detail = String(/** @type {{ detail: unknown }} */ (parsed).detail);
+            detail = formatFastApiDetail(/** @type {{ detail: unknown }} */ (parsed).detail);
         }
     } catch {
         // keep raw text
@@ -53,9 +77,10 @@ function withQuery(path, query) {
 
 /**
  * @param {MessageCreateBody} body
- * @returns {Record<string, string>}
+ * @returns {{ body: string, to?: string }}
  */
 function messageJson(body) {
+    /** @type {{ body: string, to?: string }} */
     const payload = { body: body.body };
     if (body.to !== undefined && body.to.trim() !== "") {
         payload.to = body.to.trim();

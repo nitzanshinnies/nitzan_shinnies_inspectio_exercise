@@ -15,6 +15,8 @@ def test_frontend_entry_and_proxy_hints_exist() -> None:
     index = (_FRONTEND_PUBLIC / "index.html").read_text(encoding="utf-8")
     assert 'id="form-send"' in index
     assert 'id="form-repeat"' in index
+    assert 'id="repeat-count"' in index
+    assert 'max="10000"' in index
     assert "/messages" in index
     assert "inspectio-api-base" in index
 

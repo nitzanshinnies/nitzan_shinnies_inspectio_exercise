@@ -19,8 +19,9 @@
                 <h1>Inspectio operational UI</h1>
                 <p>
                     Submit messages, run repeat load tests, and inspect recent outcomes via the public
-                    REST API (<code>plans/REST_API.md</code>). Served as a separate container; JSON
-                    routes are proxied to the API service in Docker Compose.
+                    REST API (<code>plans/REST_API.md</code> §3). This UI does not call the health
+                    monitor integrity API (that service is separate per §3.0). JSON routes are proxied
+                    to the API in Docker Compose.
                 </p>
             </header>
 
@@ -56,11 +57,15 @@
                             name="count"
                             type="number"
                             min="1"
+                            max="10000"
                             step="1"
                             value="5"
                             required
                         />
-                        <p class="hint">Uses the same <strong>To</strong> / <strong>Body</strong> fields as above.</p>
+                        <p class="hint">
+                            Uses the same <strong>To</strong> / <strong>Body</strong> fields as above.
+                            <code>count</code> is capped at the API <code>REPEAT_COUNT_MAX</code> (default 10&nbsp;000).
+                        </p>
                         <div class="actions">
                             <button type="submit">POST /messages/repeat?count=N</button>
                         </div>
