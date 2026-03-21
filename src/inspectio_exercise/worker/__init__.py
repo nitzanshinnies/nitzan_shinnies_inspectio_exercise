@@ -1,1 +1,1 @@
-"""StatefulSet worker: shard ownership + wakeup loop (skeleton)."""
+"""Shard worker: scheduler, persistence, mock SMS, outcome publish (see ``worker.runtime``)."""
