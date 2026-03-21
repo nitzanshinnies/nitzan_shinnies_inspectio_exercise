@@ -61,17 +61,25 @@ pytest -m integration
 pytest -m e2e
 ```
 
-Dev deps include **`httpx`**, **`pytest-asyncio`**, and **`ruff`** (lint + format).
+Dev deps include **`httpx`**, **`pytest-asyncio`**, **`pre-commit`**, and **`ruff`** (lint + format).
 
 ## Lint
 
+On each commit, **`pre-commit`** runs **`ruff`** (with fixes) and **`ruff-format`** via **`.pre-commit-config.yaml`**. Install the hook once per clone:
+
 ```bash
 pip install -e ".[dev]"
+pre-commit install
+```
+
+Manual checks (same rules as the hook):
+
+```bash
 ruff check src tests
 ruff format src tests   # apply formatting
 ```
 
-Configuration lives in **`pyproject.toml`** (`[tool.ruff]`). CI should run `ruff check` (and optionally `ruff format --check`).
+Configuration lives in **`pyproject.toml`** (`[tool.ruff]`).
 
 ## Status
 
