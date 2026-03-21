@@ -27,17 +27,17 @@ def _outcome_query_limit(
     return limit
 
 
-def _message_recipient_query(
-    recipient: Annotated[
+def _message_to_query(
+    to: Annotated[
         str,
         Query(
             description=(
-                "Default SMS recipient for this request scope; reserved for future outcome filtering."
+                "Default SMS destination for this request scope; reserved for future outcome filtering."
             ),
         ),
-    ] = config.DEFAULT_MESSAGE_RECIPIENT,
+    ] = config.DEFAULT_MESSAGE_TO,
 ) -> str:
-    return recipient
+    return to
 
 
 def create_app(
@@ -100,7 +100,7 @@ def create_app(
             message_id = await submit_message(
                 persistence_client,
                 total_shards=total_shards,
-                recipient=body.recipient,
+                to=body.to,
                 body=body.body,
             )
         except (httpx.HTTPError, OSError) as exc:
@@ -119,7 +119,7 @@ def create_app(
                 mid = await submit_message(
                     persistence_client,
                     total_shards=total_shards,
-                    recipient=repeat.recipient,
+                    to=repeat.to,
                     body=repeat.body,
                 )
                 ids.append(mid)
@@ -130,10 +130,10 @@ def create_app(
     @app.get("/messages/success", tags=["messages"])
     async def get_messages_success(
         limit: int = Depends(_outcome_query_limit),
-        recipient: str = Depends(_message_recipient_query),
+        to: str = Depends(_message_to_query),
         client: httpx.AsyncClient = Depends(get_notification_http),
     ) -> dict[str, Any]:
-        logger.debug("outcomes.success", extra={"recipient": recipient, "limit": limit})
+        logger.debug("outcomes.success", extra={"to": to, "limit": limit})
         try:
             response = await client.get(
                 "/internal/v1/outcomes/success",
@@ -152,10 +152,10 @@ def create_app(
     @app.get("/messages/failed", tags=["messages"])
     async def get_messages_failed(
         limit: int = Depends(_outcome_query_limit),
-        recipient: str = Depends(_message_recipient_query),
+        to: str = Depends(_message_to_query),
         client: httpx.AsyncClient = Depends(get_notification_http),
     ) -> dict[str, Any]:
-        logger.debug("outcomes.failed", extra={"recipient": recipient, "limit": limit})
+        logger.debug("outcomes.failed", extra={"to": to, "limit": limit})
         try:
             response = await client.get(
                 "/internal/v1/outcomes/failed",

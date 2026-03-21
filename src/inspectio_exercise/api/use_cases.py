@@ -18,13 +18,10 @@ async def submit_message(
     persistence: PersistenceHttpClient,
     *,
     total_shards: int,
-    recipient: str,
+    to: str,
     body: str,
 ) -> str:
-    """Persist a new pending record; return ``messageId`` (UUID string).
-
-    Stored JSON uses ``payload.to`` (same as PLAN.md) — API field is ``recipient``.
-    """
+    """Persist a new pending record; return ``messageId`` (UUID string)."""
     message_id = str(uuid.uuid4())
     shard_id = shard_id_for_message(message_id, total_shards)
     key = f"{pending_prefix_for_shard(shard_id)}{message_id}.json"
@@ -34,7 +31,7 @@ async def submit_message(
         "attemptCount": 0,
         "nextDueAt": now_ms,
         "status": "pending",
-        "payload": {"to": recipient, "body": body},
+        "payload": {"to": to, "body": body},
         "history": [],
     }
     raw = json.dumps(record, separators=(",", ":")).encode("utf-8")

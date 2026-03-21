@@ -14,7 +14,7 @@ pytestmark = pytest.mark.integration
 
 def test_post_messages_returns_accepted_metadata(api_client) -> None:
     """§5.3 / REST_API §3.1 — accepted message metadata including messageId; pending (or accepted) state."""
-    response = api_client.post("/messages", json={"recipient": "+1", "body": "hi"})
+    response = api_client.post("/messages", json={"to": "+1", "body": "hi"})
     assert response.status_code == 202
     data = response.json()
     assert "messageId" in data

@@ -11,6 +11,6 @@ REPEAT_COUNT_MAX: int = int(os.environ.get("REPEAT_COUNT_MAX", "10000"))
 OUTCOME_QUERY_LIMIT_DEFAULT: int = 100
 OUTCOME_QUERY_LIMIT_MAX: int = 1000
 
-# Default SMS recipient / body for public REST (plans/REST_API.md §3.1–3.2)
-DEFAULT_MESSAGE_RECIPIENT: str = "+10000000000"
+# Default SMS `to` / body for public REST (plans/REST_API.md §3.1–3.2)
+DEFAULT_MESSAGE_TO: str = "+10000000000"
 DEFAULT_REPEAT_MESSAGE_BODY: str = "load-test"

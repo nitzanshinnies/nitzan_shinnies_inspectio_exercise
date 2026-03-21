@@ -24,23 +24,23 @@ def test_post_messages_valid_body_returns_accepted_metadata(api_client: TestClie
 
 
 @pytest.mark.unit
-def test_post_messages_explicit_recipient(api_client: TestClient) -> None:
+def test_post_messages_explicit_to(api_client: TestClient) -> None:
     response = api_client.post(
         "/messages",
-        json={"recipient": "+15551234567", "body": "hello"},
+        json={"to": "+15551234567", "body": "hello"},
     )
     assert response.status_code == 202
 
 
 @pytest.mark.unit
 def test_post_messages_missing_required_fields_rejected(api_client: TestClient) -> None:
-    response = api_client.post("/messages", json={"recipient": "+1"})
+    response = api_client.post("/messages", json={"to": "+1"})
     assert response.status_code == 422
 
 
 @pytest.mark.unit
-def test_post_messages_empty_recipient_rejected(api_client: TestClient) -> None:
-    response = api_client.post("/messages", json={"recipient": "", "body": "x"})
+def test_post_messages_empty_to_rejected(api_client: TestClient) -> None:
+    response = api_client.post("/messages", json={"to": "", "body": "x"})
     assert response.status_code == 422
 
 
