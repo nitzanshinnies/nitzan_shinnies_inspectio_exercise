@@ -12,6 +12,7 @@ Distributed **SMS retry scheduler** per `plans/` (S3 truth, workers, notificatio
 | `inspectio_exercise.notification` | Outcomes publish + query (Redis + S3 log) | 8002 |
 | `inspectio_exercise.persistence` | Dedicated S3 persistence boundary | 8001 |
 | `inspectio_exercise.worker` | Shard worker (background loop placeholder + health) | 8004 |
+| `frontend/` (nginx) | Operational / demo UI — static assets + reverse proxy to API | 3000 → 80 |
 
 **Infrastructure (not Python):** Redis container for hot outcomes cache; S3 (AWS or LocalStack) behind persistence.
 
@@ -56,11 +57,13 @@ Then create keys via **`POST /internal/v1/put-object`** or by running the API ag
 
 ## Docker Compose
 
-Starts **Redis** plus all Python services (build from repo root containing this directory):
+Starts **Redis**, all Python services, and the **web** UI (nginx on host port **3000** proxying `/messages` and `/healthz` to the API — `plans/REST_API.md` §3.0). Build from the directory containing `docker-compose.yml`:
 
 ```bash
 docker compose up --build
 ```
+
+Open **http://localhost:3000** for the demo UI, or call the API directly at **http://localhost:8000**.
 
 ## Tests
 
