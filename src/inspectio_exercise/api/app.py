@@ -10,7 +10,7 @@ import httpx
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 
 from inspectio_exercise.api import config
-from inspectio_exercise.api.schemas import MessageCreate, RepeatMessagesCreate
+from inspectio_exercise.api.schemas import MessageCreate
 from inspectio_exercise.api.use_cases import submit_message
 from inspectio_exercise.common.health import register_healthz
 from inspectio_exercise.notification.persistence_client import PersistenceHttpClient
@@ -25,6 +25,15 @@ def _outcome_query_limit(
     ] = config.OUTCOME_QUERY_LIMIT_DEFAULT,
 ) -> int:
     return limit
+
+
+def _repeat_count(
+    count: Annotated[
+        int,
+        Query(ge=1, le=config.REPEAT_COUNT_MAX, description="How many copies to create"),
+    ],
+) -> int:
+    return count
 
 
 def _message_to_query(
@@ -109,23 +118,25 @@ def create_app(
 
     @app.post("/messages/repeat", tags=["messages"])
     async def post_messages_repeat(
-        repeat: RepeatMessagesCreate,
+        message: MessageCreate,
+        count: int = Depends(_repeat_count),
         persistence_client: PersistenceHttpClient = Depends(get_persistence),
         total_shards: int = Depends(get_total_shards),
     ) -> dict[str, Any]:
+        """``?count=N`` with the same JSON body as ``POST /messages``, reused ``N`` times."""
         ids: list[str] = []
         try:
-            for _ in range(repeat.count):
+            for _ in range(count):
                 mid = await submit_message(
                     persistence_client,
                     total_shards=total_shards,
-                    to=repeat.to,
-                    body=repeat.body,
+                    to=message.to,
+                    body=message.body,
                 )
                 ids.append(mid)
         except (httpx.HTTPError, OSError) as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
-        return {"accepted": repeat.count, "messageIds": ids}
+        return {"accepted": count, "messageIds": ids}
 
     @app.get("/messages/success", tags=["messages"])
     async def get_messages_success(

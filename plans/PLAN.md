@@ -146,8 +146,8 @@ Implement the following endpoints:
 
 1. `POST /messages`
    - Send a single message.
-2. `POST /messages/repeat`
-   - Load test endpoint: JSON body with **`count`** (and optional **`to`** / **`body`**); create `N` copies.
+2. `POST /messages/repeat?count=N`
+   - Load test endpoint: query **`count`**, JSON body same as **`POST /messages`**; body reused **`N`** times.
 3. `GET /messages/success` (`limit` optional, default **100**; `to` optional—see [`plans/REST_API.md`](REST_API.md))
    - Return the most recent successful outcomes (via notification service + Redis).
 4. `GET /messages/failed` (same `limit` / `to` rules as success)

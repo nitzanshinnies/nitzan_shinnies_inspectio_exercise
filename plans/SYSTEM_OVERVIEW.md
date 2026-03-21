@@ -168,8 +168,8 @@ Terminal failure:
 Implement:
 - `POST /messages`
   - Send a single message.
-- `POST /messages/repeat`
-  - Load test endpoint: JSON body with **`count`** (optional **`to`** / **`body`**); create `N` copies.
+- `POST /messages/repeat?count=N`
+  - Load test endpoint: same JSON body as **`POST /messages`**, reused **`N`** times.
 - `GET /messages/success` (`limit` optional, default **100**; `to` optional—[`REST_API.md`](REST_API.md))
   - Return most recent successful outcomes (notification service → Redis).
 - `GET /messages/failed` (same `limit` / `to` rules)

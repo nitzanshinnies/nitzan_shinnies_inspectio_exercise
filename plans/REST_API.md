@@ -58,15 +58,16 @@ Validation expectations:
 - Reject malformed or empty payload fields.
 - Enforce schema-level validation before persistence/activation.
 
-### 3.2 `POST /messages/repeat`
+### 3.2 `POST /messages/repeat?count=N`
 
 Purpose:
-- Load-test helper endpoint to create **`count`** message copies with shared template content.
+- Load-test helper endpoint to create **`N`** messages from **one** template.
+
+Query parameters:
+- `count` (required): positive integer, bounded by a configured **maximum** (e.g. `REPEAT_COUNT_MAX`) to prevent abuse.
 
 Request body (JSON):
-- `count` (required): positive integer, bounded by a configured **maximum** (e.g. `REPEAT_COUNT_MAX`) to prevent abuse.
-- `to` (optional): defaults to **`+10000000000`**.
-- `body` (optional): defaults to **`load-test`**.
+- Same fields as **`POST /messages`** (§3.1): **`to`** (optional, default **`+10000000000`**) and **`body`** (required, non-empty). This object is **reused `count` times**: each iteration creates an **independent** `messageId` and pending record with the same `to` / `body` payload.
 
 Behavior:
 - Creates **`count`** independent messages with distinct `messageId`s.
@@ -145,7 +146,7 @@ At API boundary:
 ### 5.3 Validation and error handling
 
 Common invalid cases:
-- Missing required fields (`body` on `POST /messages`; `count` on `POST /messages/repeat`)
+- Missing required fields (`body` on `POST /messages`; **`count`** query on `POST /messages/repeat?count=…`)
 - Empty `to` when provided
 - Invalid `count`/`limit` values
 - Unsupported types
@@ -192,7 +193,7 @@ The REST API plan is considered complete when:
 ```mermaid
 flowchart LR
   Client[Client] --> PostMsg[POST /messages]
-  Client --> Repeat[POST /messages/repeat]
+  Client --> Repeat[POST /messages/repeat?count=N]
   Client --> GetSuccess[GET /messages/success]
   Client --> GetFailed[GET /messages/failed]
   Client --> Health[GET /healthz]
