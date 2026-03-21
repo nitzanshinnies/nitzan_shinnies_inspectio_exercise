@@ -1,15 +1,18 @@
 :root {
-    --bg: #0f1210;
-    --panel: #171b18;
-    --text: #e8ebe6;
-    --muted: #9aa399;
-    --accent: #c4a35a;
-    --accent-dim: #8a7340;
-    --error: #e07a6e;
-    --border: #2a312b;
+    --accent: #7c5c1e;
+    --accent-dim: #a07828;
+    --bg: #f6f4ef;
+    --border: #d9d4c8;
+    --error: #b42318;
     --font-display: "DM Serif Display", Georgia, serif;
     --font-mono: "IBM Plex Mono", ui-monospace, monospace;
     --font-sans: "Source Sans 3", system-ui, sans-serif;
+    --input-bg: #ffffff;
+    --muted: #5c574c;
+    --panel: #ffffff;
+    --shadow: rgba(45, 42, 36, 0.08);
+    --table-head: #ebe6dc;
+    --text: #1f1d18;
 }
 
 *,
@@ -23,8 +26,8 @@ body {
     min-height: 100vh;
     color: var(--text);
     background:
-        radial-gradient(1200px 600px at 10% -10%, #1f2a22 0%, transparent 55%),
-        radial-gradient(900px 500px at 100% 0%, #1a1c24 0%, transparent 50%),
+        radial-gradient(1000px 520px at 8% -8%, #e8e2d6 0%, transparent 55%),
+        radial-gradient(800px 480px at 100% 0%, #e4ebe4 0%, transparent 48%),
         var(--bg);
     font-family: var(--font-sans);
     line-height: 1.5;
@@ -47,17 +50,12 @@ header.hero {
 }
 
 header.hero h1 {
-    margin: 0 0 0.5rem;
+    margin: 0;
     font-family: var(--font-display);
     font-size: clamp(1.75rem, 4vw, 2.35rem);
     font-weight: 400;
     letter-spacing: 0.02em;
-}
-
-header.hero p {
-    margin: 0;
-    color: var(--muted);
-    max-width: 52ch;
+    color: var(--text);
 }
 
 #banner {
@@ -67,11 +65,13 @@ header.hero p {
     border: 1px solid var(--border);
     background: var(--panel);
     font-size: 0.95rem;
+    box-shadow: 0 1px 3px var(--shadow);
 }
 
 #banner[data-kind="error"] {
-    border-color: color-mix(in srgb, var(--error) 55%, var(--border));
+    border-color: color-mix(in srgb, var(--error) 35%, var(--border));
     color: var(--error);
+    background: #fef3f2;
 }
 
 #banner[hidden] {
@@ -90,11 +90,11 @@ header.hero p {
 }
 
 .panel {
-    background: color-mix(in srgb, var(--panel) 92%, transparent);
+    background: var(--panel);
     border: 1px solid var(--border);
     border-radius: 10px;
     padding: 1.25rem 1.35rem;
-    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 8px 28px var(--shadow);
 }
 
 .panel h2 {
@@ -120,7 +120,7 @@ textarea {
     padding: 0.55rem 0.65rem;
     border-radius: 6px;
     border: 1px solid var(--border);
-    background: #0c0f0d;
+    background: var(--input-bg);
     color: var(--text);
     font-family: var(--font-sans);
     font-size: 1rem;
@@ -142,8 +142,8 @@ textarea {
 button {
     cursor: pointer;
     border-radius: 6px;
-    border: 1px solid var(--accent-dim);
-    background: linear-gradient(180deg, #3a3428 0%, #26231c 100%);
+    border: 1px solid var(--border);
+    background: linear-gradient(180deg, #faf9f6 0%, #f0ebe3 100%);
     color: var(--text);
     font-family: var(--font-sans);
     font-size: 0.95rem;
@@ -151,13 +151,14 @@ button {
 }
 
 button:hover {
-    border-color: var(--accent);
+    border-color: var(--accent-dim);
+    background: #fffefb;
 }
 
 button:focus-visible,
 input:focus-visible,
 textarea:focus-visible {
-    outline: 2px solid var(--accent);
+    outline: 2px solid var(--accent-dim);
     outline-offset: 2px;
 }
 
@@ -171,8 +172,8 @@ textarea:focus-visible {
     margin-top: 1rem;
     padding: 0.75rem;
     border-radius: 6px;
-    border: 1px dashed color-mix(in srgb, var(--muted) 45%, var(--border));
-    background: rgba(0, 0, 0, 0.2);
+    border: 1px dashed var(--border);
+    background: #faf8f4;
     overflow: auto;
     max-height: 280px;
 }
@@ -190,6 +191,7 @@ textarea:focus-visible {
     max-height: 360px;
     border-radius: 6px;
     border: 1px solid var(--border);
+    background: var(--input-bg);
 }
 
 .outcomes-table {
@@ -210,12 +212,12 @@ textarea:focus-visible {
 .outcomes-table th {
     position: sticky;
     top: 0;
-    background: #121612;
+    background: var(--table-head);
     z-index: 1;
 }
 
 .outcomes-table tr:hover td {
-    background: rgba(196, 163, 90, 0.06);
+    background: rgba(124, 92, 30, 0.06);
 }
 
 .empty-outcomes {
