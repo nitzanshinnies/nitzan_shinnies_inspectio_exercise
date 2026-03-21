@@ -14,3 +14,7 @@ venv/
 # IDE
 .idea/
 .vscode/
+
+# Local file-backed S3 (set LOCAL_S3_ROOT to this path for inspectio-persistence)
+.local-s3/*
+!.local-s3/.gitkeep
