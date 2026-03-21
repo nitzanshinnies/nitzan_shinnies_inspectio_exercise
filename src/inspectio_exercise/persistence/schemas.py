@@ -7,10 +7,8 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 
-class PutObjectRequest(BaseModel):
+class DeleteObjectRequest(BaseModel):
     key: str
-    body_b64: str = Field(..., description="Standard base64-encoded object bytes")
-    content_type: str = "application/json"
 
 
 class GetObjectRequest(BaseModel):
@@ -21,10 +19,6 @@ class GetObjectResponse(BaseModel):
     body_b64: str
 
 
-class DeleteObjectRequest(BaseModel):
-    key: str
-
-
 class ListPrefixRequest(BaseModel):
     prefix: str
     max_keys: int | None = None
@@ -32,3 +26,9 @@ class ListPrefixRequest(BaseModel):
 
 class ListPrefixResponse(BaseModel):
     keys: list[dict[str, Any]]
+
+
+class PutObjectRequest(BaseModel):
+    key: str
+    body_b64: str = Field(..., description="Standard base64-encoded object bytes")
+    content_type: str = "application/json"

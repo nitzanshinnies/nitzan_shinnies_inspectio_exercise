@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 import json
 import os
-from contextlib import asynccontextmanager
 from typing import Any
 
-import httpx
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
+import httpx
 from pydantic import BaseModel, Field, field_validator
 from pydantic.config import ConfigDict
 from redis import asyncio as redis_asyncio
@@ -24,8 +24,8 @@ from inspectio_exercise.notification.persistence_client import PersistenceHttpCl
 class PublishOutcomeRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
-    notification_id: str = Field(alias="notificationId")
     message_id: str = Field(alias="messageId")
+    notification_id: str = Field(alias="notificationId")
     outcome: str
     recorded_at: int = Field(alias="recordedAt")
     shard_id: int = Field(alias="shardId")
@@ -95,23 +95,17 @@ def create_app(
     )
     register_healthz(app, "notification")
 
-    def get_redis(request: Request) -> Redis:
-        return request.app.state.redis
-
     def get_persistence(request: Request) -> PersistenceHttpClient:
         return request.app.state.persistence
 
-    @app.get("/internal/v1/ready", tags=["internal"], include_in_schema=False)
-    async def ready(request: Request) -> Response:
-        if not hasattr(request.app.state, "redis"):
-            return Response(status_code=503)
-        return Response(status_code=200)
+    def get_redis(request: Request) -> Redis:
+        return request.app.state.redis
 
     @app.post("/internal/v1/outcomes", tags=["internal"])
     async def post_outcomes(
         body: PublishOutcomeRequest,
-        redis: Redis = Depends(get_redis),
         persistence: PersistenceHttpClient = Depends(get_persistence),
+        redis: Redis = Depends(get_redis),
     ) -> dict[str, str]:
         record = body.model_dump(by_alias=True, mode="json")
         try:
@@ -119,6 +113,18 @@ def create_app(
         except (RedisError, httpx.HTTPError, OSError) as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         return {"status": "ok"}
+
+    @app.get("/internal/v1/outcomes/failed", tags=["internal"])
+    async def get_outcomes_failed(
+        limit: int = config.QUERY_LIMIT_DEFAULT,
+        redis: Redis = Depends(get_redis),
+    ) -> list[dict[str, Any]]:
+        lim = _clamp_limit(limit)
+        try:
+            raw_rows = await redis.lrange(config.REDIS_KEY_FAILED, 0, lim - 1)
+        except RedisError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        return [json.loads(x) for x in raw_rows]
 
     @app.get("/internal/v1/outcomes/success", tags=["internal"])
     async def get_outcomes_success(
@@ -132,17 +138,11 @@ def create_app(
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         return [json.loads(x) for x in raw_rows]
 
-    @app.get("/internal/v1/outcomes/failed", tags=["internal"])
-    async def get_outcomes_failed(
-        limit: int = config.QUERY_LIMIT_DEFAULT,
-        redis: Redis = Depends(get_redis),
-    ) -> list[dict[str, Any]]:
-        lim = _clamp_limit(limit)
-        try:
-            raw_rows = await redis.lrange(config.REDIS_KEY_FAILED, 0, lim - 1)
-        except RedisError as exc:
-            raise HTTPException(status_code=503, detail=str(exc)) from exc
-        return [json.loads(x) for x in raw_rows]
+    @app.get("/internal/v1/ready", tags=["internal"], include_in_schema=False)
+    async def ready(request: Request) -> Response:
+        if not hasattr(request.app.state, "redis"):
+            return Response(status_code=503)
+        return Response(status_code=200)
 
     return app
 

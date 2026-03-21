@@ -27,15 +27,17 @@ async def hydrate_from_persistence(redis: Redis, persistence: PersistenceHttpCli
     records.sort(key=lambda r: int(r["recordedAt"]), reverse=True)
     top = records[: config.HYDRATION_MAX]
     await redis.delete(config.REDIS_KEY_SUCCESS, config.REDIS_KEY_FAILED)
+    # LPUSH builds head-to-tail: push *oldest* first so the list reads
+    # [newest, …, oldest] and LRANGE 0 N-1 matches NOTIFICATION_SERVICE.md §6 (newest first).
     success = sorted(
         (r for r in top if r.get("outcome") == "success"),
         key=lambda r: int(r["recordedAt"]),
-        reverse=True,
+        reverse=False,
     )
     failed = sorted(
         (r for r in top if r.get("outcome") == "failed"),
         key=lambda r: int(r["recordedAt"]),
-        reverse=True,
+        reverse=False,
     )
     for r in success:
         await redis.lpush(config.REDIS_KEY_SUCCESS, json.dumps(r, separators=(",", ":")))

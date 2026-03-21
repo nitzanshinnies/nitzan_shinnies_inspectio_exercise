@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import base64
-import os
 from contextlib import asynccontextmanager
+import os
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
@@ -20,6 +20,7 @@ from inspectio_exercise.persistence.schemas import (
     ListPrefixResponse,
     PutObjectRequest,
 )
+
 
 def _backend_from_env() -> PersistencePort | None:
     root = os.environ.get("LOCAL_S3_ROOT")
@@ -52,13 +53,12 @@ def create_app() -> FastAPI:
             )
         return backend
 
-    @app.post("/internal/v1/put-object", tags=["persistence"])
-    async def put_object(
-        body: PutObjectRequest,
+    @app.post("/internal/v1/delete-object", tags=["persistence"])
+    async def delete_object(
+        body: DeleteObjectRequest,
         backend: PersistencePort = Depends(require_backend),
     ) -> dict[str, str]:
-        raw = base64.b64decode(body.body_b64)
-        await backend.put_object(body.key, raw, content_type=body.content_type)
+        await backend.delete_object(body.key)
         return {"status": "ok"}
 
     @app.post("/internal/v1/get-object", tags=["persistence"])
@@ -72,14 +72,6 @@ def create_app() -> FastAPI:
             raise HTTPException(status_code=404, detail={"key": body.key, "reason": "not found"}) from None
         return GetObjectResponse(body_b64=base64.b64encode(raw).decode("ascii"))
 
-    @app.post("/internal/v1/delete-object", tags=["persistence"])
-    async def delete_object(
-        body: DeleteObjectRequest,
-        backend: PersistencePort = Depends(require_backend),
-    ) -> dict[str, str]:
-        await backend.delete_object(body.key)
-        return {"status": "ok"}
-
     @app.post("/internal/v1/list-prefix", tags=["persistence"])
     async def list_prefix(
         body: ListPrefixRequest,
@@ -87,6 +79,15 @@ def create_app() -> FastAPI:
     ) -> ListPrefixResponse:
         rows = await backend.list_prefix(body.prefix, max_keys=body.max_keys)
         return ListPrefixResponse(keys=rows)
+
+    @app.post("/internal/v1/put-object", tags=["persistence"])
+    async def put_object(
+        body: PutObjectRequest,
+        backend: PersistencePort = Depends(require_backend),
+    ) -> dict[str, str]:
+        raw = base64.b64decode(body.body_b64)
+        await backend.put_object(body.key, raw, content_type=body.content_type)
+        return {"status": "ok"}
 
     @app.get("/internal/v1/ready", tags=["persistence"], include_in_schema=False)
     async def ready(request: Request) -> Response:
