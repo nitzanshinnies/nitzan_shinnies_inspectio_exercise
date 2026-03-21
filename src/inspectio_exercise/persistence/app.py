@@ -1,17 +1,15 @@
-"""Persistence microservice — HTTP surface over ``PersistencePort`` (local S3 or future AWS)."""
+"""Persistence microservice — HTTP surface over ``PersistencePort`` (local files or AWS S3)."""
 
 from __future__ import annotations
 
 import base64
-import os
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 
 from inspectio_exercise.common.health import register_healthz
+from inspectio_exercise.persistence.backend import build_persistence_backend
 from inspectio_exercise.persistence.interface import PersistencePort
-from inspectio_exercise.persistence.local_s3 import LocalS3Provider
 from inspectio_exercise.persistence.schemas import (
     DeleteObjectRequest,
     GetObjectRequest,
@@ -22,16 +20,9 @@ from inspectio_exercise.persistence.schemas import (
 )
 
 
-def _backend_from_env() -> PersistencePort | None:
-    root = os.environ.get("LOCAL_S3_ROOT")
-    if not root:
-        return None
-    return LocalS3Provider(Path(root))
-
-
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
-    app.state.backend = _backend_from_env()
+    app.state.backend = build_persistence_backend()
     yield
 
 
@@ -39,7 +30,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="Inspectio Persistence Service",
         version="0.1.0",
-        description="Put/get/delete/list-prefix over S3 (or local mock) — see plans/SYSTEM_OVERVIEW.md §1.3.",
+        description="Put/get/delete/list-prefix — local file tree or AWS S3 (plans/SYSTEM_OVERVIEW.md §1.3).",
         lifespan=_lifespan,
     )
     register_healthz(app, "persistence")
@@ -49,7 +40,12 @@ def create_app() -> FastAPI:
         if backend is None:
             raise HTTPException(
                 status_code=503,
-                detail="persistence backend not configured — set LOCAL_S3_ROOT for local file-backed S3",
+                detail=(
+                    "persistence backend not configured — set INSPECTIO_PERSISTENCE_BACKEND=local "
+                    "with LOCAL_S3_ROOT, or INSPECTIO_PERSISTENCE_BACKEND=aws with "
+                    "INSPECTIO_S3_BUCKET (or S3_BUCKET); implicit mode uses LOCAL_S3_ROOT for "
+                    "local or bucket env vars for AWS"
+                ),
             )
         return backend
 
