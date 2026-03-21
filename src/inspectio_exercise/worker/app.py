@@ -5,28 +5,51 @@ import contextlib
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
+import httpx
 from fastapi import FastAPI
 
 from inspectio_exercise.common.health import register_healthz
-
-
-async def _placeholder_wakeup_loop() -> None:
-    """Reserved for 500ms wakeup + due sends (plans/PLAN.md §5)."""
-    while True:
-        await asyncio.sleep(0.5)
+from inspectio_exercise.notification.persistence_client import PersistenceHttpClient
+from inspectio_exercise.worker.config import load_worker_settings
+from inspectio_exercise.worker.runtime import WorkerRuntime
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    task = asyncio.create_task(_placeholder_wakeup_loop(), name="worker-wakeup-placeholder")
+    settings = load_worker_settings()
+    persist_http = httpx.AsyncClient(
+        base_url=settings.persistence_url,
+        timeout=settings.http_timeout_sec,
+    )
+    sms_http = httpx.AsyncClient(
+        base_url=settings.mock_sms_url,
+        timeout=settings.http_timeout_sec,
+    )
+    notify_http = httpx.AsyncClient(
+        base_url=settings.notification_url,
+        timeout=settings.http_timeout_sec,
+    )
+    persistence = PersistenceHttpClient(persist_http)
+    runtime = WorkerRuntime(
+        notify_client=notify_http,
+        persistence=persistence,
+        settings=settings,
+        sms_client=sms_http,
+    )
+    stop = asyncio.Event()
+    task = asyncio.create_task(runtime.run_forever(stop), name="worker-scheduler")
     yield
+    stop.set()
     task.cancel()
     with contextlib.suppress(asyncio.CancelledError):
         await task
+    await persist_http.aclose()
+    await sms_http.aclose()
+    await notify_http.aclose()
 
 
 def create_app() -> FastAPI:
-    """HTTP only for probes; scheduler runs as background task (skeleton)."""
+    """HTTP for probes; shard scheduler runs as background task (plans/CORE_LIFECYCLE.md)."""
     app = FastAPI(
         title="Inspectio Worker",
         version="0.1.0",

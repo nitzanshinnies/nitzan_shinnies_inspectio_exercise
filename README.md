@@ -11,7 +11,7 @@ Distributed **SMS retry scheduler** per `plans/` (S3 truth, workers, notificatio
 | `inspectio_exercise.mock_sms` | Simulated provider + audit | 8080 |
 | `inspectio_exercise.notification` | Outcomes publish + query (Redis + S3 log) | 8002 |
 | `inspectio_exercise.persistence` | Dedicated S3 persistence boundary | 8001 |
-| `inspectio_exercise.worker` | Shard worker (background loop placeholder + health) | 8004 |
+| `inspectio_exercise.worker` | Shard scheduler (500ms tick, mock SMS, persistence, outcomes notify) | 8004 |
 | `frontend/` (nginx) | Operational / demo UI — static assets + reverse proxy to API | 3000 → 80 |
 
 **Infrastructure (not Python):** Redis container for hot outcomes cache; object storage is accessed only through the **persistence** service (local directory or AWS S3).
@@ -38,7 +38,29 @@ inspectio-worker
 
 Or `uvicorn` directly, e.g. `uvicorn inspectio_exercise.api.app:app --host 0.0.0.0 --port 8000`.
 
-**Public API env (defaults match default ports above):** `PERSISTENCE_SERVICE_URL` (`http://127.0.0.1:8001`), `NOTIFICATION_SERVICE_URL` (`http://127.0.0.1:8002`), `TOTAL_SHARDS` (`256`, must align with workers).
+**Public API env (defaults match default ports above):** `PERSISTENCE_SERVICE_URL` (`http://127.0.0.1:8001`), `NOTIFICATION_SERVICE_URL` (`http://127.0.0.1:8002`), `TOTAL_SHARDS` (`256`, **must match every worker** — same value on API and all worker processes or pending keys and ownership will disagree).
+
+### Worker env (`inspectio-worker`)
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `HOSTNAME` | `worker-0` (local) | StatefulSet-style name; trailing digits → pod index for shard ownership (`plans/SHARDING.md`). |
+| `TOTAL_SHARDS` | `256` | Same formula as API when writing pending keys. |
+| `SHARDS_PER_POD` | `256` | Contiguous shard range per pod. |
+| `PERSISTENCE_SERVICE_URL` | `http://127.0.0.1:8001` | HTTP persistence microservice (no direct S3 from worker). |
+| `MOCK_SMS_URL` | `http://127.0.0.1:8080` | `POST /send` target. |
+| `NOTIFICATION_SERVICE_URL` | `http://127.0.0.1:8002` | `POST /internal/v1/outcomes` after durable terminal write. |
+| `INSPECTIO_WORKER_TICK_SEC` | `0.5` | Wakeup interval (plans/CORE_LIFECYCLE.md). |
+| `INSPECTIO_WORKER_PERSISTENCE_READ_RETRIES` | `5` | Bounded retries on transient persistence errors (`plans/RESILIENCE.md` §5). |
+| `INSPECTIO_WORKER_PERSISTENCE_READ_BACKOFF_SEC` | `0.05` | Initial backoff; exponential per attempt. |
+| `INSPECTIO_WORKER_TERMINAL_LOOKBACK_HOURS` | `6` | How far back (UTC hourly prefixes) the worker scans `state/success/` and `state/failed/` for **idempotent** reconciliation (duplicate pending vs existing terminal). Older terminals are not visible to this logic—increase the value if you must reconcile long-lived orphans (more `list_prefix` work per due message). |
+| `INSPECTIO_WORKER_NOTIFY_RETRIES` | `3` | Outcome publish retries. |
+| `INSPECTIO_WORKER_NOTIFY_BACKOFF_SEC` | `0.05` | Initial notify backoff. |
+
+**Worker behavior notes**
+
+- **Invalid `payload` at send time** (e.g. `to` / `body` not strings after a concurrent or manual S3 edit): the worker **deletes** the pending object (best-effort), **drops** in-memory scheduler state, and logs a warning — it does not spin forever on the heap.
+- **Idempotency / scan cost:** Reconciliation lists hourly prefixes under success/failed for the lookback window **before** calling mock SMS when a message is due. Under very large buckets or long lookback, that is **O(lookback × list_prefix)** per check; tune `INSPECTIO_WORKER_TERMINAL_LOOKBACK_HOURS` accordingly.
 
 **Message routes (see `plans/REST_API.md`):** `POST /messages` — JSON `body` (required), `to` optional (default `+10000000000`). `POST /messages/repeat?count=N` — same JSON body as `/messages`, reused **`N`** times; response includes **`messageIds`** (and **`accepted`**). `GET /messages/success|failed` — optional **`limit`** (default **100**, e.g. `?limit=100`). Demo/operational UI is a **separate frontend container** (not served by this API).
 
@@ -74,7 +96,7 @@ inspectio-persistence
 
 ## Docker Compose
 
-Starts **Redis**, all Python services, and the **web** UI (nginx on host port **3000** proxying `/messages` and `/healthz` to the API — `plans/REST_API.md` §3.0). Build from the directory containing `docker-compose.yml`:
+Starts **Redis**, all Python services, and the **web** UI (nginx on host port **3000** proxying `/messages` and `/healthz` to the API — `plans/REST_API.md` §3.0). **`TOTAL_SHARDS` is set the same on `api` and `worker`** so compose stacks do not rely on matching defaults alone. Build from the directory containing `docker-compose.yml`:
 
 ```bash
 docker compose up --build
@@ -84,7 +106,7 @@ Open **http://localhost:3000** for the demo UI, or call the API directly at **ht
 
 ## Tests
 
-Layout follows **`plans/TESTS.md`**: `tests/unit/`, `tests/integration/`, `tests/e2e/` (integration/e2e are mostly placeholders until features exist).
+Layout follows **`plans/TESTS.md`**: `tests/unit/`, `tests/integration/`, `tests/e2e/`. **Integration and e2e** still include **skipped** cases (worker bootstrap harness, multi-component flow, health-monitor reconcile, some notification/API outcome wiring) — see `pytest` markers and `tests/integration/README.md`; those are **outside** the worker + mock SMS implementation track until enabled.
 
 **TDD:** Canonical behavior is documented in **`tests/reference_spec.py`** (with notes tying to **`plans/`**). **`inspectio_exercise.domain`** should match that spec; stubs raise **`NotImplementedError`** until implemented — **`pytest tests/unit`** stays **red** until domain, REST contract, and related gates pass.
 
@@ -120,4 +142,5 @@ Configuration lives in **`pyproject.toml`** (`[tool.ruff]`).
 
 ## Status
 
-Skeleton: **`GET /healthz`** on each service; business routes return **501** until implemented per plan documents. **Domain** package: implement to satisfy **`tests/reference_spec.py`** (see **`plans/TESTS.md` §4**).
+- **Implemented (core exercise path):** public API message submission + outcomes proxy, **persistence** service (local + AWS backends), **notification** + Redis, **mock SMS** (`POST /send` + audit), **worker** (shard discovery, retries, terminal writes, outcome publish). **`GET /healthz`** on each service.
+- **Still skeleton / backlog:** **`inspectio-health-monitor`** business route **`POST /internal/v1/integrity-check`** returns **501** (`plans/HEALTH_MONITOR.md`). **Domain** matches **`tests/reference_spec.py`** where covered by **`pytest`**; expand skipped integration/e2e per **`plans/TESTS.md`** when you tackle those areas.

@@ -17,6 +17,7 @@ services:
       INSPECTIO_API_PORT: "8000"
       NOTIFICATION_SERVICE_URL: http://notification:8002
       PERSISTENCE_SERVICE_URL: http://persistence:8001
+      TOTAL_SHARDS: "256"
     ports:
       - "8000:8000"
 
@@ -69,7 +70,17 @@ services:
   worker:
     build: .
     command: ["inspectio-worker"]
+    depends_on:
+      - mock-sms
+      - notification
+      - persistence
     environment:
+      HOSTNAME: worker-0
       INSPECTIO_WORKER_PORT: "8004"
+      MOCK_SMS_URL: http://mock-sms:8080
+      NOTIFICATION_SERVICE_URL: http://notification:8002
+      PERSISTENCE_SERVICE_URL: http://persistence:8001
+      SHARDS_PER_POD: "256"
+      TOTAL_SHARDS: "256"
     ports:
       - "8004:8004"
