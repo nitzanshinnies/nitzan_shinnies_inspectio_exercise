@@ -39,10 +39,9 @@ All persistence operations are performed through the dedicated S3 persistence se
 
 ## 3) Required endpoints (Section 7)
 
-### 3.0 `GET /` (optional operational UI)
+### 3.0 Operational UI (separate frontend container)
 
-Purpose:
-- Minimal **HTML** page (same process) that uses `fetch` to call **`POST /messages`**, **`POST /messages/repeat?count=N`**, and **`GET /messages/success|failed?limit=…`**, matching the exercise operational surface.
+The public REST API does **not** serve HTML. Exercise **operational / demo UI** lives in a **dedicated frontend container** (see [`PLAN.md`](PLAN.md) deployment notes) and calls the JSON routes below over HTTP.
 
 ### 3.1 `POST /messages`
 

@@ -13,14 +13,6 @@ from fastapi.testclient import TestClient
 
 
 @pytest.mark.unit
-def test_get_root_returns_operational_html(api_client: TestClient) -> None:
-    response = api_client.get("/")
-    assert response.status_code == 200
-    assert "text/html" in response.headers.get("content-type", "")
-    assert "POST /messages" in response.text
-
-
-@pytest.mark.unit
 def test_post_messages_valid_body_returns_accepted_metadata(api_client: TestClient) -> None:
     """REST_API.md §3.1 — accepted message metadata including messageId; pending or accepted state."""
     response = api_client.post("/messages", json={"body": "hello"})

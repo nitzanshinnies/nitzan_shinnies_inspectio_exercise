@@ -8,10 +8,8 @@ from typing import Annotated, Any
 
 import httpx
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
-from fastapi.responses import HTMLResponse
 
 from inspectio_exercise.api import config
-from inspectio_exercise.api.operational_ui import OPERATIONAL_HTML
 from inspectio_exercise.api.schemas import MessageCreate
 from inspectio_exercise.api.use_cases import submit_message
 from inspectio_exercise.common.health import register_healthz
@@ -54,7 +52,7 @@ def create_app(
         if persistence is None:
             persist_raw = httpx.AsyncClient(
                 base_url=config.PERSISTENCE_SERVICE_URL,
-                timeout=60.0,
+                timeout=config.PEER_HTTP_CLIENT_TIMEOUT_SEC,
             )
             app.state.persistence = PersistenceHttpClient(persist_raw)
         else:
@@ -62,7 +60,7 @@ def create_app(
         if notification_http is None:
             app.state.notification_http = httpx.AsyncClient(
                 base_url=config.NOTIFICATION_SERVICE_URL,
-                timeout=60.0,
+                timeout=config.PEER_HTTP_CLIENT_TIMEOUT_SEC,
             )
         else:
             app.state.notification_http = notification_http
@@ -78,11 +76,6 @@ def create_app(
         lifespan=lifespan,
     )
     register_healthz(app, "api")
-
-    @app.get("/", include_in_schema=False)
-    async def operational_page() -> HTMLResponse:
-        """Minimal HTML hitting the exercise REST routes (optional operational surface)."""
-        return HTMLResponse(OPERATIONAL_HTML)
 
     def get_persistence(request: Request) -> PersistenceHttpClient:
         return request.app.state.persistence

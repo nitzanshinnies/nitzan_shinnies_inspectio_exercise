@@ -154,8 +154,8 @@ Implement the following endpoints:
    - Return the most recent failed outcomes (via notification service + Redis).
 5. `GET /healthz`
    - Basic health endpoint(s).
-6. `GET /` (optional)
-   - Minimal HTML operational page calling the message routes (see [`plans/REST_API.md`](REST_API.md) §3.0).
+
+Operational / demo UI is **not** part of this API process; use the **frontend container** described in deployment docs, calling the same JSON routes ([`plans/REST_API.md`](REST_API.md) §3.0).
 
 Recent outcomes performance requirement:
 
