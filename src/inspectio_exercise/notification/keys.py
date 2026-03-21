@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 
 def utc_segments_for_instant_ms(instant_ms: int) -> tuple[str, str, str, str]:
-    dt = datetime.fromtimestamp(instant_ms / 1000.0, tz=timezone.utc)
+    dt = datetime.fromtimestamp(instant_ms / 1000.0, tz=UTC)
     return (
         f"{dt.year:04d}",
         f"{dt.month:02d}",

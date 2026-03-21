@@ -10,12 +10,16 @@ import pytest
 pytestmark = pytest.mark.integration
 
 
-@pytest.mark.skip(reason="§4.5: durable terminal S3 write then worker publish → notification → Redis")
+@pytest.mark.skip(
+    reason="§4.5: durable terminal S3 write then worker publish → notification → Redis"
+)
 def test_publish_after_durable_terminal_write() -> None:
     """state/notifications/... + Redis update after terminal persistence."""
 
 
-@pytest.mark.skip(reason="§4.5: API calls notification HTTP; no broad state/success|failed list per GET")
+@pytest.mark.skip(
+    reason="§4.5: API calls notification HTTP; no broad state/success|failed list per GET"
+)
 def test_api_get_outcomes_uses_notification_service_not_terminal_listing() -> None:
     """Spy: GET /messages/success does not list-prefix assemble from S3 terminal trees."""
 

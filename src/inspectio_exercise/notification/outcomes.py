@@ -48,7 +48,9 @@ async def hydrate_from_persistence(redis: Redis, persistence: PersistenceHttpCli
     return len(top)
 
 
-async def publish_outcome(redis: Redis, persistence: PersistenceHttpClient, record: dict[str, Any]) -> None:
+async def publish_outcome(
+    redis: Redis, persistence: PersistenceHttpClient, record: dict[str, Any]
+) -> None:
     """Persist notification JSON to S3, then LPUSH + LTRIM the appropriate Redis stream."""
     notification_id = str(record["notificationId"])
     recorded_at = int(record["recordedAt"])

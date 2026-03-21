@@ -30,38 +30,42 @@ async def test_publish_then_query_success(
     redis = FakeAsyncRedis(decode_responses=True)
     persist_app = create_persistence_app()
 
-    async with LifespanManager(persist_app):
-        async with httpx.AsyncClient(
+    async with (
+        LifespanManager(persist_app),
+        httpx.AsyncClient(
             transport=httpx.ASGITransport(app=persist_app),
             base_url="http://persistence",
-        ) as p_client:
-            notify_app = create_notification_app(test_redis=redis, test_http_client=p_client)
-            async with LifespanManager(notify_app):
-                async with httpx.AsyncClient(
-                    transport=httpx.ASGITransport(app=notify_app),
-                    base_url="http://notify",
-                ) as n_client:
-                    body = {
-                        "notificationId": "01HZXK9YQTEST1234567890AB",
-                        "messageId": "mid-1",
-                        "outcome": "success",
-                        "recordedAt": 1_705_312_800_000,
-                        "shardId": 3,
-                    }
-                    r = await n_client.post("/internal/v1/outcomes", json=body)
-                    assert r.status_code == 200, r.text
+        ) as p_client,
+    ):
+        notify_app = create_notification_app(test_redis=redis, test_http_client=p_client)
+        async with (
+            LifespanManager(notify_app),
+            httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=notify_app),
+                base_url="http://notify",
+            ) as n_client,
+        ):
+            body = {
+                "notificationId": "01HZXK9YQTEST1234567890AB",
+                "messageId": "mid-1",
+                "outcome": "success",
+                "recordedAt": 1_705_312_800_000,
+                "shardId": 3,
+            }
+            r = await n_client.post("/internal/v1/outcomes", json=body)
+            assert r.status_code == 200, r.text
 
-                    listed = list(tmp_path.rglob("*.json"))
-                    assert len(listed) == 1
-                    rel = str(listed[0].relative_to(tmp_path)).replace(os.sep, "/")
-                    assert "state/notifications/" in rel
+            listed = list(tmp_path.rglob("*.json"))
+            assert len(listed) == 1
+            rel = str(listed[0].relative_to(tmp_path)).replace(os.sep, "/")
+            assert "state/notifications/" in rel
 
-                    q = await n_client.get("/internal/v1/outcomes/success", params={"limit": 10})
-                    assert q.status_code == 200
-                    rows = q.json()
-                    assert len(rows) == 1
-                    assert rows[0]["notificationId"] == body["notificationId"]
-                    assert rows[0]["outcome"] == "success"
+            q = await n_client.get("/internal/v1/outcomes/success", params={"limit": 10})
+            assert q.status_code == 200
+            rows = q.json()
+            assert len(rows) == 1
+            assert rows[0]["notificationId"] == body["notificationId"]
+            assert rows[0]["outcome"] == "success"
 
 
 @pytest.mark.integration
@@ -73,40 +77,44 @@ async def test_success_stream_newest_first_after_two_publishes(
     redis = FakeAsyncRedis(decode_responses=True)
     persist_app = create_persistence_app()
 
-    async with LifespanManager(persist_app):
-        async with httpx.AsyncClient(
+    async with (
+        LifespanManager(persist_app),
+        httpx.AsyncClient(
             transport=httpx.ASGITransport(app=persist_app),
             base_url="http://persistence",
-        ) as p_client:
-            notify_app = create_notification_app(test_redis=redis, test_http_client=p_client)
-            async with LifespanManager(notify_app):
-                async with httpx.AsyncClient(
-                    transport=httpx.ASGITransport(app=notify_app),
-                    base_url="http://notify",
-                ) as n_client:
-                    await n_client.post(
-                        "/internal/v1/outcomes",
-                        json={
-                            "notificationId": "nid-old",
-                            "messageId": "m-old",
-                            "outcome": "success",
-                            "recordedAt": 1_000,
-                            "shardId": 0,
-                        },
-                    )
-                    await n_client.post(
-                        "/internal/v1/outcomes",
-                        json={
-                            "notificationId": "nid-new",
-                            "messageId": "m-new",
-                            "outcome": "success",
-                            "recordedAt": 2_000,
-                            "shardId": 0,
-                        },
-                    )
-                    q = await n_client.get("/internal/v1/outcomes/success", params={"limit": 10})
-                    rows = q.json()
-                    assert [r["notificationId"] for r in rows] == ["nid-new", "nid-old"]
+        ) as p_client,
+    ):
+        notify_app = create_notification_app(test_redis=redis, test_http_client=p_client)
+        async with (
+            LifespanManager(notify_app),
+            httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=notify_app),
+                base_url="http://notify",
+            ) as n_client,
+        ):
+            await n_client.post(
+                "/internal/v1/outcomes",
+                json={
+                    "notificationId": "nid-old",
+                    "messageId": "m-old",
+                    "outcome": "success",
+                    "recordedAt": 1_000,
+                    "shardId": 0,
+                },
+            )
+            await n_client.post(
+                "/internal/v1/outcomes",
+                json={
+                    "notificationId": "nid-new",
+                    "messageId": "m-new",
+                    "outcome": "success",
+                    "recordedAt": 2_000,
+                    "shardId": 0,
+                },
+            )
+            q = await n_client.get("/internal/v1/outcomes/success", params={"limit": 10})
+            rows = q.json()
+            assert [r["notificationId"] for r in rows] == ["nid-new", "nid-old"]
 
 
 @pytest.mark.integration
@@ -119,40 +127,46 @@ async def test_hydration_reloads_redis_after_second_stack(
     redis = FakeAsyncRedis(decode_responses=True)
     persist_app = create_persistence_app()
 
-    async with LifespanManager(persist_app):
-        async with httpx.AsyncClient(
+    async with (
+        LifespanManager(persist_app),
+        httpx.AsyncClient(
             transport=httpx.ASGITransport(app=persist_app),
             base_url="http://persistence",
-        ) as p_client:
-            app1 = create_notification_app(test_redis=redis, test_http_client=p_client)
-            async with LifespanManager(app1):
-                async with httpx.AsyncClient(
-                    transport=httpx.ASGITransport(app=app1),
-                    base_url="http://n1",
-                ) as n1:
-                    await n1.post(
-                        "/internal/v1/outcomes",
-                        json={
-                            "notificationId": "nid-h1",
-                            "messageId": "m1",
-                            "outcome": "failed",
-                            "recordedAt": 1_705_312_900_000,
-                            "shardId": 0,
-                        },
-                    )
+        ) as p_client,
+    ):
+        app1 = create_notification_app(test_redis=redis, test_http_client=p_client)
+        async with (
+            LifespanManager(app1),
+            httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=app1),
+                base_url="http://n1",
+            ) as n1,
+        ):
+            await n1.post(
+                "/internal/v1/outcomes",
+                json={
+                    "notificationId": "nid-h1",
+                    "messageId": "m1",
+                    "outcome": "failed",
+                    "recordedAt": 1_705_312_900_000,
+                    "shardId": 0,
+                },
+            )
 
-            redis2 = FakeAsyncRedis(decode_responses=True)
-            app2 = create_notification_app(test_redis=redis2, test_http_client=p_client)
-            async with LifespanManager(app2):
-                async with httpx.AsyncClient(
-                    transport=httpx.ASGITransport(app=app2),
-                    base_url="http://n2",
-                ) as n2:
-                    r = await n2.get("/internal/v1/outcomes/failed", params={"limit": 5})
-                    assert r.status_code == 200
-                    rows = r.json()
-                    assert len(rows) == 1
-                    assert rows[0]["notificationId"] == "nid-h1"
+        redis2 = FakeAsyncRedis(decode_responses=True)
+        app2 = create_notification_app(test_redis=redis2, test_http_client=p_client)
+        async with (
+            LifespanManager(app2),
+            httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=app2),
+                base_url="http://n2",
+            ) as n2,
+        ):
+            r = await n2.get("/internal/v1/outcomes/failed", params={"limit": 5})
+            assert r.status_code == 200
+            rows = r.json()
+            assert len(rows) == 1
+            assert rows[0]["notificationId"] == "nid-h1"
 
 
 @pytest.mark.integration
@@ -164,45 +178,51 @@ async def test_hydration_two_success_records_newest_first(
     redis = FakeAsyncRedis(decode_responses=True)
     persist_app = create_persistence_app()
 
-    async with LifespanManager(persist_app):
-        async with httpx.AsyncClient(
+    async with (
+        LifespanManager(persist_app),
+        httpx.AsyncClient(
             transport=httpx.ASGITransport(app=persist_app),
             base_url="http://persistence",
-        ) as p_client:
-            app1 = create_notification_app(test_redis=redis, test_http_client=p_client)
-            async with LifespanManager(app1):
-                async with httpx.AsyncClient(
-                    transport=httpx.ASGITransport(app=app1),
-                    base_url="http://n1",
-                ) as n1:
-                    await n1.post(
-                        "/internal/v1/outcomes",
-                        json={
-                            "notificationId": "h-old",
-                            "messageId": "m1",
-                            "outcome": "success",
-                            "recordedAt": 1_705_000_000_000,
-                            "shardId": 0,
-                        },
-                    )
-                    await n1.post(
-                        "/internal/v1/outcomes",
-                        json={
-                            "notificationId": "h-new",
-                            "messageId": "m2",
-                            "outcome": "success",
-                            "recordedAt": 1_706_000_000_000,
-                            "shardId": 0,
-                        },
-                    )
+        ) as p_client,
+    ):
+        app1 = create_notification_app(test_redis=redis, test_http_client=p_client)
+        async with (
+            LifespanManager(app1),
+            httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=app1),
+                base_url="http://n1",
+            ) as n1,
+        ):
+            await n1.post(
+                "/internal/v1/outcomes",
+                json={
+                    "notificationId": "h-old",
+                    "messageId": "m1",
+                    "outcome": "success",
+                    "recordedAt": 1_705_000_000_000,
+                    "shardId": 0,
+                },
+            )
+            await n1.post(
+                "/internal/v1/outcomes",
+                json={
+                    "notificationId": "h-new",
+                    "messageId": "m2",
+                    "outcome": "success",
+                    "recordedAt": 1_706_000_000_000,
+                    "shardId": 0,
+                },
+            )
 
-            redis2 = FakeAsyncRedis(decode_responses=True)
-            app2 = create_notification_app(test_redis=redis2, test_http_client=p_client)
-            async with LifespanManager(app2):
-                async with httpx.AsyncClient(
-                    transport=httpx.ASGITransport(app=app2),
-                    base_url="http://n2",
-                ) as n2:
-                    r = await n2.get("/internal/v1/outcomes/success", params={"limit": 10})
-                    rows = r.json()
-                    assert [row["notificationId"] for row in rows] == ["h-new", "h-old"]
+        redis2 = FakeAsyncRedis(decode_responses=True)
+        app2 = create_notification_app(test_redis=redis2, test_http_client=p_client)
+        async with (
+            LifespanManager(app2),
+            httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=app2),
+                base_url="http://n2",
+            ) as n2,
+        ):
+            r = await n2.get("/internal/v1/outcomes/success", params={"limit": 10})
+            rows = r.json()
+            assert [row["notificationId"] for row in rows] == ["h-new", "h-old"]

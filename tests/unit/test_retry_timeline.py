@@ -18,8 +18,12 @@ def test_delay_ms_matches_spec_for_each_failure_index() -> None:
 
 @pytest.mark.unit
 def test_next_due_at_matches_spec() -> None:
-    assert retry_mod.next_due_at_ms_after_failure(1_000, 0) == spec.next_due_at_ms_after_failure(1_000, 0)
-    assert retry_mod.next_due_at_ms_after_failure(1_000, 5) == spec.next_due_at_ms_after_failure(1_000, 5)
+    assert retry_mod.next_due_at_ms_after_failure(1_000, 0) == spec.next_due_at_ms_after_failure(
+        1_000, 0
+    )
+    assert retry_mod.next_due_at_ms_after_failure(1_000, 5) == spec.next_due_at_ms_after_failure(
+        1_000, 5
+    )
 
 
 @pytest.mark.unit

@@ -37,7 +37,9 @@ class PersistenceHttpClient:
         response.raise_for_status()
         return response.json()["keys"]
 
-    async def put_object(self, key: str, body: bytes, content_type: str = "application/json") -> None:
+    async def put_object(
+        self, key: str, body: bytes, content_type: str = "application/json"
+    ) -> None:
         payload = {
             "key": key,
             "body_b64": base64.b64encode(body).decode("ascii"),

@@ -39,7 +39,9 @@ def test_post_repeat_returns_summary(api_client) -> None:
     assert len(body.get("messageIds", [])) == 1
 
 
-@pytest.mark.skip(reason="§5.3: persistence + shard_id + durable pending under state/pending/shard-*/")
+@pytest.mark.skip(
+    reason="§5.3: persistence + shard_id + durable pending under state/pending/shard-*/"
+)
 def test_post_messages_creates_pending_under_shard_prefix() -> None:
     """POST /messages creates state/pending/shard-<shard_id>/<messageId>.json."""
 

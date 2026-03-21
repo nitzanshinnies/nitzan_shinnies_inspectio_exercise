@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from contextlib import asynccontextmanager
 import json
 import os
+from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException, Request, Response
 import httpx
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from pydantic import BaseModel, Field, field_validator
 from pydantic.config import ConfigDict
 from redis import asyncio as redis_asyncio
@@ -57,7 +57,11 @@ def create_app(
         persist_url = os.environ.get("PERSISTENCE_SERVICE_URL", config.PERSISTENCE_SERVICE_URL)
         created_redis = test_redis is None
         created_http = test_http_client is None
-        r = test_redis if test_redis is not None else redis_asyncio.from_url(redis_url, decode_responses=True)
+        r = (
+            test_redis
+            if test_redis is not None
+            else redis_asyncio.from_url(redis_url, decode_responses=True)
+        )
         try:
             await r.ping()
         except RedisError as exc:

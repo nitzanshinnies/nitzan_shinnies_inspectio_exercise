@@ -22,6 +22,7 @@ dev = [
     "fakeredis>=2.23.0",
     "pytest-asyncio>=0.24.0",
     "pytest>=8.0.0",
+    "ruff>=0.8.0",
 ]
 
 [project.scripts]
@@ -45,3 +46,29 @@ markers = [
     "integration: integration tests (plans/TESTS.md §5)",
     "unit: unit tests (plans/TESTS.md §4)",
 ]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "F",      # Pyflakes
+    "I",      # isort
+    "UP",     # pyupgrade
+    "B",      # flake8-bugbear
+    "SIM",    # flake8-simplify
+]
+ignore = [
+    "B008",   # FastAPI Depends() in defaults — intentional
+    "E501",   # line length — enforced loosely; long strings in tests/plans
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["inspectio_exercise"]
+
+[tool.ruff.format]
+quote-style = "double"
+docstring-code-format = true

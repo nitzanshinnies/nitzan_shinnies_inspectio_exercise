@@ -61,7 +61,17 @@ pytest -m integration
 pytest -m e2e
 ```
 
-Dev deps include **`httpx`** and **`pytest-asyncio`** for async / ASGI tests.
+Dev deps include **`httpx`**, **`pytest-asyncio`**, and **`ruff`** (lint + format).
+
+## Lint
+
+```bash
+pip install -e ".[dev]"
+ruff check src tests
+ruff format src tests   # apply formatting
+```
+
+Configuration lives in **`pyproject.toml`** (`[tool.ruff]`). CI should run `ruff check` (and optionally `ruff format --check`).
 
 ## Status
 
