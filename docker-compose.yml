@@ -16,6 +16,10 @@ services:
       - worker
     environment:
       INSPECTIO_API_PORT: "8000"
+      # Match defaults in inspectio_exercise.common.http_client (peer httpx pools).
+      INSPECTIO_HTTPX_MAX_CONNECTIONS: "256"
+      INSPECTIO_HTTPX_MAX_KEEPALIVE_CONNECTIONS: "64"
+      INSPECTIO_HTTPX_POOL_TIMEOUT_SEC: "30"
       INSPECTIO_WORKER_ACTIVATION_URLS: http://worker:8004
       INSPECTIO_WORKER_SHARDS_PER_POD: "256"
       NOTIFICATION_SERVICE_URL: http://notification:8002
@@ -90,6 +94,10 @@ services:
       - persistence
     environment:
       HOSTNAME: worker-0
+      INSPECTIO_HTTPX_MAX_CONNECTIONS: "256"
+      INSPECTIO_HTTPX_MAX_KEEPALIVE_CONNECTIONS: "64"
+      INSPECTIO_HTTPX_POOL_TIMEOUT_SEC: "30"
+      INSPECTIO_WORKER_MAX_PARALLEL_HANDLES: "128"
       INSPECTIO_WORKER_PORT: "8004"
       MOCK_SMS_URL: http://mock-sms:8080
       NOTIFICATION_SERVICE_URL: http://notification:8002

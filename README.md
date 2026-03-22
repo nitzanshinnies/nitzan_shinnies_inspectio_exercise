@@ -42,6 +42,19 @@ Or `uvicorn` directly, e.g. `uvicorn inspectio_exercise.api.app:app --host 0.0.0
 
 **Assignment `newMessage` / attempt #1:** set `INSPECTIO_WORKER_ACTIVATION_URLS` to a comma-separated list of worker base URLs (e.g. `http://127.0.0.1:8004`). After each pending `put-object`, the API `POST`s `/internal/v1/activate-pending` on the URL selected by `shard_id // INSPECTIO_WORKER_SHARDS_PER_POD` (default matches `SHARDS_PER_POD`). If the list is empty or the call fails, attempt #1 still runs on the next worker tick (degraded). **`INSPECTIO_REPEAT_SUBMIT_CONCURRENCY`** (default `64`) caps parallel `put` + activation for `POST /messages/repeat`. The PDF’s `send` / `newMessage` / `wakeup` names are documented on `AssignmentSchedulerHooks` in `inspectio_exercise.domain.assignment_scheduler_surface`.
 
+### Peer HTTP clients (`inspectio-api`, `inspectio-worker`)
+
+Outbound `httpx` pools and timeouts (`inspectio_exercise.common.http_client`). **`docker-compose.yml`** sets the same defaults on **`api`** and **`worker`**. In Kubernetes or other orchestration, map the same variable names into workload env or a ConfigMap.
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `INSPECTIO_HTTPX_MAX_CONNECTIONS` | `256` | Max concurrent connections per peer `AsyncClient` (reduces `PoolTimeout` under burst). |
+| `INSPECTIO_HTTPX_MAX_KEEPALIVE_CONNECTIONS` | `64` | Keep-alive cap per client. |
+| `INSPECTIO_HTTPX_POOL_TIMEOUT_SEC` | `30` | Max seconds to wait for a free connection from the pool. |
+| `INSPECTIO_WORKER_MAX_PARALLEL_HANDLES` | `128` | **Worker only:** max messages processed in parallel per tick (`asyncio` semaphore). Lower if S3 or peers throttle; raise with care and higher pool limits. |
+
+All services still honor **`INSPECTIO_HTTP_CLIENT_TIMEOUT_SEC`** (default `60`) for read/write bounds on peer calls.
+
 ### Worker env (`inspectio-worker`)
 
 | Variable | Default | Purpose |
@@ -58,6 +71,7 @@ Or `uvicorn` directly, e.g. `uvicorn inspectio_exercise.api.app:app --host 0.0.0
 | `INSPECTIO_WORKER_TERMINAL_LOOKBACK_HOURS` | `6` | How far back (UTC hourly prefixes) the worker scans `state/success/` and `state/failed/` for **idempotent** reconciliation (duplicate pending vs existing terminal). Older terminals are not visible to this logic—increase the value if you must reconcile long-lived orphans (more `list_prefix` work per due message). |
 | `INSPECTIO_WORKER_NOTIFY_RETRIES` | `3` | Outcome publish retries. |
 | `INSPECTIO_WORKER_NOTIFY_BACKOFF_SEC` | `0.05` | Initial notify backoff. |
+| `INSPECTIO_WORKER_MAX_PARALLEL_HANDLES` | `128` | Cap concurrent `handle_one` tasks per tick (see **Peer HTTP clients** above). |
 
 **Worker behavior notes**
 
@@ -99,7 +113,7 @@ inspectio-persistence
 
 ## Docker Compose
 
-Starts **Redis**, all Python services, and the **web** UI (nginx on host port **3000** proxying `/messages` and `/healthz` to the API — `plans/REST_API.md` §3.0). **`TOTAL_SHARDS` is set the same on `api` and `worker`** so compose stacks do not rely on matching defaults alone. Build from the directory containing `docker-compose.yml`:
+Starts **Redis**, all Python services, and the **web** UI (nginx on host port **3000** proxying `/messages` and `/healthz` to the API — `plans/REST_API.md` §3.0). **`TOTAL_SHARDS` is set the same on `api` and `worker`** so compose stacks do not rely on matching defaults alone. **`api`** and **`worker`** also set **`INSPECTIO_HTTPX_*`** and **`INSPECTIO_WORKER_MAX_PARALLEL_HANDLES`** to the documented defaults (see **Peer HTTP clients**). Build from the directory containing `docker-compose.yml`:
 
 ```bash
 docker compose up --build
