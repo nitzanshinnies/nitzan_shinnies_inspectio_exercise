@@ -11,15 +11,14 @@ import httpx
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from pydantic import BaseModel, Field, field_validator
 from pydantic.config import ConfigDict
-from redis import asyncio as redis_asyncio
-from redis.asyncio import Redis
-from redis.exceptions import RedisError
 
 from inspectio_exercise.common.health import register_healthz
 from inspectio_exercise.common.http_client import HTTP_CLIENT_TIMEOUT_SEC
 from inspectio_exercise.notification import config
 from inspectio_exercise.notification.outcomes import hydrate_from_persistence, publish_outcome
 from inspectio_exercise.notification.persistence_client import PersistenceHttpClient
+from inspectio_exercise.notification.store.factory import create_outcomes_store
+from inspectio_exercise.notification.store.interface import OutcomesHotStore, OutcomesStoreError
 
 
 class PublishOutcomeRequest(BaseModel):
@@ -47,26 +46,30 @@ def _clamp_limit(limit: int) -> int:
 
 def create_app(
     *,
-    test_redis: Redis | None = None,
     test_http_client: httpx.AsyncClient | None = None,
+    test_outcomes_store: OutcomesHotStore | None = None,
 ) -> FastAPI:
-    """Create the FastAPI app. For tests, pass ``test_redis`` and ``test_http_client`` (e.g. ASGI transport to persistence)."""
+    """Create the FastAPI app.
+
+    For tests, pass ``test_outcomes_store`` and ``test_http_client`` (e.g. ASGI transport to persistence).
+    """
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         redis_url = os.environ.get("REDIS_URL", config.REDIS_URL)
+        backend = os.environ.get("OUTCOMES_STORE_BACKEND", config.OUTCOMES_STORE_BACKEND)
         persist_url = os.environ.get("PERSISTENCE_SERVICE_URL", config.PERSISTENCE_SERVICE_URL)
-        created_redis = test_redis is None
         created_http = test_http_client is None
-        r = (
-            test_redis
-            if test_redis is not None
-            else redis_asyncio.from_url(redis_url, decode_responses=True)
-        )
-        try:
-            await r.ping()
-        except RedisError as exc:
-            raise RuntimeError(f"Redis unavailable at {redis_url!r}") from exc
+        created_store = test_outcomes_store is None
+        if test_outcomes_store is not None:
+            store = test_outcomes_store
+        else:
+            try:
+                store = await create_outcomes_store(backend=backend, redis_url=redis_url)
+            except OutcomesStoreError as exc:
+                raise RuntimeError(f"outcomes store unavailable (backend={backend!r})") from exc
+            except ValueError as exc:
+                raise RuntimeError(str(exc)) from exc
         client = (
             test_http_client
             if test_http_client is not None
@@ -74,78 +77,78 @@ def create_app(
         )
         persistence = PersistenceHttpClient(client)
         try:
-            loaded = await hydrate_from_persistence(r, persistence)
-        except (httpx.HTTPError, OSError) as exc:
+            loaded = await hydrate_from_persistence(store, persistence)
+        except (OutcomesStoreError, httpx.HTTPError, OSError) as exc:
             if created_http:
                 await persistence.aclose()
-            if created_redis:
-                await r.aclose()
+            if created_store:
+                await store.aclose()
             raise RuntimeError("hydration failed — persistence service unreachable?") from exc
-        app.state.redis = r
+        app.state.outcomes_store = store
         app.state.persistence = persistence
         app.state.hydration_count = loaded
-        app.state.created_redis = created_redis
+        app.state.created_store = created_store
         app.state.created_http = created_http
         yield
         if created_http:
             await persistence.aclose()
-        if created_redis:
-            await r.aclose()
+        if created_store:
+            await store.aclose()
 
     app = FastAPI(
         title="Inspectio Notification Service",
         version="0.1.0",
-        description="Publish terminal outcomes; query Redis — see plans/NOTIFICATION_SERVICE.md.",
+        description="Publish terminal outcomes; query hot store — see plans/NOTIFICATION_SERVICE.md.",
         lifespan=lifespan,
     )
     register_healthz(app, "notification")
 
+    def get_outcomes_store(request: Request) -> OutcomesHotStore:
+        return request.app.state.outcomes_store
+
     def get_persistence(request: Request) -> PersistenceHttpClient:
         return request.app.state.persistence
-
-    def get_redis(request: Request) -> Redis:
-        return request.app.state.redis
 
     @app.post("/internal/v1/outcomes", tags=["internal"])
     async def post_outcomes(
         body: PublishOutcomeRequest,
         persistence: PersistenceHttpClient = Depends(get_persistence),
-        redis: Redis = Depends(get_redis),
+        store: OutcomesHotStore = Depends(get_outcomes_store),
     ) -> dict[str, str]:
         record = body.model_dump(by_alias=True, mode="json")
         try:
-            await publish_outcome(redis, persistence, record)
-        except (RedisError, httpx.HTTPError, OSError) as exc:
+            await publish_outcome(store, persistence, record)
+        except (OutcomesStoreError, httpx.HTTPError, OSError) as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         return {"status": "ok"}
 
     @app.get("/internal/v1/outcomes/failed", tags=["internal"])
     async def get_outcomes_failed(
         limit: int = config.QUERY_LIMIT_DEFAULT,
-        redis: Redis = Depends(get_redis),
+        store: OutcomesHotStore = Depends(get_outcomes_store),
     ) -> list[dict[str, Any]]:
         lim = _clamp_limit(limit)
         try:
-            raw_rows = await redis.lrange(config.REDIS_KEY_FAILED, 0, lim - 1)
-        except RedisError as exc:
+            raw_rows = await store.get_failed_json_rows(lim)
+        except OutcomesStoreError as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         return [json.loads(x) for x in raw_rows]
 
     @app.get("/internal/v1/outcomes/success", tags=["internal"])
     async def get_outcomes_success(
         limit: int = config.QUERY_LIMIT_DEFAULT,
-        redis: Redis = Depends(get_redis),
+        store: OutcomesHotStore = Depends(get_outcomes_store),
     ) -> list[dict[str, Any]]:
         lim = _clamp_limit(limit)
         try:
-            raw_rows = await redis.lrange(config.REDIS_KEY_SUCCESS, 0, lim - 1)
-        except RedisError as exc:
+            raw_rows = await store.get_success_json_rows(lim)
+        except OutcomesStoreError as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         return [json.loads(x) for x in raw_rows]
 
     @app.get("/internal/v1/ready", tags=["internal"], include_in_schema=False)
     async def ready(request: Request) -> Response:
-        if not hasattr(request.app.state, "redis"):
+        if not hasattr(request.app.state, "outcomes_store"):
             return Response(status_code=503)
         return Response(status_code=200)
 

@@ -28,8 +28,14 @@ from inspectio_exercise.worker.app import create_app as create_worker
     ],
 )
 @pytest.mark.unit
-def test_healthz(factory: Callable[[], FastAPI], service: str) -> None:
+def test_healthz(
+    factory: Callable[[], FastAPI],
+    service: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Liveness smoke: `register_healthz` (plans/REST_API.md §3.5 exercise minimum). Readiness is separate."""
+    if service == "notification":
+        monkeypatch.setenv("OUTCOMES_STORE_BACKEND", "memory")
     client = TestClient(factory())
     response = client.get("/healthz")
     assert response.status_code == 200

@@ -31,7 +31,8 @@ def persistence_client() -> TestClient:
 
 
 @pytest.fixture
-def notification_client() -> TestClient:
+def notification_client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
+    monkeypatch.setenv("OUTCOMES_STORE_BACKEND", "memory")
     return TestClient(create_notification())
 
 

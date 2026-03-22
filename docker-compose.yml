@@ -45,6 +45,7 @@ services:
       - redis
     environment:
       INSPECTIO_NOTIFICATION_PORT: "8002"
+      OUTCOMES_STORE_BACKEND: redis
       PERSISTENCE_SERVICE_URL: http://persistence:8001
       REDIS_URL: redis://redis:6379/0
     ports:

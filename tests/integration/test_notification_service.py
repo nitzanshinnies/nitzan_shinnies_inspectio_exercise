@@ -13,6 +13,7 @@ from asgi_lifespan import LifespanManager
 from fakeredis import FakeAsyncRedis
 
 from inspectio_exercise.notification.app import create_app as create_notification_app
+from inspectio_exercise.notification.store.redis_store import RedisOutcomesHotStore
 from inspectio_exercise.persistence.app import create_app as create_persistence_app
 
 
@@ -28,6 +29,7 @@ async def test_publish_then_query_success(
     tmp_path,
 ) -> None:
     redis = FakeAsyncRedis(decode_responses=True)
+    store = RedisOutcomesHotStore(redis, owns_client=False)
     persist_app = create_persistence_app()
 
     async with (
@@ -37,7 +39,7 @@ async def test_publish_then_query_success(
             base_url="http://persistence",
         ) as p_client,
     ):
-        notify_app = create_notification_app(test_redis=redis, test_http_client=p_client)
+        notify_app = create_notification_app(test_outcomes_store=store, test_http_client=p_client)
         async with (
             LifespanManager(notify_app),
             httpx.AsyncClient(
@@ -75,6 +77,7 @@ async def test_success_stream_newest_first_after_two_publishes(
 ) -> None:
     """LRANGE order must match NOTIFICATION_SERVICE.md §6 (newest first)."""
     redis = FakeAsyncRedis(decode_responses=True)
+    store = RedisOutcomesHotStore(redis, owns_client=False)
     persist_app = create_persistence_app()
 
     async with (
@@ -84,7 +87,7 @@ async def test_success_stream_newest_first_after_two_publishes(
             base_url="http://persistence",
         ) as p_client,
     ):
-        notify_app = create_notification_app(test_redis=redis, test_http_client=p_client)
+        notify_app = create_notification_app(test_outcomes_store=store, test_http_client=p_client)
         async with (
             LifespanManager(notify_app),
             httpx.AsyncClient(
@@ -125,6 +128,7 @@ async def test_hydration_reloads_redis_after_second_stack(
 ) -> None:
     """Simulate restart: new notification app re-hydrates from persistence-only state."""
     redis = FakeAsyncRedis(decode_responses=True)
+    store1 = RedisOutcomesHotStore(redis, owns_client=False)
     persist_app = create_persistence_app()
 
     async with (
@@ -134,7 +138,7 @@ async def test_hydration_reloads_redis_after_second_stack(
             base_url="http://persistence",
         ) as p_client,
     ):
-        app1 = create_notification_app(test_redis=redis, test_http_client=p_client)
+        app1 = create_notification_app(test_outcomes_store=store1, test_http_client=p_client)
         async with (
             LifespanManager(app1),
             httpx.AsyncClient(
@@ -154,7 +158,8 @@ async def test_hydration_reloads_redis_after_second_stack(
             )
 
         redis2 = FakeAsyncRedis(decode_responses=True)
-        app2 = create_notification_app(test_redis=redis2, test_http_client=p_client)
+        store2 = RedisOutcomesHotStore(redis2, owns_client=False)
+        app2 = create_notification_app(test_outcomes_store=store2, test_http_client=p_client)
         async with (
             LifespanManager(app2),
             httpx.AsyncClient(
@@ -176,6 +181,7 @@ async def test_hydration_two_success_records_newest_first(
 ) -> None:
     """After cold start, Redis list order must still be newest-first (hydrate LPUSH order)."""
     redis = FakeAsyncRedis(decode_responses=True)
+    store1 = RedisOutcomesHotStore(redis, owns_client=False)
     persist_app = create_persistence_app()
 
     async with (
@@ -185,7 +191,7 @@ async def test_hydration_two_success_records_newest_first(
             base_url="http://persistence",
         ) as p_client,
     ):
-        app1 = create_notification_app(test_redis=redis, test_http_client=p_client)
+        app1 = create_notification_app(test_outcomes_store=store1, test_http_client=p_client)
         async with (
             LifespanManager(app1),
             httpx.AsyncClient(
@@ -215,7 +221,8 @@ async def test_hydration_two_success_records_newest_first(
             )
 
         redis2 = FakeAsyncRedis(decode_responses=True)
-        app2 = create_notification_app(test_redis=redis2, test_http_client=p_client)
+        store2 = RedisOutcomesHotStore(redis2, owns_client=False)
+        app2 = create_notification_app(test_outcomes_store=store2, test_http_client=p_client)
         async with (
             LifespanManager(app2),
             httpx.AsyncClient(
