@@ -32,6 +32,8 @@ services:
       - persistence
     environment:
       INSPECTIO_HEALTH_MONITOR_PORT: "8003"
+      # Must match mock SMS cap; health monitor reads mock_sms.config at startup.
+      INSPECTIO_MOCK_AUDIT_SENDS_MAX_LIMIT: "250000"
       MOCK_SMS_URL: http://mock-sms:8080
       PERSISTENCE_SERVICE_URL: http://persistence:8001
     ports:
@@ -41,6 +43,9 @@ services:
     build: .
     command: ["inspectio-mock-sms"]
     environment:
+      INSPECTIO_MOCK_AUDIT_LOG_MAX_ENTRIES: "500000"
+      INSPECTIO_MOCK_AUDIT_SENDS_MAX_LIMIT: "250000"
+      INSPECTIO_MOCK_FAILURE_RATE: "0"
       INSPECTIO_MOCK_SMS_PORT: "8080"
     ports:
       - "8080:8080"
