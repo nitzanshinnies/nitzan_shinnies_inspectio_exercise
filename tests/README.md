@@ -20,7 +20,7 @@ pytest -m integration
 
 ## End-to-end (`tests/e2e/`)
 
-Placeholders for **`plans/TESTS.md` §6**.
+In-process **ASGI** stack (persistence + mock SMS + notification + API + worker) per **`plans/TESTS.md` §6** — requires **`asgi-lifespan`** (dev extra). One **terminal-failure** case remains **skipped** pending scheduler/fake-clock follow-up.
 
 ```bash
 pytest tests/e2e
