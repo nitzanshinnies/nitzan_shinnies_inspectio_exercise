@@ -104,17 +104,20 @@ The provider **must** implement **`PersistencePort`**:
 
 ## 5) Wiring and configuration
 
-- **Env / settings:** `LOCAL_S3_ROOT` (path), optional flag to select local vs AWS in persistence service factory.
-- **Lifecycle:** on test teardown, delete `root` tree or use **`TemporaryDirectory`**.
-- **Docker:** mount a volume at `LOCAL_S3_ROOT` if you run persistence in a container with local backend.
+- **Env / settings:** `INSPECTIO_PERSISTENCE_BACKEND` selects **`local`** vs **`aws`**. For **local file-backed** storage (default when local): set **`LOCAL_S3_ROOT`** to the directory root (required unless memory mode is selected).
+- **In-memory local backend (opt-in):** set **`INSPECTIO_LOCAL_S3_STORAGE=memory`** to use an in-process dict instead of files. **`LOCAL_S3_ROOT` is not required** for normal put/get/list/delete; state is **volatile** (lost on process exit). Full design: [`IN_MEMORY_LOCAL_S3.md`](IN_MEMORY_LOCAL_S3.md).
+- **Explicit file mode:** **`INSPECTIO_LOCAL_S3_STORAGE=file`** (or unset) keeps the file-backed provider and requires **`LOCAL_S3_ROOT`** when backend is local.
+- **Lifecycle:** on test teardown, delete `root` tree or use **`TemporaryDirectory`** (file mode); memory mode needs no disk cleanup unless you **`flush_to_disk`** (§6).
+- **Docker:** mount a volume at **`LOCAL_S3_ROOT`** if you run persistence in a container with **file** local backend.
 
 ---
 
 ## 6) Relationship to persistence HTTP service
 
 - The **persistence microservice** remains the **only** boundary for API/worker I/O in architecture.
-- **Local S3 provider** lives **inside** (or behind) that service’s implementation: same **`/internal/v1/*`** routes, different backend.
-- **Health:** **`GET /internal/v1/ready`** may return **200** when `root` is writable (local mode) vs **503** when AWS credentials missing (AWS mode).
+- **Local S3 provider** (file or memory) lives **inside** (or behind) that service’s implementation: same **`/internal/v1/*`** routes, different backend.
+- **Flush (memory only):** **`POST /internal/v1/flush-to-disk`** (internal, not in OpenAPI schema) snapshots all in-memory objects to disk under a root passed as JSON **`root`** or taken from **`LOCAL_S3_ROOT`**. Returns **501** if the backend is not memory-backed; **422** if no root is available. See [`IN_MEMORY_LOCAL_S3.md`](IN_MEMORY_LOCAL_S3.md).
+- **Health:** **`GET /internal/v1/ready`** returns **200** when a backend is configured (local file, local memory, or AWS) vs **503** when the factory yields no backend.
 
 ---
 

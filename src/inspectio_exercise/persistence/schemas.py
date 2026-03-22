@@ -68,3 +68,12 @@ class PutObjectRequest(BaseModel):
     def key_shape(cls, value: str) -> str:
         validate_object_key(value)
         return value
+
+
+class FlushToDiskRequest(BaseModel):
+    """Optional root for ``POST /internal/v1/flush-to-disk`` (memory backend only)."""
+
+    root: str | None = Field(
+        default=None,
+        description="Directory root; defaults to LOCAL_S3_ROOT when omitted.",
+    )

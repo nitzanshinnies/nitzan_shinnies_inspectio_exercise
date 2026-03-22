@@ -22,6 +22,19 @@ def persistence_local_client(tmp_path, monkeypatch: pytest.MonkeyPatch) -> TestC
     monkeypatch.setenv("INSPECTIO_PERSISTENCE_BACKEND", "local")
     monkeypatch.delenv("INSPECTIO_S3_BUCKET", raising=False)
     monkeypatch.delenv("S3_BUCKET", raising=False)
+    monkeypatch.delenv("INSPECTIO_LOCAL_S3_STORAGE", raising=False)
+    app = create_app()
+    with TestClient(app) as client:
+        yield client
+
+
+@pytest.fixture
+def persistence_memory_client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
+    monkeypatch.setenv("INSPECTIO_PERSISTENCE_BACKEND", "local")
+    monkeypatch.setenv("INSPECTIO_LOCAL_S3_STORAGE", "memory")
+    monkeypatch.delenv("LOCAL_S3_ROOT", raising=False)
+    monkeypatch.delenv("INSPECTIO_S3_BUCKET", raising=False)
+    monkeypatch.delenv("S3_BUCKET", raising=False)
     app = create_app()
     with TestClient(app) as client:
         yield client
@@ -114,6 +127,76 @@ def test_put_object_rejects_invalid_key_and_malformed_base64(
     assert bad_b64.status_code == 422
 
 
+def test_flush_to_disk_writes_snapshot(
+    persistence_memory_client: TestClient,
+    tmp_path,
+) -> None:
+    client = persistence_memory_client
+    key = "state/pending/shard-0/msg.json"
+    body = b'{"messageId":"abc"}'
+    put = client.post(
+        "/internal/v1/put-object",
+        json={
+            "key": key,
+            "body_b64": base64.b64encode(body).decode("ascii"),
+            "content_type": "application/json",
+        },
+    )
+    assert put.status_code == 200
+
+    flush = client.post(
+        "/internal/v1/flush-to-disk",
+        json={"root": str(tmp_path)},
+    )
+    assert flush.status_code == 200
+    assert flush.json() == {"status": "ok", "root": str(tmp_path)}
+    written = tmp_path / key
+    assert written.read_bytes() == body
+
+
+def test_flush_to_disk_uses_local_s3_root_env_when_body_omits_root(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    monkeypatch.setenv("INSPECTIO_PERSISTENCE_BACKEND", "local")
+    monkeypatch.setenv("INSPECTIO_LOCAL_S3_STORAGE", "memory")
+    monkeypatch.setenv("LOCAL_S3_ROOT", str(tmp_path))
+    monkeypatch.delenv("INSPECTIO_S3_BUCKET", raising=False)
+    monkeypatch.delenv("S3_BUCKET", raising=False)
+    app = create_app()
+    key = "k.json"
+    payload = b"hello"
+    with TestClient(app) as client:
+        assert (
+            client.post(
+                "/internal/v1/put-object",
+                json={
+                    "key": key,
+                    "body_b64": base64.b64encode(payload).decode("ascii"),
+                },
+            ).status_code
+            == 200
+        )
+        flush = client.post("/internal/v1/flush-to-disk", json={})
+        assert flush.status_code == 200
+        assert flush.json()["root"] == str(tmp_path)
+    assert (tmp_path / key).read_bytes() == payload
+
+
+def test_flush_to_disk_422_without_root(
+    persistence_memory_client: TestClient,
+) -> None:
+    r = persistence_memory_client.post("/internal/v1/flush-to-disk", json={})
+    assert r.status_code == 422
+
+
+def test_flush_to_disk_501_for_file_backend(
+    persistence_local_client: TestClient,
+) -> None:
+    r = persistence_local_client.post("/internal/v1/flush-to-disk", json={})
+    assert r.status_code == 501
+
+
 def test_ready_and_routes_503_when_backend_unconfigured(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -121,6 +204,7 @@ def test_ready_and_routes_503_when_backend_unconfigured(
     monkeypatch.delenv("INSPECTIO_PERSISTENCE_BACKEND", raising=False)
     monkeypatch.delenv("INSPECTIO_S3_BUCKET", raising=False)
     monkeypatch.delenv("S3_BUCKET", raising=False)
+    monkeypatch.delenv("INSPECTIO_LOCAL_S3_STORAGE", raising=False)
     app = create_app()
     with TestClient(app) as client:
         assert client.get("/internal/v1/ready").status_code == 503
