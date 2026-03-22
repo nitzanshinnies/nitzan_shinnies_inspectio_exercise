@@ -95,9 +95,10 @@ def create_app(
         try:
             message_id = await submit_message(
                 persistence_client,
-                total_shards=total_shards,
-                to=body.to,
                 body=body.body,
+                should_fail=body.should_fail,
+                to=body.to,
+                total_shards=total_shards,
             )
         except (httpx.HTTPError, OSError) as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
@@ -116,9 +117,10 @@ def create_app(
             for _ in range(count):
                 mid = await submit_message(
                     persistence_client,
-                    total_shards=total_shards,
-                    to=message.to,
                     body=message.body,
+                    should_fail=message.should_fail,
+                    to=message.to,
+                    total_shards=total_shards,
                 )
                 ids.append(mid)
         except (httpx.HTTPError, OSError) as exc:

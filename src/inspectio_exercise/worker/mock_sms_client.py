@@ -11,15 +11,16 @@ async def post_mock_send(
     attempt_index: int,
     body: str,
     message_id: str,
+    should_fail: bool = False,
     to: str,
 ) -> int:
-    response = await client.post(
-        "/send",
-        json={
-            "to": to,
-            "body": body,
-            "messageId": message_id,
-            "attemptIndex": attempt_index,
-        },
-    )
+    payload: dict[str, str | int | bool] = {
+        "attemptIndex": attempt_index,
+        "body": body,
+        "messageId": message_id,
+        "to": to,
+    }
+    if should_fail:
+        payload["shouldFail"] = True
+    response = await client.post("/send", json=payload)
     return response.status_code
