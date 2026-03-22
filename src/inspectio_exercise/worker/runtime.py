@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import json
 from functools import partial
+from typing import Any
 
 import httpx
 
@@ -110,6 +111,7 @@ class WorkerRuntime:
             scanner=scanner,
             sms=sms_client,
         )
+        self._max_parallel_handles = max(1, settings.max_parallel_handles)
 
     def _message_lock_for(self, message_id: str) -> asyncio.Lock:
         lock = self._message_locks.get(message_id)
@@ -152,9 +154,13 @@ class WorkerRuntime:
         due = await self._queue.collect_due(clocks.now_ms())
         if not due:
             return
-        await asyncio.gather(
-            *(self._dispatch.handle_one(mid, dict(rec), key) for mid, rec, key in due)
-        )
+        sem = asyncio.Semaphore(self._max_parallel_handles)
+
+        async def _bounded(mid: str, rec: dict[str, Any], key: str) -> None:
+            async with sem:
+                await self._dispatch.handle_one(mid, dict(rec), key)
+
+        await asyncio.gather(*(_bounded(mid, rec, key) for mid, rec, key in due))
 
 
 __all__ = ["WorkerRuntime", "message_id_from_pending_key"]

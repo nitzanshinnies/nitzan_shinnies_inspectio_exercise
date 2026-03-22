@@ -24,6 +24,9 @@ PERSISTENCE_READ_MAX_ATTEMPTS: int = int(
 )
 TERMINAL_LOOKBACK_HOURS: int = int(os.environ.get("INSPECTIO_WORKER_TERMINAL_LOOKBACK_HOURS", "6"))
 WORKER_TICK_INTERVAL_SEC: float = float(os.environ.get("INSPECTIO_WORKER_TICK_SEC", "0.5"))
+WORKER_MAX_PARALLEL_HANDLES: int = int(
+    os.environ.get("INSPECTIO_WORKER_MAX_PARALLEL_HANDLES", "128"),
+)
 
 assert PERSISTENCE_READ_MAX_ATTEMPTS >= 1
 assert TERMINAL_LOOKBACK_HOURS >= 0
@@ -38,6 +41,7 @@ class WorkerSettings:
     shards_per_pod: int
     total_shards: int
     http_timeout_sec: float
+    max_parallel_handles: int = 128
 
 
 def load_worker_settings() -> WorkerSettings:
@@ -49,6 +53,7 @@ def load_worker_settings() -> WorkerSettings:
         shards_per_pod=int(os.environ.get("SHARDS_PER_POD", "256")),
         total_shards=int(os.environ.get("TOTAL_SHARDS", "256")),
         http_timeout_sec=HTTP_CLIENT_TIMEOUT_SEC,
+        max_parallel_handles=max(1, WORKER_MAX_PARALLEL_HANDLES),
     )
     if settings.total_shards <= 0 or settings.shards_per_pod <= 0:
         msg = (
