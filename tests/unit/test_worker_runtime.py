@@ -287,6 +287,60 @@ async def test_existing_terminal_skips_sms_reconciles_pending() -> None:
 
 
 @pytest.mark.asyncio
+async def test_dispatch_forwards_should_fail_to_mock_sms() -> None:
+    mid = _mid_on_shard0()
+    key = f"{pending_prefix_for_shard(0)}{mid}.json"
+    now_ms = int(time.time() * 1000)
+    record = {
+        "attemptCount": 0,
+        "history": [],
+        "messageId": mid,
+        "nextDueAt": now_ms,
+        "payload": {"body": "b", "to": "+1", "shouldFail": True},
+        "status": "pending",
+    }
+    persistence = RecordingPersistence()
+    await persistence.put_object(key, json.dumps(record, separators=(",", ":")).encode("utf-8"))
+
+    last_send: dict | None = None
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal last_send
+        if request.url.path == "/send":
+            last_send = json.loads(request.content.decode("utf-8"))
+            return httpx.Response(503, json={"code": "SERVICE_UNAVAILABLE", "error": "simulated"})
+        return httpx.Response(404)
+
+    transport = httpx.MockTransport(handler)
+    async with (
+        httpx.AsyncClient(transport=transport, base_url="http://mock-sms") as sms,
+        httpx.AsyncClient(transport=transport, base_url="http://notification") as notify,
+    ):
+        settings = WorkerSettings(
+            hostname="worker-0",
+            http_timeout_sec=30.0,
+            mock_sms_url="http://mock-sms",
+            notification_url="http://notification",
+            persistence_url="http://persistence",
+            shards_per_pod=256,
+            total_shards=256,
+        )
+        runtime = WorkerRuntime(
+            notify_client=notify,
+            persistence=persistence,
+            settings=settings,
+            sms_client=sms,
+            tick_interval_sec=0.01,
+        )
+        await runtime._dispatch.handle_one(mid, record, key)
+
+    assert last_send is not None
+    assert last_send.get("shouldFail") is True
+    assert last_send["messageId"] == mid
+    assert key not in persistence.deleted
+
+
+@pytest.mark.asyncio
 async def test_invalid_payload_deletes_pending_and_drops_scheduler_state() -> None:
     mid = _mid_on_shard0()
     key = f"{pending_prefix_for_shard(0)}{mid}.json"

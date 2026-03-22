@@ -51,8 +51,9 @@ Purpose:
 Request body (JSON):
 - `body` (required): string — SMS text (non-empty).
 - `to` (optional): string — destination phone or E.164 address; defaults to **`+10000000000`** when omitted.
+- `shouldFail` (optional): boolean — default false. When true, stored on the pending **`payload`** and forwarded by the worker to mock SMS `POST /send` for deterministic simulated failure on every attempt ([`MOCK_SMS.md`](MOCK_SMS.md)).
 
-The persisted pending object uses **`payload.to`** / **`payload.body`** in S3 (see [`PLAN.md`](PLAN.md) §3); the REST field **`to`** is stored as **`payload.to`**.
+The persisted pending object uses **`payload.to`** / **`payload.body`** in S3 (see [`PLAN.md`](PLAN.md) §3); the REST field **`to`** is stored as **`payload.to`**. Optional **`payload.shouldFail`** mirrors the request when set.
 
 Response expectations:
 - JSON including assigned **`messageId`** (exercise minimum). Implementations may also return **`status`** (e.g. **`pending`**) and other stable fields.

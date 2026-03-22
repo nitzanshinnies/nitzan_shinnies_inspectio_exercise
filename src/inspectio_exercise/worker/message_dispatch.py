@@ -68,13 +68,15 @@ class MessageDispatch:
             async with self._queue.lock:
                 self._queue.drop_locked(mid)
             return
+        should_fail = payload.get("shouldFail") is True
         ac = int(rec["attemptCount"])
         status = await post_mock_send(
             self._sms,
-            to=to,
+            attempt_index=ac,
             body=body,
             message_id=mid,
-            attempt_index=ac,
+            should_fail=should_fail,
+            to=to,
         )
         if is_successful_send(status):
             await self._lifecycle.transition_success(mid, rec, pending_key)

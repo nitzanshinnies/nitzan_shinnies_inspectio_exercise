@@ -61,8 +61,9 @@ Or `uvicorn` directly, e.g. `uvicorn inspectio_exercise.api.app:app --host 0.0.0
 
 - **Invalid `payload` at send time** (e.g. `to` / `body` not strings after a concurrent or manual S3 edit): the worker **deletes** the pending object (best-effort), **drops** in-memory scheduler state, and logs a warning — it does not spin forever on the heap.
 - **Idempotency / scan cost:** Reconciliation lists hourly prefixes under success/failed for the lookback window **before** calling mock SMS when a message is due. Under very large buckets or long lookback, that is **O(lookback × list_prefix)** per check; tune `INSPECTIO_WORKER_TERMINAL_LOOKBACK_HOURS` accordingly.
+- **`shouldFail` (mock SMS):** optional JSON field on `POST /messages` / `POST /messages/repeat` (alias **`shouldFail`**). When true, it is stored on the pending **`payload`** and the worker forwards it to mock SMS `POST /send` so attempts fail deterministically (`plans/MOCK_SMS.md`).
 
-**Message routes (see `plans/REST_API.md`):** `POST /messages` — JSON `body` (required), `to` optional (default `+10000000000`). `POST /messages/repeat?count=N` — same JSON body as `/messages`, reused **`N`** times; response includes **`messageIds`** (and **`accepted`**). `GET /messages/success|failed` — optional **`limit`** (default **100**, e.g. `?limit=100`). Demo/operational UI is a **separate frontend container** (not served by this API).
+**Message routes (see `plans/REST_API.md`):** `POST /messages` — JSON `body` (required), `to` optional (default `+10000000000`), optional **`shouldFail`** (boolean). `POST /messages/repeat?count=N` — same JSON body as `/messages`, reused **`N`** times; response includes **`messageIds`** (and **`accepted`**). `GET /messages/success|failed` — optional **`limit`** (default **100**, e.g. `?limit=100`). Demo/operational UI is a **separate frontend container** (not served by this API).
 
 ### Persistence service backend (local dev vs AWS)
 
