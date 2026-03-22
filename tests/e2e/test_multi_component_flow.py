@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 
+import httpx
 import pytest
 
 pytest.importorskip("asgi_lifespan")
@@ -17,6 +18,23 @@ from tests.e2e.constants import (
 from tests.e2e.stack import PatchedTime, e2e_stack, wait_for_message_in_outcomes
 
 pytestmark = pytest.mark.e2e
+
+
+async def _success_object_keys_for_mid(
+    persistence: httpx.AsyncClient, message_id: str
+) -> list[str]:
+    listed = await persistence.post(
+        "/internal/v1/list-prefix",
+        json={"prefix": "state/success/", "max_keys": 500},
+    )
+    listed.raise_for_status()
+    suffix = f"/{message_id}.json"
+    keys: list[str] = []
+    for row in listed.json().get("keys", []):
+        k = row.get("Key")
+        if isinstance(k, str) and k.endswith(suffix):
+            keys.append(k)
+    return keys
 
 
 @pytest.mark.asyncio
@@ -80,20 +98,67 @@ async def test_e2e_retry_then_success(
         )
 
 
-@pytest.mark.skip(
-    reason=(
-        "TC-E2E-03: shouldFail terminal-fail path stalls after ~4 sends in ASGI+fake-clock "
-        "harness (mock audit shows attemptIndex 0..3 only); worker+DueWorkQueue scheduling "
-        "under patched retry delays needs follow-up — lifecycle covered in unit tests."
-    )
-)
 @pytest.mark.asyncio
 async def test_e2e_terminal_failed_should_fail_payload(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """TC-E2E-03 / TC-E2E-09: shouldFail forces failure until terminal failed."""
-    pass
+
+    # PLAN.md uses multi-second gaps before later attempts; nudge fake time until the mock
+    # records six failed sends (attemptIndex 0..5), then assert notification outcome.
+    def _next_due_compact(now_ms: int, attempt_count_when_failed: int) -> int | None:
+        if attempt_count_when_failed == 5:
+            return None
+        return now_ms + 50
+
+    monkeypatch.setattr(
+        "inspectio_exercise.worker.lifecycle_transitions.next_due_at_ms_after_failure",
+        _next_due_compact,
+    )
+
+    async with e2e_stack(monkeypatch, tmp_path) as st:
+        pr = await st.api.post(
+            "/messages",
+            json={"to": "+15550003", "body": "e2e-fail", "shouldFail": True},
+        )
+        assert pr.status_code == 202, pr.text
+        mid = pr.json()["messageId"]
+
+        loop = asyncio.get_running_loop()
+        drive_deadline = loop.time() + 25.0
+        fail_rows: list[dict[str, object]] = []
+        while loop.time() < drive_deadline:
+            ar = await st.mock_sms.get("/audit/sends", params={"limit": 50})
+            assert ar.status_code == 200
+            rows = ar.json()
+            fail_rows = [
+                r
+                for r in rows
+                if r.get("messageId") == mid
+                and isinstance(r.get("http_status"), int)
+                and r["http_status"] >= 500
+            ]
+            if len(fail_rows) >= 6:
+                indices = sorted(
+                    int(r["attemptIndex"])
+                    for r in fail_rows
+                    if isinstance(r.get("attemptIndex"), int)
+                )
+                if len(indices) >= 6 and min(indices) == 0 and max(indices) >= 5:
+                    break
+            st.clock.advance_ms(120)
+            await asyncio.sleep(0.08)
+        else:
+            pytest.fail(f"expected 6 failed mock sends for {mid!r}, got {fail_rows!r}")
+
+        await wait_for_message_in_outcomes(
+            st.api,
+            message_id=mid,
+            outcome="failed",
+            timeout_sec=E2E_POLL_TIMEOUT_SEC,
+            poll_interval_sec=E2E_POLL_INTERVAL_SEC,
+        )
 
 
 @pytest.mark.asyncio
@@ -213,3 +278,76 @@ async def test_e2e_worker_restart_resumes_retry(
             timeout_sec=E2E_POLL_TIMEOUT_SEC,
             poll_interval_sec=E2E_POLL_INTERVAL_SEC,
         )
+
+
+@pytest.mark.asyncio
+async def test_e2e_health_monitor_healthz(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """TC-E2E-HM-01: health monitor liveness without running reconcile (HEALTH_MONITOR.md §4.1)."""
+    async with e2e_stack(monkeypatch, tmp_path) as st:
+        hz = await st.health_monitor.get("/healthz")
+        assert hz.status_code == 200
+        assert hz.json().get("status") == "ok"
+        assert hz.json().get("service") == "health_monitor"
+
+
+@pytest.mark.asyncio
+async def test_e2e_health_monitor_integrity_ok_after_success(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """TC-E2E-HM-02: after steady-state success, POST integrity-check returns 200 (TESTS.md §6)."""
+    async with e2e_stack(monkeypatch, tmp_path) as st:
+        pr = await st.api.post("/messages", json={"to": "+15550008", "body": "e2e-hm-ok"})
+        assert pr.status_code == 202, pr.text
+        mid = pr.json()["messageId"]
+        await wait_for_message_in_outcomes(
+            st.api,
+            message_id=mid,
+            outcome="success",
+            timeout_sec=E2E_POLL_TIMEOUT_SEC,
+            poll_interval_sec=E2E_POLL_INTERVAL_SEC,
+        )
+
+        ir = await st.health_monitor.post(
+            "/internal/v1/integrity-check",
+            json={"graceMs": 500},
+        )
+        assert ir.status_code == 200, ir.text
+        data = ir.json()
+        assert data.get("ok") is True
+        assert data.get("violations") == []
+
+
+@pytest.mark.asyncio
+async def test_e2e_health_monitor_integrity_fails_on_induced_drift(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """TC-E2E-HM-03: audit vs S3 drift — delete success object, expect phantom violation (§1)."""
+    async with e2e_stack(monkeypatch, tmp_path) as st:
+        pr = await st.api.post("/messages", json={"to": "+15550009", "body": "e2e-hm-drift"})
+        assert pr.status_code == 202, pr.text
+        mid = pr.json()["messageId"]
+        await wait_for_message_in_outcomes(
+            st.api,
+            message_id=mid,
+            outcome="success",
+            timeout_sec=E2E_POLL_TIMEOUT_SEC,
+            poll_interval_sec=E2E_POLL_INTERVAL_SEC,
+        )
+
+        keys = await _success_object_keys_for_mid(st.persistence, mid)
+        assert len(keys) == 1
+        dr = await st.persistence.post("/internal/v1/delete-object", json={"key": keys[0]})
+        assert dr.status_code == 200
+
+        ir = await st.health_monitor.post(
+            "/internal/v1/integrity-check",
+            json={"graceMs": 0},
+        )
+        assert ir.status_code == 503, ir.text
+        kinds = {v.get("kind") for v in ir.json().get("violations", [])}
+        assert "audit_send_without_lifecycle" in kinds

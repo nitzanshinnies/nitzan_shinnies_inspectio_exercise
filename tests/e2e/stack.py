@@ -18,7 +18,9 @@ import inspectio_exercise.api.use_cases as api_use_cases
 import inspectio_exercise.mock_sms.config as mock_sms_config
 import inspectio_exercise.worker.clocks as worker_clocks
 from inspectio_exercise.api.app import create_app as create_api_app
+from inspectio_exercise.health_monitor.app import create_app as create_health_monitor_app
 from inspectio_exercise.mock_sms.app import create_app as create_mock_sms_app
+from inspectio_exercise.mock_sms.audit import clear_audit_ring_for_tests
 from inspectio_exercise.notification.app import create_app as create_notification_app
 from inspectio_exercise.notification.persistence_client import PersistenceHttpClient
 from inspectio_exercise.notification.store.memory_store import MemoryOutcomesHotStore
@@ -52,7 +54,9 @@ class E2EStack:
 
     api: httpx.AsyncClient
     clock: PatchedTime
+    health_monitor: httpx.AsyncClient
     mock_sms: httpx.AsyncClient
+    persistence: httpx.AsyncClient
 
 
 @asynccontextmanager
@@ -64,6 +68,8 @@ async def e2e_stack(
     worker_tick_sec: float | None = None,
 ) -> Any:
     clock = clock if clock is not None else PatchedTime(E2E_BASE_TIME_SEC)
+
+    clear_audit_ring_for_tests()
 
     monkeypatch.setenv("LOCAL_S3_ROOT", str(tmp_path))
     monkeypatch.setenv("HOSTNAME", E2E_WORKER_HOSTNAME)
@@ -146,6 +152,18 @@ async def e2e_stack(
         )
         await stack.enter_async_context(sc_worker)
 
+        hm_app = create_health_monitor_app(
+            persistence=PersistenceHttpClient(pc_api),
+            mock_sms=sc_worker,
+        )
+        await stack.enter_async_context(LifespanManager(hm_app))
+        hm_http = httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=hm_app),
+            base_url="http://health-monitor",
+            timeout=30.0,
+        )
+        await stack.enter_async_context(hm_http)
+
         api_app = create_api_app(
             persistence=PersistenceHttpClient(pc_api),
             notification_http=nc_api,
@@ -166,7 +184,13 @@ async def e2e_stack(
         )
         await stack.enter_async_context(LifespanManager(worker_app))
 
-        yield E2EStack(api=ac, clock=clock, mock_sms=sc_worker)
+        yield E2EStack(
+            api=ac,
+            clock=clock,
+            health_monitor=hm_http,
+            mock_sms=sc_worker,
+            persistence=pc_api,
+        )
 
 
 async def wait_for_message_in_outcomes(

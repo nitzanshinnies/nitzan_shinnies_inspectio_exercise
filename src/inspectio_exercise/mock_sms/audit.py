@@ -26,3 +26,9 @@ def recent_audit_rows(limit: int) -> list[dict[str, Any]]:
         rows = list(_ring)
     rows.reverse()
     return rows[:limit]
+
+
+def clear_audit_ring_for_tests() -> None:
+    """Drop all in-memory audit rows (for isolated e2e / integration harnesses)."""
+    with _lock:
+        _ring.clear()
