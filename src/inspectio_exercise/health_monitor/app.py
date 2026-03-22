@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from contextlib import asynccontextmanager, suppress
 from datetime import UTC, datetime
 from typing import Any
@@ -14,6 +15,12 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from inspectio_exercise.common.health import register_healthz
+from inspectio_exercise.common.performance_logging import (
+    OPERATION_INTEGRITY_CHECK_PERIODIC,
+    duration_ms_since,
+    log_performance,
+    register_performance_logging,
+)
 from inspectio_exercise.health_monitor.config import (
     HEADER_INTEGRITY_CHECK_TOKEN,
     HealthMonitorSettings,
@@ -111,11 +118,18 @@ def create_app(
                 await asyncio.sleep(settings.poll_interval_sec)
                 try:
                     grace = settings.default_grace_ms
+                    ic_started = time.perf_counter()
                     res = await run_integrity_check(
                         persistence=app.state.persistence,
                         mock_sms=app.state.mock_sms,
                         settings=settings,
                         grace_ms=grace,
+                    )
+                    log_performance(
+                        component="health_monitor",
+                        duration_ms=duration_ms_since(ic_started),
+                        integrity_violation_count=len(res.violations),
+                        operation=OPERATION_INTEGRITY_CHECK_PERIODIC,
                     )
                     checked_at = datetime.now(UTC).isoformat()
                     vjson = [v.as_json() for v in res.violations]
@@ -159,6 +173,7 @@ def create_app(
         lifespan=lifespan,
     )
     register_healthz(app, "health_monitor")
+    register_performance_logging(app, component="health_monitor")
 
     @app.post(
         "/internal/v1/integrity-check",

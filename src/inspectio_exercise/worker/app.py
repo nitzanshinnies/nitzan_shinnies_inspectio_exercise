@@ -10,6 +10,7 @@ from fastapi import FastAPI, HTTPException, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 
 from inspectio_exercise.common.health import register_healthz
+from inspectio_exercise.common.performance_logging import register_performance_logging
 from inspectio_exercise.notification.persistence_client import PersistenceHttpClient
 from inspectio_exercise.worker.config import WORKER_ACTIVATE_PENDING_PATH, load_worker_settings
 from inspectio_exercise.worker.runtime import WorkerRuntime
@@ -97,6 +98,7 @@ def create_app(
         ),
     )
     register_healthz(app, "worker")
+    register_performance_logging(app, component="worker")
 
     class ActivatePendingBody(BaseModel):
         model_config = ConfigDict(populate_by_name=True)

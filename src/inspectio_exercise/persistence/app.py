@@ -11,6 +11,7 @@ from pathlib import Path
 from fastapi import Body, Depends, FastAPI, HTTPException, Request, Response
 
 from inspectio_exercise.common.health import register_healthz
+from inspectio_exercise.common.performance_logging import register_performance_logging
 from inspectio_exercise.persistence import config as persistence_config
 from inspectio_exercise.persistence.backend import build_persistence_backend
 from inspectio_exercise.persistence.interface import PersistencePort
@@ -40,6 +41,7 @@ def create_app() -> FastAPI:
         lifespan=_lifespan,
     )
     register_healthz(app, "persistence")
+    register_performance_logging(app, component="persistence")
 
     def require_backend(request: Request) -> PersistencePort:
         backend = getattr(request.app.state, "backend", None)

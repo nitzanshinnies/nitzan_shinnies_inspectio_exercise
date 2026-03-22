@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -14,6 +15,12 @@ from pydantic.config import ConfigDict
 
 from inspectio_exercise.common.health import register_healthz
 from inspectio_exercise.common.http_client import HTTP_CLIENT_TIMEOUT_SEC
+from inspectio_exercise.common.performance_logging import (
+    OPERATION_OUTCOMES_HYDRATE,
+    duration_ms_since,
+    log_performance,
+    register_performance_logging,
+)
 from inspectio_exercise.notification import config
 from inspectio_exercise.notification.outcomes import hydrate_from_persistence, publish_outcome
 from inspectio_exercise.notification.persistence_client import PersistenceHttpClient
@@ -87,7 +94,14 @@ def create_app(
         )
         persistence = PersistenceHttpClient(client)
         try:
+            hydrate_started = time.perf_counter()
             loaded = await hydrate_from_persistence(store, persistence)
+            log_performance(
+                component="notification",
+                duration_ms=duration_ms_since(hydrate_started),
+                hydration_row_count=loaded,
+                operation=OPERATION_OUTCOMES_HYDRATE,
+            )
         except (OutcomesStoreError, httpx.HTTPError, OSError) as exc:
             if created_http:
                 await persistence.aclose()
@@ -112,6 +126,7 @@ def create_app(
         lifespan=lifespan,
     )
     register_healthz(app, "notification")
+    register_performance_logging(app, component="notification")
 
     def get_outcomes_store(request: Request) -> OutcomesHotStore:
         return request.app.state.outcomes_store
