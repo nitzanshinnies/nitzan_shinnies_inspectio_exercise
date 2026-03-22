@@ -164,9 +164,24 @@ async def e2e_stack(
         )
         await stack.enter_async_context(hm_http)
 
+        worker_app = create_worker_app(
+            test_notify_client=nc_worker,
+            test_persistence_client=pc_worker,
+            test_sms_client=sc_worker,
+        )
+        worker_activation_client = httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=worker_app),
+            base_url="http://worker",
+            timeout=30.0,
+        )
+        await stack.enter_async_context(worker_activation_client)
+
+        await stack.enter_async_context(LifespanManager(worker_app))
+
         api_app = create_api_app(
             persistence=PersistenceHttpClient(pc_api),
             notification_http=nc_api,
+            worker_activation_http=worker_activation_client,
         )
         await stack.enter_async_context(LifespanManager(api_app))
 
@@ -176,13 +191,6 @@ async def e2e_stack(
             timeout=30.0,
         )
         await stack.enter_async_context(ac)
-
-        worker_app = create_worker_app(
-            test_notify_client=nc_worker,
-            test_persistence_client=pc_worker,
-            test_sms_client=sc_worker,
-        )
-        await stack.enter_async_context(LifespanManager(worker_app))
 
         yield E2EStack(
             api=ac,

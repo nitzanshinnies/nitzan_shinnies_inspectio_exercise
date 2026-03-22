@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from collections.abc import Awaitable, Callable
 from typing import Any
@@ -25,6 +26,7 @@ class MessageDispatch:
         *,
         delete_pending: Callable[[str], Awaitable[None]],
         lifecycle: LifecycleTransitions,
+        message_lock_for: Callable[[str], asyncio.Lock],
         persist: RetryingPersistence,
         queue: DueWorkQueue,
         scanner: TerminalScanner,
@@ -32,12 +34,17 @@ class MessageDispatch:
     ) -> None:
         self._delete_pending = delete_pending
         self._lifecycle = lifecycle
+        self._message_lock_for = message_lock_for
         self._persist = persist
         self._queue = queue
         self._scanner = scanner
         self._sms = sms
 
     async def handle_one(self, mid: str, rec: dict[str, Any], pending_key: str) -> None:
+        async with self._message_lock_for(mid):
+            await self.handle_one_core(mid, rec, pending_key)
+
+    async def handle_one_core(self, mid: str, rec: dict[str, Any], pending_key: str) -> None:
         try:
             await self._persist.get_object(pending_key)
         except KeyError:

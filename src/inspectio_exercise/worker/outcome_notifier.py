@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
+from typing import Any
 
 import httpx
 
@@ -28,6 +29,8 @@ class OutcomeNotifier:
         outcome: str,
         recorded_at: int,
         shard_id: int,
+        attempt_count: int | None = None,
+        brief_reason: str | None = None,
         terminal_storage_key: str | None = None,
     ) -> None:
         if terminal_storage_key is not None:
@@ -36,13 +39,18 @@ class OutcomeNotifier:
             )
         else:
             notification_id = str(uuid.uuid4())
-        body = {
+        body: dict[str, Any] = {
             "messageId": message_id,
             "notificationId": notification_id,
             "outcome": outcome,
             "recordedAt": recorded_at,
+            "finalTimestamp": recorded_at,
             "shardId": shard_id,
         }
+        if attempt_count is not None:
+            body["attemptCount"] = attempt_count
+        if brief_reason is not None:
+            body["reason"] = brief_reason
         last_exc: httpx.HTTPError | None = None
         for try_idx in range(NOTIFICATION_PUBLISH_MAX_ATTEMPTS):
             try:

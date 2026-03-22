@@ -40,6 +40,8 @@ Or `uvicorn` directly, e.g. `uvicorn inspectio_exercise.api.app:app --host 0.0.0
 
 **Public API env (defaults match default ports above):** `PERSISTENCE_SERVICE_URL` (`http://127.0.0.1:8001`), `NOTIFICATION_SERVICE_URL` (`http://127.0.0.1:8002`), `TOTAL_SHARDS` (`256`, **must match every worker** — same value on API and all worker processes or pending keys and ownership will disagree).
 
+**Assignment `newMessage` / attempt #1:** set `INSPECTIO_WORKER_ACTIVATION_URLS` to a comma-separated list of worker base URLs (e.g. `http://127.0.0.1:8004`). After each pending `put-object`, the API `POST`s `/internal/v1/activate-pending` on the URL selected by `shard_id // INSPECTIO_WORKER_SHARDS_PER_POD` (default matches `SHARDS_PER_POD`). If the list is empty or the call fails, attempt #1 still runs on the next worker tick (degraded). **`INSPECTIO_REPEAT_SUBMIT_CONCURRENCY`** (default `64`) caps parallel `put` + activation for `POST /messages/repeat`. The PDF’s `send` / `newMessage` / `wakeup` names are documented on `AssignmentSchedulerHooks` in `inspectio_exercise.domain.assignment_scheduler_surface`.
+
 ### Worker env (`inspectio-worker`)
 
 | Variable | Default | Purpose |

@@ -29,6 +29,9 @@ class PublishOutcomeRequest(BaseModel):
     outcome: str
     recorded_at: int = Field(alias="recordedAt")
     shard_id: int = Field(alias="shardId")
+    attempt_count: int | None = Field(default=None, alias="attemptCount")
+    final_timestamp: int | None = Field(default=None, alias="finalTimestamp")
+    reason: str | None = None
 
     @field_validator("outcome")
     @classmethod
@@ -42,6 +45,13 @@ def _clamp_limit(limit: int) -> int:
     if limit < 1:
         raise HTTPException(status_code=422, detail="limit must be >= 1")
     return min(limit, config.QUERY_LIMIT_MAX)
+
+
+def _normalize_outcome_public_shape(row: dict[str, Any]) -> dict[str, Any]:
+    """Ensure assignment-style ``finalTimestamp`` exists for older hydrated rows."""
+    if "finalTimestamp" not in row and "recordedAt" in row:
+        return {**row, "finalTimestamp": row["recordedAt"]}
+    return row
 
 
 def create_app(
@@ -116,6 +126,8 @@ def create_app(
         store: OutcomesHotStore = Depends(get_outcomes_store),
     ) -> dict[str, str]:
         record = body.model_dump(by_alias=True, mode="json")
+        if record.get("finalTimestamp") is None:
+            record["finalTimestamp"] = record["recordedAt"]
         try:
             await publish_outcome(store, persistence, record)
         except (OutcomesStoreError, httpx.HTTPError, OSError) as exc:
@@ -132,7 +144,7 @@ def create_app(
             raw_rows = await store.get_failed_json_rows(lim)
         except OutcomesStoreError as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
-        return [json.loads(x) for x in raw_rows]
+        return [_normalize_outcome_public_shape(json.loads(x)) for x in raw_rows]
 
     @app.get("/internal/v1/outcomes/success", tags=["internal"])
     async def get_outcomes_success(
@@ -144,7 +156,7 @@ def create_app(
             raw_rows = await store.get_success_json_rows(lim)
         except OutcomesStoreError as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
-        return [json.loads(x) for x in raw_rows]
+        return [_normalize_outcome_public_shape(json.loads(x)) for x in raw_rows]
 
     @app.get("/internal/v1/ready", tags=["internal"], include_in_schema=False)
     async def ready(request: Request) -> Response:
