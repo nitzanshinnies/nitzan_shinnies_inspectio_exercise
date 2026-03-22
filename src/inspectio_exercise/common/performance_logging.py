@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import time
+from datetime import UTC, datetime
 from typing import Any
 
 from starlette.types import ASGIApp, Receive, Scope, Send
@@ -16,8 +17,14 @@ OPERATION_INTEGRITY_CHECK_PERIODIC: str = "integrity_check_periodic"
 OPERATION_OUTCOMES_HYDRATE: str = "outcomes_hydrate"
 OPERATION_WORKER_TICK: str = "worker_tick"
 PERF_EVENT_NAME: str = "inspectio_perf"
+PERF_FIELD_TIMESTAMP_UTC: str = "timestamp_utc"
 
 _perf_logger = logging.getLogger("inspectio_exercise.performance")
+
+
+def _utc_iso_timestamp_now() -> str:
+    """Wall-clock UTC time when the log record is emitted (ISO-8601, ``Z`` suffix)."""
+    return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
 
 def _duration_ms(start: float) -> float:
@@ -29,9 +36,13 @@ def log_performance(
     logger_instance: logging.Logger | None = None,
     **fields: str | int | float | bool | None,
 ) -> None:
-    """Emit one performance line: fixed prefix + JSON payload for parsing."""
+    """Emit one performance line: fixed prefix + JSON payload for parsing.
+
+    Each line includes ``timestamp_utc`` (emit time) in addition to caller fields.
+    """
     log = logger_instance or _perf_logger
     payload: dict[str, Any] = {"event": PERF_EVENT_NAME, **fields}
+    payload[PERF_FIELD_TIMESTAMP_UTC] = _utc_iso_timestamp_now()
     log.info("%s %s", PERF_EVENT_NAME, json.dumps(payload, separators=(",", ":"), sort_keys=True))
 
 

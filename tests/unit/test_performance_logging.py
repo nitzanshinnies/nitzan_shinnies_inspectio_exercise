@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import datetime
 
 import pytest
 from fastapi import FastAPI
@@ -13,6 +14,7 @@ from inspectio_exercise.common.performance_logging import (
     HEALTHZ_PATH,
     OPERATION_HTTP_REQUEST,
     PERF_EVENT_NAME,
+    PERF_FIELD_TIMESTAMP_UTC,
     log_performance,
     register_performance_logging,
 )
@@ -41,6 +43,10 @@ def test_log_performance_emits_expected_keys(caplog: pytest.LogCaptureFixture) -
     assert payload["operation"] == OPERATION_HTTP_REQUEST
     assert payload["duration_ms"] == 1.234
     assert payload["http_status_code"] == 200
+    assert PERF_FIELD_TIMESTAMP_UTC in payload
+    ts = payload[PERF_FIELD_TIMESTAMP_UTC]
+    assert isinstance(ts, str)
+    datetime.fromisoformat(ts.replace("Z", "+00:00"))
 
 
 def test_performance_middleware_logs_request(caplog: pytest.LogCaptureFixture) -> None:
@@ -65,6 +71,7 @@ def test_performance_middleware_logs_request(caplog: pytest.LogCaptureFixture) -
     assert payload["http_method"] == "GET"
     assert payload["http_status_code"] == 200
     assert "duration_ms" in payload
+    assert PERF_FIELD_TIMESTAMP_UTC in payload
 
 
 def test_performance_middleware_skips_healthz(caplog: pytest.LogCaptureFixture) -> None:
