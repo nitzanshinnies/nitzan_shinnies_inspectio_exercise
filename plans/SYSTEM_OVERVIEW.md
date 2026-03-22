@@ -24,16 +24,16 @@ The system is composed of logical services/services-with-containers:
    - **AWS mode**: uses `aioboto3` for async S3 operations.
    - **Local dev mode**: uses an in-process mock S3 implementation that performs file reader/writer semantics on a local directory while presenting the same persistence interface — **detailed spec and tests:** [`plans/LOCAL_S3.md`](LOCAL_S3.md).
 
-4. **Redis (dedicated container — outcomes hot cache)**
-   - Runs as its **own container** (e.g. official Redis image).
-   - Holds **bounded** recent-outcome structures for **success** and **failed** streams (**LIST**/ZSET pattern—see [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) §4).
-   - Accessed **only** by the **notification service** (not directly by the REST API or workers).
+4. **Redis (dedicated container — optional when using the Redis hot-store backend)**
+   - When **`OUTCOMES_STORE_BACKEND=redis`** (default in docker-compose), runs as its **own container** (e.g. official Redis image).
+   - Implements the **Redis** plugin for **`OutcomesHotStore`**: **bounded** **success** / **failed** streams (**LIST**/ZSET pattern—see [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) §4).
+   - Accessed **only** from the **notification service** process via that plugin (not directly by the REST API or workers).
 
 5. **Outcomes notification service (dedicated container)**
    - Accepts **publish** requests from workers after terminal S3 writes.
-   - Writes the **durable** log to `state/notifications/...` in S3 (via persistence service) and **updates Redis**.
+   - Writes the **durable** log to `state/notifications/...` in S3 (via persistence service) and **updates the configured hot store** (`OutcomesHotStore`).
    - Exposes **query** endpoints (or internal HTTP) used by the **REST API** for `GET /messages/success` and `GET /messages/failed`.
-   - On startup, **hydrates Redis** from S3 with up to **`HYDRATION_MAX`** records (default **10,000**), walking **recent hour prefixes** backward (acceptable **cold-start** listing; not per user request).
+   - On startup, **hydrates the hot store** from S3 with up to **`HYDRATION_MAX`** records (default **10,000**), walking **recent hour prefixes** backward (acceptable **cold-start** listing; not per user request).
    - **Detailed plan:** [`plans/NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md).
 
 6. **Mock SMS provider (separate single container)**
@@ -171,15 +171,15 @@ Implement:
 - `POST /messages/repeat?count=N`
   - Load test endpoint: same JSON body as **`POST /messages`**, reused **`N`** times.
 - `GET /messages/success` (`limit` optional, default **100** — e.g. **`?limit=100`**; [`REST_API.md`](REST_API.md))
-  - Return most recent successful outcomes (notification service → Redis).
+  - Return most recent successful outcomes (notification service → **hot store**; Redis in default deployment).
 - `GET /messages/failed` (same `limit` rules)
-  - Return most recent failed outcomes (notification service → Redis).
+  - Return most recent failed outcomes (notification service → **hot store**; Redis in default deployment).
 - `GET /healthz`
   - Health endpoints.
 
 Recent outcomes performance requirement:
 - Avoid listing large `state/success/` / `state/failed/` trees on **each** `GET`.
-- Serve `GET /messages/success` and `GET /messages/failed` via the **notification service**, which reads **Redis** (hot cache) with **S3 `state/notifications/...`** as durable log and **hydration** source—see [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md).
+- Serve `GET /messages/success` and `GET /messages/failed` via the **notification service**, which reads **`OutcomesHotStore`** (Redis plugin in default deployment) with **S3 `state/notifications/...`** as durable log and **hydration** source—see [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md).
 
 ## 6) Mock SMS provider contract (required)
 
@@ -209,8 +209,8 @@ Optional simulated latency:
 ## 7) Local development mapping (required)
 
 - **Mock S3 provider**: in-process file reader/writer that implements the same persistence interface as the dedicated S3 persistence service — see [`plans/LOCAL_S3.md`](LOCAL_S3.md) (interface, on-disk layout, test plan).
-- **Redis**: dedicated container with `REDIS_URL` wired into the **notification service** (see [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) §12).
-- **Notification service**: dedicated container (or local run) talking to Redis + persistence layer.
+- **Hot outcomes cache:** **`OUTCOMES_STORE_BACKEND`** (`redis` default, `memory` for no-Redis tests); **`REDIS_URL`** when backend is **redis** (see [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) §1, §12).
+- **Notification service**: dedicated container (or local run) talking to **persistence** + chosen **hot store** implementation.
 - **Mock SMS provider**: runs as a separate container (single container) calling `POST /send`.
 - **Health monitor**: **specified** in [`PLAN.md`](PLAN.md) §1/§9 (include in compose/K8s for the exercise); `MOCK_SMS_URL` + read-only S3/persistence access; callers **`POST`** the integrity-check route to run **`GET /audit/sends`** + S3 compare ([`HEALTH_MONITOR.md`](HEALTH_MONITOR.md) §4).
 - **State ownership**: worker pods still use `HOSTNAME` and shard-range ownership semantics so the same code paths apply in local and cluster environments.
@@ -228,9 +228,9 @@ Before meaningful implementation:
   - wakeup due-selection behavior: only process messages with `nextDueAt <= now`
   - retry timeline mapping from `attemptCount` to `nextDueAt`
   - terminal transition correctness: `pending -> success` and `pending -> failed`
-  - recent outcomes via **notification service + Redis** (no per-GET broad terminal-prefix listing)
+  - recent outcomes via **notification service + hot store** (no per-GET broad terminal-prefix listing)
 - Integration tests should cover:
   - S3 persistence via local mock S3 and/or an AWS simulator
-  - end-to-end: API creates pending → worker activation → retries → terminal S3 keys → **notification publish + Redis** → `GET` outcomes (see [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md))
+  - end-to-end: API creates pending → worker activation → retries → terminal S3 keys → **notification publish + hot store** → `GET` outcomes (see [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md))
   - **Health monitor:** **`POST`** integrity-check reconciles mock audit vs S3; **`GET /healthz`** liveness only ([`HEALTH_MONITOR.md`](HEALTH_MONITOR.md) §4)
 

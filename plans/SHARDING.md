@@ -3,7 +3,7 @@
 This document defines the detailed sharding requirements for the SMS retry scheduler.
 It extends the requirements in `PLAN.md` and `SYSTEM_OVERVIEW.md` and focuses only on shard assignment, worker ownership, contention avoidance, and sharding operations.
 
-**Note:** Recent outcomes (`GET /messages/*`) use **Redis + notification service** and **`state/notifications/...`**—**not** pending shard keys; see [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md).
+**Note:** Recent outcomes (`GET /messages/*`) use **notification service + hot store** (`OutcomesHotStore`; Redis by default) and **`state/notifications/...`**—**not** pending shard keys; see [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md).
 
 ## 1) Scope
 

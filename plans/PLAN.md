@@ -16,7 +16,7 @@ This document mirrors the architect’s “High-Throughput SMS Retry Scheduler�
 - FastAPI
 - `aioboto3` (async AWS operations)
 - `uvicorn` to run the FastAPI service(s)
-- **Redis** (outcomes hot cache; dedicated container); **`redis-py`** / **`redis.asyncio`** in the **notification service**
+- **Outcomes hot cache:** **`OutcomesHotStore`** port inside the **notification service**; **Redis** is the default **production** backend (`OUTCOMES_STORE_BACKEND=redis`, dedicated container, **`redis-py`** / **`redis.asyncio`**); **`memory`** backend for tests / no-Redis local runs ([`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) §1, §3.1)
 
 ## 3) S3 data model & bucket layout
 
@@ -149,9 +149,9 @@ Implement the following endpoints:
 2. `POST /messages/repeat?count=N`
    - Load test endpoint: query **`count`**, JSON body same as **`POST /messages`**; body reused **`N`** times.
 3. `GET /messages/success` (`limit` optional, default **100** — exercise: **`?limit=100`**; see [`plans/REST_API.md`](REST_API.md))
-   - Return the most recent successful outcomes (via notification service + Redis).
+   - Return the most recent successful outcomes (via notification service → **hot store**, typically Redis in deployment).
 4. `GET /messages/failed` (same `limit` rules as success)
-   - Return the most recent failed outcomes (via notification service + Redis).
+   - Return the most recent failed outcomes (via notification service → **hot store**, typically Redis in deployment).
 5. `GET /healthz`
    - Basic health endpoint(s).
 
@@ -160,7 +160,7 @@ Operational / demo UI is **not** part of this API process; use the **frontend co
 Recent outcomes performance requirement:
 
 - Do not list large `state/success/` or `state/failed/` prefixes to answer each `GET /messages/success` or `GET /messages/failed`.
-- Use an **outcomes notification service** (dedicated container) plus **Redis** (dedicated container) for the **hot** recent-outcomes cache, and a durable **`state/notifications/...`** log in S3; on notification service startup **hydrate ~10,000** newest records from S3 **into Redis** (cold path only). **Details:** [`plans/NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md).
+- Use an **outcomes notification service** (dedicated container) with a **pluggable hot store** (default **Redis** in compose/K8s) for the **hot** recent-outcomes cache, and a durable **`state/notifications/...`** log in S3; on notification service startup **hydrate ~10,000** newest records from S3 **into the hot store** (cold path only). **Details:** [`plans/NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md).
 
 ## 8) Mock SMS provider container (requirements)
 
@@ -200,7 +200,7 @@ A **dedicated health monitor** container **compares** the mock SMS send audit (v
 
 **Strict TDD:** [`plans/TESTS.md`](TESTS.md) §1.1–§1.2 — tests assert planned behavior; stay red until implementation; a **tests-first branch** may add tests without implementing `src/` yet (see §1.2).
 
-**Recent outcomes architecture:** [`plans/NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) (notification service container + **Redis** container + S3 log + hydration into Redis).
+**Recent outcomes architecture:** [`plans/NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) (notification service + **`OutcomesHotStore`** + optional **Redis** container + S3 log + hydration into the hot store).
 
 Before meaningful implementation:
 
@@ -208,10 +208,10 @@ Before meaningful implementation:
   - Shard assignment and worker shard range ownership mapping
   - `nextDueAt` computation for the architect’s retry timeline
   - Correct S3 state transitions: `pending -> success` and `pending -> failed`
-  - Recent outcomes via **notification service + Redis** (bounded streams; default `limit` 100); see [`plans/NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md)
+  - Recent outcomes via **notification service + hot store** (bounded streams; default `limit` 100); see [`plans/NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md)
 - Integration test requirements:
   - Simulate S3 using LocalStack or moto
-  - End-to-end flow: API creates pending state → worker processes retries → terminal S3 keys → **worker publishes to notification service** → **Redis** updated → `GET /messages/success|failed` returns expected rows **without** broad terminal-prefix listing on each request
+  - End-to-end flow: API creates pending state → worker processes retries → terminal S3 keys → **worker publishes to notification service** → **hot store** updated → `GET /messages/success|failed` returns expected rows **without** broad terminal-prefix listing on each request
   - **Health monitor:** **`POST`** integrity-check reconciles **mock audit** vs **S3** lifecycle; **`GET /healthz`** is liveness-only ([`plans/HEALTH_MONITOR.md`](HEALTH_MONITOR.md))
 
 ## 11) Detailed plan documents (index)
@@ -225,7 +225,7 @@ All normative detail lives in these files; keep them **consistent** with this se
 | Lifecycle, retry, wakeup, worker ↔ mock SMS | [`CORE_LIFECYCLE.md`](CORE_LIFECYCLE.md) |
 | Worker/bootstrap resilience | [`RESILIENCE.md`](RESILIENCE.md) |
 | REST API, `GET` outcomes path | [`REST_API.md`](REST_API.md) |
-| Recent outcomes: Redis + notification + S3 log | [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) |
+| Recent outcomes: notification + pluggable hot store (Redis default) + S3 log | [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) |
 | Mock SMS provider | [`MOCK_SMS.md`](MOCK_SMS.md) |
 | Local file-backed mock S3 (`PersistencePort`) | [`LOCAL_S3.md`](LOCAL_S3.md) |
 | Health monitor (mock audit vs S3) | [`HEALTH_MONITOR.md`](HEALTH_MONITOR.md) |

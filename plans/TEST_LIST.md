@@ -167,7 +167,7 @@ Companion to [`plans/TESTS.md`](TESTS.md): a **concrete checklist** of test case
 | TC-CA-06 | U / I | No S3 **list** on GET outcomes—spy. | |
 | TC-CA-07 | U | `limit` **> current cache length** → return **all** available (≤ limit). | |
 | TC-CA-08 | U | **Same** `messageId` should not appear twice in one response unless spec allows—normally **dedupe** or impossible. | |
-| TC-CA-09 | I | **API restart** alone: Redis + notification service still hold data; **GET** still works. **Full stack restart** (Redis empty): **hydration** repopulates from S3—assert behavior. | |
+| TC-CA-09 | I | **API restart** alone: hot cache + notification service still hold data; **GET** still works. **Full stack restart** (e.g. Redis empty): **hydration** repopulates from S3—assert behavior. | |
 | TC-CA-10 | I | **Ordering**: outcome appended **when** terminal write committed (worker vs API path—document). | |
 
 ---
@@ -303,9 +303,9 @@ When implementing, map cases to spec checklists:
 
 ---
 
-## 19) Resolved architecture: outcomes notification service + Redis
+## 19) Resolved architecture: outcomes notification service + pluggable hot store
 
-**Spec:** [`plans/NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md). Workers **publish** after durable terminal S3 writes; a **notification service** (dedicated container) writes **`state/notifications/...`** and updates **Redis** (dedicated container); the **REST API** queries the notification service only. On startup the notification service **hydrates ~10k** newest records from S3 **into Redis**.
+**Spec:** [`plans/NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md). Workers **publish** after durable terminal S3 writes; a **notification service** (dedicated container) writes **`state/notifications/...`** and updates **`OutcomesHotStore`** (default **Redis** in compose); the **REST API** queries the notification service only. On startup the notification service **hydrates ~10k** newest records from S3 **into the hot store**.
 
 ### 19.1 Integration tests (normative)
 
@@ -314,10 +314,10 @@ When implementing, map cases to spec checklists:
 | TC-NTF-01 | I | Worker completes terminal **success** in S3 → **publish** → `GET /messages/success` returns that `messageId` **without** listing `state/success/`. | Spy persistence `list` on API `GET`. |
 | TC-NTF-02 | I | Same for **failed** terminal and `GET /messages/failed`. | |
 | TC-NTF-03 | I | **Order:** if publish is stubbed to fail, S3 terminal still exists; retry publish succeeds → GET reflects outcome. | |
-| TC-NTF-04 | I | **Notification service restart:** after terminal events persisted to `state/notifications/...`, restart service (Redis **empty** or flushed) → hydration fills **Redis** → **GET** returns recent rows up to **`HYDRATION_MAX`**. | |
-| TC-NTF-07 | I | **Redis unavailable:** notification service **readiness** / publish behavior per [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) §7; API outcomes **503** or degraded—**document + test**. | |
+| TC-NTF-04 | I | **Notification service restart:** after terminal events persisted to `state/notifications/...`, restart service (hot store **empty** or flushed—e.g. Redis flushed) → hydration fills store → **GET** returns recent rows up to **`HYDRATION_MAX`**. | |
+| TC-NTF-07 | I | **Hot store unavailable** (e.g. **Redis** down with `OUTCOMES_STORE_BACKEND=redis`): notification service **readiness** / publish behavior per [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) §7; API outcomes **503** or degraded—**document + test**. | |
 | TC-NTF-05 | U / I | **Dedupe / idempotency:** duplicate publish same `messageId`+outcome does **not** corrupt GET ordering per documented policy ([`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) §4). | |
-| TC-NTF-06 | I | **`HYDRATION_MAX` boundary:** with >10k notifications in S3, **Redis** holds **at most** cap after hydration; **newest** bias preserved. | |
+| TC-NTF-06 | I | **`HYDRATION_MAX` boundary:** with >10k notifications in S3, **hot store** holds **at most** cap after hydration; **newest** bias preserved. | |
 
 ### 19.2 Remaining implementation choices (test when decided)
 
