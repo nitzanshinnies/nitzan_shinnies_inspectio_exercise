@@ -1,1 +1,1 @@
-"""Mock audit vs S3 lifecycle reconciliation (on-demand)."""
+"""Mock SMS audit vs lifecycle objects (persistence / S3) - on-demand reconciliation."""
