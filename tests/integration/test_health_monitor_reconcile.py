@@ -14,10 +14,16 @@ from asgi_lifespan import LifespanManager
 from inspectio_exercise.domain.utc_paths import terminal_success_key
 from inspectio_exercise.health_monitor.app import create_app as create_health_monitor
 from inspectio_exercise.mock_sms.app import create_app as create_mock_sms
+from inspectio_exercise.mock_sms.audit import clear_audit_ring_for_tests
 from inspectio_exercise.notification.persistence_client import PersistenceHttpClient
 from inspectio_exercise.persistence.app import create_app as create_persistence
 
 pytestmark = pytest.mark.integration
+
+
+@pytest.fixture(autouse=True)
+def _isolate_mock_audit_ring() -> None:
+    clear_audit_ring_for_tests()
 
 
 @pytest.mark.asyncio

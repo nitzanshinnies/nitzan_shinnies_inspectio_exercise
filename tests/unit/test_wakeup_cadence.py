@@ -29,3 +29,13 @@ def test_select_due_matches_spec() -> None:
 def test_heap_pop_order_matches_spec() -> None:
     events = [(300, "late"), (100, "a"), (100, "b")]
     assert wakeup_mod.heap_pop_order(events) == spec.heap_pop_order(events)
+
+
+@pytest.mark.unit
+def test_select_due_excludes_messages_when_now_moves_backward() -> None:
+    """TC-WU-12: smaller ``now_ms`` yields fewer (or no) due ids vs a larger clock."""
+    messages = [("a", 500), ("b", 300)]
+    assert wakeup_mod.select_due_message_ids(messages, 600) == spec.select_due_message_ids(
+        messages, 600
+    )
+    assert wakeup_mod.select_due_message_ids(messages, 200) == []

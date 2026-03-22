@@ -254,6 +254,8 @@ Companion to [`plans/TESTS.md`](TESTS.md): a **concrete checklist** of test case
 
 ## 16) Traceability
 
+**Implemented-test matrix (status per `TC-*` row):** [`plans/TEST_TRACEABILITY.md`](TEST_TRACEABILITY.md).
+
 When implementing, map cases to spec checklists:
 
 - **Sharding:** TC-SH-* ↔ [`SHARDING.md`](SHARDING.md) §8

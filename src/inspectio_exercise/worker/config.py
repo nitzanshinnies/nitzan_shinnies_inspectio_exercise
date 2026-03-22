@@ -40,7 +40,7 @@ class WorkerSettings:
 
 
 def load_worker_settings() -> WorkerSettings:
-    return WorkerSettings(
+    settings = WorkerSettings(
         hostname=os.environ.get("HOSTNAME", "worker-0"),
         mock_sms_url=os.environ.get("MOCK_SMS_URL", "http://127.0.0.1:8080"),
         notification_url=os.environ.get("NOTIFICATION_SERVICE_URL", "http://127.0.0.1:8002"),
@@ -49,3 +49,11 @@ def load_worker_settings() -> WorkerSettings:
         total_shards=int(os.environ.get("TOTAL_SHARDS", "256")),
         http_timeout_sec=HTTP_CLIENT_TIMEOUT_SEC,
     )
+    if settings.total_shards <= 0 or settings.shards_per_pod <= 0:
+        msg = (
+            "TOTAL_SHARDS and SHARDS_PER_POD must be positive "
+            f"(got total_shards={settings.total_shards!r}, "
+            f"shards_per_pod={settings.shards_per_pod!r})"
+        )
+        raise ValueError(msg)
+    return settings

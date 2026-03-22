@@ -92,6 +92,8 @@ def create_app(
         persistence_client: PersistenceHttpClient = Depends(get_persistence),
         total_shards: int = Depends(get_total_shards),
     ) -> dict[str, str]:
+        if len(body.body) > config.MESSAGE_BODY_MAX_CHARS:
+            raise HTTPException(status_code=413, detail="message body too large")
         try:
             message_id = await submit_message(
                 persistence_client,
@@ -112,6 +114,8 @@ def create_app(
         total_shards: int = Depends(get_total_shards),
     ) -> dict[str, Any]:
         """``?count=N`` with the same JSON body as ``POST /messages``, reused ``N`` times."""
+        if len(message.body) > config.MESSAGE_BODY_MAX_CHARS:
+            raise HTTPException(status_code=413, detail="message body too large")
         ids: list[str] = []
         try:
             for _ in range(count):
