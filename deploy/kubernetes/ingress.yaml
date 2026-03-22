@@ -1,0 +1,22 @@
+# Optional: requires an Ingress controller (nginx, traefik, etc.).
+# Single host → web (nginx proxies /messages and /healthz to the api Service).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: inspectio
+  namespace: inspectio
+  labels:
+    app.kubernetes.io/name: inspectio-exercise
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: inspectio.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web
+                port:
+                  name: http
