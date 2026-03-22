@@ -56,3 +56,15 @@ def test_is_shard_owned_matches_spec() -> None:
 @pytest.mark.unit
 def test_pending_prefix_matches_spec() -> None:
     assert sharding_mod.pending_prefix_for_shard(7) == spec.pending_prefix_for_shard(7)
+
+
+@pytest.mark.unit
+def test_owned_shard_sets_vary_with_pod_index() -> None:
+    """TC-SC-01: different pod ordinals own disjoint shard ranges (same topology)."""
+    total = 256
+    spp = 64
+    a = sharding_mod.owned_shard_ids(0, spp, total)
+    b = sharding_mod.owned_shard_ids(1, spp, total)
+    assert a.isdisjoint(b)
+    assert len(a) == spp
+    assert len(b) == spp

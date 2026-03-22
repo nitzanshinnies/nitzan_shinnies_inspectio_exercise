@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import time
 from unittest import mock
@@ -16,6 +17,28 @@ from inspectio_exercise.worker.runtime import WorkerRuntime, message_id_from_pen
 from tests.fakes import RecordingPersistence
 
 pytestmark = pytest.mark.unit
+
+_MOCK_SMS_HIGH_5XX = 599
+_MOCK_SMS_STATUS_NOT_IMPLEMENTED = 501
+
+
+class _Flaky503PendingDeleteOnce(RecordingPersistence):
+    """First ``delete_object`` on a pending key raises 503; then succeeds (TC-PV-06)."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._fail_next_pending_delete = True
+
+    async def delete_object(self, key: str) -> None:
+        if self._fail_next_pending_delete and key.startswith("state/pending/"):
+            self._fail_next_pending_delete = False
+            req = httpx.Request("POST", "http://persistence/internal/v1/delete-object")
+            raise httpx.HTTPStatusError(
+                "transient",
+                request=req,
+                response=httpx.Response(503, request=req),
+            )
+        await super().delete_object(key)
 
 
 class _FlakyListPersistence(RecordingPersistence):
@@ -133,6 +156,357 @@ async def test_run_tick_failed_send_schedules_retry() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/send":
             return httpx.Response(500, json={"code": "FAILED_TO_SEND"})
+        return httpx.Response(404)
+
+    transport = httpx.MockTransport(handler)
+    async with (
+        httpx.AsyncClient(transport=transport, base_url="http://mock-sms") as sms,
+        httpx.AsyncClient(transport=transport, base_url="http://notification") as notify,
+    ):
+        settings = WorkerSettings(
+            hostname="worker-0",
+            http_timeout_sec=30.0,
+            mock_sms_url="http://mock-sms",
+            notification_url="http://notification",
+            persistence_url="http://persistence",
+            shards_per_pod=256,
+            total_shards=256,
+        )
+        runtime = WorkerRuntime(
+            notify_client=notify,
+            persistence=persistence,
+            settings=settings,
+            sms_client=sms,
+            tick_interval_sec=0.01,
+        )
+        with mock.patch("inspectio_exercise.worker.clocks.now_ms", return_value=now_ms):
+            await runtime.run_tick()
+
+    pending_puts = [p for p in persistence.puts if p[0] == key]
+    assert len(pending_puts) >= 2
+    updated = json.loads(pending_puts[-1][1].decode("utf-8"))
+    assert updated["attemptCount"] == 1
+    assert updated["nextDueAt"] == now_ms + 500
+
+
+@pytest.mark.asyncio
+async def test_run_tick_empty_persistence_does_not_call_sms() -> None:
+    """TC-WU-08: tick with no due work performs no mock SMS POST."""
+    send_hits = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal send_hits
+        if request.url.path == "/send":
+            send_hits += 1
+        return httpx.Response(404)
+
+    transport = httpx.MockTransport(handler)
+    persistence = RecordingPersistence()
+    async with (
+        httpx.AsyncClient(transport=transport, base_url="http://mock-sms") as sms,
+        httpx.AsyncClient(transport=transport, base_url="http://notification") as notify,
+    ):
+        settings = WorkerSettings(
+            hostname="worker-0",
+            http_timeout_sec=30.0,
+            mock_sms_url="http://mock-sms",
+            notification_url="http://notification",
+            persistence_url="http://persistence",
+            shards_per_pod=256,
+            total_shards=256,
+        )
+        runtime = WorkerRuntime(
+            notify_client=notify,
+            persistence=persistence,
+            settings=settings,
+            sms_client=sms,
+            tick_interval_sec=0.01,
+        )
+        await runtime.run_tick()
+    assert send_hits == 0
+
+
+@pytest.mark.asyncio
+async def test_run_tick_http_204_counts_as_success() -> None:
+    """TC-WS-04: 2xx empty body still transitions success."""
+    mid = _mid_on_shard0()
+    key = f"{pending_prefix_for_shard(0)}{mid}.json"
+    now_ms = int(time.time() * 1000)
+    record = {
+        "attemptCount": 0,
+        "history": [],
+        "messageId": mid,
+        "nextDueAt": now_ms,
+        "payload": {"body": "b", "to": "+1"},
+        "status": "pending",
+    }
+    persistence = RecordingPersistence()
+    await persistence.put_object(key, json.dumps(record, separators=(",", ":")).encode("utf-8"))
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/send":
+            return httpx.Response(204)
+        if request.url.path == "/internal/v1/outcomes":
+            return httpx.Response(200, json={"status": "ok"})
+        return httpx.Response(404)
+
+    transport = httpx.MockTransport(handler)
+    async with (
+        httpx.AsyncClient(transport=transport, base_url="http://mock-sms") as sms,
+        httpx.AsyncClient(transport=transport, base_url="http://notification") as notify,
+    ):
+        settings = WorkerSettings(
+            hostname="worker-0",
+            http_timeout_sec=30.0,
+            mock_sms_url="http://mock-sms",
+            notification_url="http://notification",
+            persistence_url="http://persistence",
+            shards_per_pod=256,
+            total_shards=256,
+        )
+        runtime = WorkerRuntime(
+            notify_client=notify,
+            persistence=persistence,
+            settings=settings,
+            sms_client=sms,
+            tick_interval_sec=0.01,
+        )
+        with mock.patch("inspectio_exercise.worker.clocks.now_ms", return_value=now_ms):
+            await runtime.run_tick()
+
+    assert key in persistence.deleted
+    success_puts = [k for k, _ in persistence.puts if k.startswith("state/success/")]
+    assert len(success_puts) == 1
+
+
+@pytest.mark.asyncio
+async def test_run_tick_http_302_triggers_retry_schedule() -> None:
+    """TC-WS-05: non-2xx redirect status schedules retry like other failures."""
+    mid = _mid_on_shard0()
+    key = f"{pending_prefix_for_shard(0)}{mid}.json"
+    now_ms = int(time.time() * 1000)
+    record = {
+        "attemptCount": 0,
+        "history": [],
+        "messageId": mid,
+        "nextDueAt": now_ms,
+        "payload": {"body": "b", "to": "+1"},
+        "status": "pending",
+    }
+    persistence = RecordingPersistence()
+    await persistence.put_object(key, json.dumps(record, separators=(",", ":")).encode("utf-8"))
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/send":
+            return httpx.Response(302, headers={"Location": "http://elsewhere/"})
+        return httpx.Response(404)
+
+    transport = httpx.MockTransport(handler)
+    async with (
+        httpx.AsyncClient(transport=transport, base_url="http://mock-sms") as sms,
+        httpx.AsyncClient(transport=transport, base_url="http://notification") as notify,
+    ):
+        settings = WorkerSettings(
+            hostname="worker-0",
+            http_timeout_sec=30.0,
+            mock_sms_url="http://mock-sms",
+            notification_url="http://notification",
+            persistence_url="http://persistence",
+            shards_per_pod=256,
+            total_shards=256,
+        )
+        runtime = WorkerRuntime(
+            notify_client=notify,
+            persistence=persistence,
+            settings=settings,
+            sms_client=sms,
+            tick_interval_sec=0.01,
+        )
+        with mock.patch("inspectio_exercise.worker.clocks.now_ms", return_value=now_ms):
+            await runtime.run_tick()
+
+    pending_puts = [p for p in persistence.puts if p[0] == key]
+    assert len(pending_puts) >= 2
+    updated = json.loads(pending_puts[-1][1].decode("utf-8"))
+    assert updated["attemptCount"] == 1
+
+
+@pytest.mark.asyncio
+async def test_run_tick_http_200_with_error_shaped_json_still_success() -> None:
+    """TC-WS-06: SMS client treats any 2xx as send success regardless of JSON body."""
+    mid = _mid_on_shard0()
+    key = f"{pending_prefix_for_shard(0)}{mid}.json"
+    now_ms = int(time.time() * 1000)
+    record = {
+        "attemptCount": 0,
+        "history": [],
+        "messageId": mid,
+        "nextDueAt": now_ms,
+        "payload": {"body": "b", "to": "+1"},
+        "status": "pending",
+    }
+    persistence = RecordingPersistence()
+    await persistence.put_object(key, json.dumps(record, separators=(",", ":")).encode("utf-8"))
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/send":
+            return httpx.Response(200, json={"ok": False, "error": "weird"})
+        if request.url.path == "/internal/v1/outcomes":
+            return httpx.Response(200, json={"status": "ok"})
+        return httpx.Response(404)
+
+    transport = httpx.MockTransport(handler)
+    async with (
+        httpx.AsyncClient(transport=transport, base_url="http://mock-sms") as sms,
+        httpx.AsyncClient(transport=transport, base_url="http://notification") as notify,
+    ):
+        settings = WorkerSettings(
+            hostname="worker-0",
+            http_timeout_sec=30.0,
+            mock_sms_url="http://mock-sms",
+            notification_url="http://notification",
+            persistence_url="http://persistence",
+            shards_per_pod=256,
+            total_shards=256,
+        )
+        runtime = WorkerRuntime(
+            notify_client=notify,
+            persistence=persistence,
+            settings=settings,
+            sms_client=sms,
+            tick_interval_sec=0.01,
+        )
+        with mock.patch("inspectio_exercise.worker.clocks.now_ms", return_value=now_ms):
+            await runtime.run_tick()
+
+    assert key in persistence.deleted
+
+
+@pytest.mark.asyncio
+async def test_run_tick_http_429_schedules_retry() -> None:
+    """TC-WS-07: 429 is non-success; pending updated for retry."""
+    mid = _mid_on_shard0()
+    key = f"{pending_prefix_for_shard(0)}{mid}.json"
+    now_ms = int(time.time() * 1000)
+    record = {
+        "attemptCount": 0,
+        "history": [],
+        "messageId": mid,
+        "nextDueAt": now_ms,
+        "payload": {"body": "b", "to": "+1"},
+        "status": "pending",
+    }
+    persistence = RecordingPersistence()
+    await persistence.put_object(key, json.dumps(record, separators=(",", ":")).encode("utf-8"))
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/send":
+            return httpx.Response(429, json={"code": "RATE_LIMIT"})
+        return httpx.Response(404)
+
+    transport = httpx.MockTransport(handler)
+    async with (
+        httpx.AsyncClient(transport=transport, base_url="http://mock-sms") as sms,
+        httpx.AsyncClient(transport=transport, base_url="http://notification") as notify,
+    ):
+        settings = WorkerSettings(
+            hostname="worker-0",
+            http_timeout_sec=30.0,
+            mock_sms_url="http://mock-sms",
+            notification_url="http://notification",
+            persistence_url="http://persistence",
+            shards_per_pod=256,
+            total_shards=256,
+        )
+        runtime = WorkerRuntime(
+            notify_client=notify,
+            persistence=persistence,
+            settings=settings,
+            sms_client=sms,
+            tick_interval_sec=0.01,
+        )
+        with mock.patch("inspectio_exercise.worker.clocks.now_ms", return_value=now_ms):
+            await runtime.run_tick()
+
+    puts_429 = [p for p in persistence.puts if p[0] == key]
+    updated = json.loads(puts_429[-1][1].decode("utf-8"))
+    assert updated["attemptCount"] == 1
+
+
+@pytest.mark.asyncio
+async def test_run_tick_http_599_schedules_retry() -> None:
+    """TC-WS-03: high 5xx family still schedules retry."""
+    mid = _mid_on_shard0()
+    key = f"{pending_prefix_for_shard(0)}{mid}.json"
+    now_ms = int(time.time() * 1000)
+    record = {
+        "attemptCount": 0,
+        "history": [],
+        "messageId": mid,
+        "nextDueAt": now_ms,
+        "payload": {"body": "b", "to": "+1"},
+        "status": "pending",
+    }
+    persistence = RecordingPersistence()
+    await persistence.put_object(key, json.dumps(record, separators=(",", ":")).encode("utf-8"))
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/send":
+            return httpx.Response(_MOCK_SMS_HIGH_5XX, json={"code": "EDGE"})
+        return httpx.Response(404)
+
+    transport = httpx.MockTransport(handler)
+    async with (
+        httpx.AsyncClient(transport=transport, base_url="http://mock-sms") as sms,
+        httpx.AsyncClient(transport=transport, base_url="http://notification") as notify,
+    ):
+        settings = WorkerSettings(
+            hostname="worker-0",
+            http_timeout_sec=30.0,
+            mock_sms_url="http://mock-sms",
+            notification_url="http://notification",
+            persistence_url="http://persistence",
+            shards_per_pod=256,
+            total_shards=256,
+        )
+        runtime = WorkerRuntime(
+            notify_client=notify,
+            persistence=persistence,
+            settings=settings,
+            sms_client=sms,
+            tick_interval_sec=0.01,
+        )
+        with mock.patch("inspectio_exercise.worker.clocks.now_ms", return_value=now_ms):
+            await runtime.run_tick()
+
+    puts_599 = [p for p in persistence.puts if p[0] == key]
+    updated = json.loads(puts_599[-1][1].decode("utf-8"))
+    assert updated["attemptCount"] == 1
+
+
+@pytest.mark.asyncio
+async def test_run_tick_http_not_implemented_schedules_retry() -> None:
+    """TC-WS-03: 501 is non-success; pending is updated for a later attempt."""
+    mid = _mid_on_shard0()
+    key = f"{pending_prefix_for_shard(0)}{mid}.json"
+    now_ms = int(time.time() * 1000)
+    record = {
+        "attemptCount": 0,
+        "history": [],
+        "messageId": mid,
+        "nextDueAt": now_ms,
+        "payload": {"body": "b", "to": "+1"},
+        "status": "pending",
+    }
+    persistence = RecordingPersistence()
+    await persistence.put_object(key, json.dumps(record, separators=(",", ":")).encode("utf-8"))
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/send":
+            return httpx.Response(
+                _MOCK_SMS_STATUS_NOT_IMPLEMENTED,
+                json={"code": "NOT_IMPLEMENTED"},
+            )
         return httpx.Response(404)
 
     transport = httpx.MockTransport(handler)
@@ -396,3 +770,128 @@ async def test_invalid_payload_deletes_pending_and_drops_scheduler_state() -> No
     assert key in persistence.deleted
     async with runtime._queue.lock:
         assert mid not in runtime._queue.records
+
+
+@pytest.mark.asyncio
+async def test_success_path_retries_pending_delete_after_transient_503() -> None:
+    """TC-PV-06: durable terminal write + retried pending delete converge; notify still fires once."""
+    mid = _mid_on_shard0()
+    key = f"{pending_prefix_for_shard(0)}{mid}.json"
+    now_ms = int(time.time() * 1000)
+    record = {
+        "attemptCount": 0,
+        "history": [],
+        "messageId": mid,
+        "nextDueAt": now_ms,
+        "payload": {"body": "b", "to": "+1"},
+        "status": "pending",
+    }
+    inner = _Flaky503PendingDeleteOnce()
+    await inner.put_object(key, json.dumps(record, separators=(",", ":")).encode("utf-8"))
+
+    outcome_posts = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal outcome_posts
+        path = request.url.path
+        if path == "/send":
+            return httpx.Response(200, json={"ok": True})
+        if path == "/internal/v1/outcomes":
+            outcome_posts += 1
+            return httpx.Response(200, json={"status": "ok"})
+        return httpx.Response(404)
+
+    transport = httpx.MockTransport(handler)
+    async with (
+        httpx.AsyncClient(transport=transport, base_url="http://mock-sms") as sms,
+        httpx.AsyncClient(transport=transport, base_url="http://notification") as notify,
+    ):
+        settings = WorkerSettings(
+            hostname="worker-0",
+            http_timeout_sec=30.0,
+            mock_sms_url="http://mock-sms",
+            notification_url="http://notification",
+            persistence_url="http://persistence",
+            shards_per_pod=256,
+            total_shards=256,
+        )
+        runtime = WorkerRuntime(
+            notify_client=notify,
+            persistence=inner,
+            persistence_read_backoff_sec=0.001,
+            persistence_read_max_attempts=5,
+            settings=settings,
+            sms_client=sms,
+            tick_interval_sec=0.01,
+        )
+        with mock.patch("asyncio.sleep", new_callable=mock.AsyncMock):
+            await runtime.run_tick()
+
+    success_puts = [k for k, _ in inner.puts if k.startswith("state/success/") and mid in k]
+    assert len(success_puts) == 1
+    assert key in inner.deleted
+    assert not inner._fail_next_pending_delete
+    assert outcome_posts == 1
+
+
+@pytest.mark.asyncio
+async def test_concurrent_handle_one_same_message_single_terminal() -> None:
+    """TC-ID-04: parallel dispatches for the same pending converge to one success terminal."""
+    mid = _mid_on_shard0()
+    key = f"{pending_prefix_for_shard(0)}{mid}.json"
+    now_ms = int(time.time() * 1000)
+    record = {
+        "attemptCount": 0,
+        "history": [],
+        "messageId": mid,
+        "nextDueAt": now_ms,
+        "payload": {"body": "b", "to": "+1"},
+        "status": "pending",
+    }
+    persistence = RecordingPersistence()
+    await persistence.put_object(key, json.dumps(record, separators=(",", ":")).encode("utf-8"))
+
+    send_hits = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal send_hits
+        path = request.url.path
+        if path == "/send":
+            send_hits += 1
+            return httpx.Response(200, json={"ok": True})
+        if path == "/internal/v1/outcomes":
+            return httpx.Response(200, json={"status": "ok"})
+        return httpx.Response(404)
+
+    transport = httpx.MockTransport(handler)
+    async with (
+        httpx.AsyncClient(transport=transport, base_url="http://mock-sms") as sms,
+        httpx.AsyncClient(transport=transport, base_url="http://notification") as notify,
+    ):
+        settings = WorkerSettings(
+            hostname="worker-0",
+            http_timeout_sec=30.0,
+            mock_sms_url="http://mock-sms",
+            notification_url="http://notification",
+            persistence_url="http://persistence",
+            shards_per_pod=256,
+            total_shards=256,
+        )
+        runtime = WorkerRuntime(
+            notify_client=notify,
+            persistence=persistence,
+            settings=settings,
+            sms_client=sms,
+            tick_interval_sec=0.01,
+        )
+        fixed_ms = 1_800_000_000_000
+        with mock.patch("inspectio_exercise.worker.clocks.now_ms", return_value=fixed_ms):
+            await asyncio.gather(
+                runtime._dispatch.handle_one(mid, dict(record), key),
+                runtime._dispatch.handle_one(mid, dict(record), key),
+            )
+
+    terminal_keys = {k for k, _ in persistence.puts if k.startswith("state/success/") and mid in k}
+    assert len(terminal_keys) == 1
+    assert key in persistence.deleted
+    assert 1 <= send_hits <= 2

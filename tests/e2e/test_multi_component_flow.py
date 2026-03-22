@@ -281,6 +281,53 @@ async def test_e2e_worker_restart_resumes_retry(
 
 
 @pytest.mark.asyncio
+async def test_e2e_sms_outage_then_recovery(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """TC-E2E-08: mock SMS returns 503 for several attempts, then succeeds."""
+    import inspectio_exercise.mock_sms.send_handler as send_handler
+
+    orig = send_handler.decide_send_outcome
+    n = {"c": 0}
+
+    async def outage_then_ok(*, should_fail: bool) -> tuple[int, str]:
+        n["c"] += 1
+        if n["c"] <= 4:
+            return 503, "sms_outage"
+        return await orig(should_fail=should_fail)
+
+    monkeypatch.setattr(send_handler, "decide_send_outcome", outage_then_ok)
+
+    def _next_due_compact(now_ms: int, attempt_count_when_failed: int) -> int | None:
+        if attempt_count_when_failed == 5:
+            return None
+        return now_ms + 50
+
+    monkeypatch.setattr(
+        "inspectio_exercise.worker.lifecycle_transitions.next_due_at_ms_after_failure",
+        _next_due_compact,
+    )
+
+    async with e2e_stack(monkeypatch, tmp_path) as st:
+        pr = await st.api.post("/messages", json={"to": "+15550020", "body": "e2e-outage"})
+        assert pr.status_code == 202, pr.text
+        mid = pr.json()["messageId"]
+        await asyncio.sleep(0.35)
+        for _ in range(30):
+            st.clock.advance_ms(500)
+            await asyncio.sleep(0.12)
+
+        await wait_for_message_in_outcomes(
+            st.api,
+            message_id=mid,
+            outcome="success",
+            timeout_sec=E2E_POLL_TIMEOUT_SEC,
+            poll_interval_sec=E2E_POLL_INTERVAL_SEC,
+        )
+
+
+@pytest.mark.asyncio
 async def test_e2e_health_monitor_healthz(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,

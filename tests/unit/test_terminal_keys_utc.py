@@ -26,3 +26,15 @@ def test_terminal_keys_match_spec() -> None:
     mid = "msg-1"
     assert utc_mod.terminal_success_key(mid, instant) == spec.terminal_success_key(mid, instant)
     assert utc_mod.terminal_failed_key(mid, instant) == spec.terminal_failed_key(mid, instant)
+
+
+@pytest.mark.unit
+def test_failed_terminal_key_shares_partition_shape_with_success() -> None:
+    """TC-PV-03: failed objects use the same UTC path layout as success."""
+    instant = 1_705_329_000_000
+    mid = "m"
+    sk = utc_mod.terminal_success_key(mid, instant)
+    fk = utc_mod.terminal_failed_key(mid, instant)
+    assert sk.count("/") == fk.count("/")
+    assert sk.startswith("state/success/")
+    assert fk.startswith("state/failed/")

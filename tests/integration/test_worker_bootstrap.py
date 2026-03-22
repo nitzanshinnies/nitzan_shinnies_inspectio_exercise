@@ -209,3 +209,409 @@ async def test_bootstrap_retries_transient_persistence_errors(
         await discover_owned_pending(owned, persist, queue)
         assert mid in queue.records
         assert flaky.list_failures_left == 0
+
+
+@pytest.mark.asyncio
+async def test_bootstrap_skips_pending_attempt_count_above_six(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """TC-RQ-03: attemptCount > 6 is not ingested."""
+    monkeypatch.setenv("LOCAL_S3_ROOT", str(tmp_path))
+    monkeypatch.setenv("INSPECTIO_PERSISTENCE_BACKEND", "local")
+    monkeypatch.delenv("INSPECTIO_S3_BUCKET", raising=False)
+    monkeypatch.delenv("S3_BUCKET", raising=False)
+    monkeypatch.setenv("HOSTNAME", "worker-0")
+    monkeypatch.setenv("TOTAL_SHARDS", "16")
+    monkeypatch.setenv("SHARDS_PER_POD", "16")
+
+    mid = "too-many-attempts"
+    rec = {
+        "messageId": mid,
+        "status": "pending",
+        "attemptCount": 7,
+        "nextDueAt": 0,
+        "payload": {"to": "+1", "body": "x"},
+    }
+    raw = json.dumps(rec, separators=(",", ":")).encode("utf-8")
+
+    persist_app = create_persistence()
+    async with LifespanManager(persist_app):
+        pc = httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=persist_app),
+            base_url="http://persistence",
+            timeout=30.0,
+        )
+        key = f"state/pending/shard-0/{mid}.json"
+        put = await pc.post(
+            "/internal/v1/put-object",
+            json={
+                "key": key,
+                "body_b64": base64.b64encode(raw).decode("ascii"),
+                "content_type": "application/json",
+            },
+        )
+        assert put.status_code == 200
+
+        inner = PersistenceHttpClient(pc)
+        queue = DueWorkQueue()
+        owned = owned_shard_ids(
+            pod_index_from_hostname("worker-0"),
+            shards_per_pod=16,
+            total_shards=16,
+        )
+        persist = RetryingPersistence(inner, base_delay_sec=0.01, max_attempts=3)
+        await discover_owned_pending(owned, persist, queue)
+        assert mid not in queue.records
+
+
+@pytest.mark.asyncio
+async def test_bootstrap_skips_pending_message_id_mismatch_filename(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """TC-PV-08: JSON messageId must match object basename."""
+    monkeypatch.setenv("LOCAL_S3_ROOT", str(tmp_path))
+    monkeypatch.setenv("INSPECTIO_PERSISTENCE_BACKEND", "local")
+    monkeypatch.delenv("INSPECTIO_S3_BUCKET", raising=False)
+    monkeypatch.delenv("S3_BUCKET", raising=False)
+    monkeypatch.setenv("HOSTNAME", "worker-0")
+    monkeypatch.setenv("TOTAL_SHARDS", "16")
+    monkeypatch.setenv("SHARDS_PER_POD", "16")
+
+    filename_mid = "key-name"
+    body_mid = "other-id"
+    rec = {
+        "messageId": body_mid,
+        "status": "pending",
+        "attemptCount": 0,
+        "nextDueAt": 0,
+        "payload": {"to": "+1", "body": "x"},
+    }
+    raw = json.dumps(rec, separators=(",", ":")).encode("utf-8")
+
+    persist_app = create_persistence()
+    async with LifespanManager(persist_app):
+        pc = httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=persist_app),
+            base_url="http://persistence",
+            timeout=30.0,
+        )
+        key = f"state/pending/shard-0/{filename_mid}.json"
+        put = await pc.post(
+            "/internal/v1/put-object",
+            json={
+                "key": key,
+                "body_b64": base64.b64encode(raw).decode("ascii"),
+                "content_type": "application/json",
+            },
+        )
+        assert put.status_code == 200
+
+        inner = PersistenceHttpClient(pc)
+        queue = DueWorkQueue()
+        owned = owned_shard_ids(
+            pod_index_from_hostname("worker-0"),
+            shards_per_pod=16,
+            total_shards=16,
+        )
+        persist = RetryingPersistence(inner, base_delay_sec=0.01, max_attempts=3)
+        await discover_owned_pending(owned, persist, queue)
+        assert filename_mid not in queue.records
+        assert body_mid not in queue.records
+
+
+@pytest.mark.asyncio
+async def test_bootstrap_skips_pending_missing_next_due_at(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """TC-RQ-10: pending without integer nextDueAt is skipped."""
+    monkeypatch.setenv("LOCAL_S3_ROOT", str(tmp_path))
+    monkeypatch.setenv("INSPECTIO_PERSISTENCE_BACKEND", "local")
+    monkeypatch.delenv("INSPECTIO_S3_BUCKET", raising=False)
+    monkeypatch.delenv("S3_BUCKET", raising=False)
+    monkeypatch.setenv("HOSTNAME", "worker-0")
+    monkeypatch.setenv("TOTAL_SHARDS", "16")
+    monkeypatch.setenv("SHARDS_PER_POD", "16")
+
+    mid = "no-next-due"
+    rec = {
+        "messageId": mid,
+        "status": "pending",
+        "attemptCount": 0,
+        "payload": {"to": "+1", "body": "x"},
+    }
+    raw = json.dumps(rec, separators=(",", ":")).encode("utf-8")
+
+    persist_app = create_persistence()
+    async with LifespanManager(persist_app):
+        pc = httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=persist_app),
+            base_url="http://persistence",
+            timeout=30.0,
+        )
+        key = f"state/pending/shard-0/{mid}.json"
+        put = await pc.post(
+            "/internal/v1/put-object",
+            json={
+                "key": key,
+                "body_b64": base64.b64encode(raw).decode("ascii"),
+                "content_type": "application/json",
+            },
+        )
+        assert put.status_code == 200
+
+        inner = PersistenceHttpClient(pc)
+        queue = DueWorkQueue()
+        owned = owned_shard_ids(
+            pod_index_from_hostname("worker-0"),
+            shards_per_pod=16,
+            total_shards=16,
+        )
+        persist = RetryingPersistence(inner, base_delay_sec=0.01, max_attempts=3)
+        await discover_owned_pending(owned, persist, queue)
+        assert mid not in queue.records
+
+
+@pytest.mark.asyncio
+async def test_bootstrap_skips_pending_status_not_pending(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """TC-RQ-12: success-shaped JSON under pending prefix is not scheduled."""
+    monkeypatch.setenv("LOCAL_S3_ROOT", str(tmp_path))
+    monkeypatch.setenv("INSPECTIO_PERSISTENCE_BACKEND", "local")
+    monkeypatch.delenv("INSPECTIO_S3_BUCKET", raising=False)
+    monkeypatch.delenv("S3_BUCKET", raising=False)
+    monkeypatch.setenv("HOSTNAME", "worker-0")
+    monkeypatch.setenv("TOTAL_SHARDS", "16")
+    monkeypatch.setenv("SHARDS_PER_POD", "16")
+
+    mid = "wrong-status-pending-path"
+    rec = {
+        "messageId": mid,
+        "status": "success",
+        "attemptCount": 0,
+        "nextDueAt": 0,
+        "payload": {"to": "+1", "body": "x"},
+    }
+    raw = json.dumps(rec, separators=(",", ":")).encode("utf-8")
+
+    persist_app = create_persistence()
+    async with LifespanManager(persist_app):
+        pc = httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=persist_app),
+            base_url="http://persistence",
+            timeout=30.0,
+        )
+        key = f"state/pending/shard-0/{mid}.json"
+        put = await pc.post(
+            "/internal/v1/put-object",
+            json={
+                "key": key,
+                "body_b64": base64.b64encode(raw).decode("ascii"),
+                "content_type": "application/json",
+            },
+        )
+        assert put.status_code == 200
+
+        inner = PersistenceHttpClient(pc)
+        queue = DueWorkQueue()
+        owned = owned_shard_ids(
+            pod_index_from_hostname("worker-0"),
+            shards_per_pod=16,
+            total_shards=16,
+        )
+        persist = RetryingPersistence(inner, base_delay_sec=0.01, max_attempts=3)
+        await discover_owned_pending(owned, persist, queue)
+        assert mid not in queue.records
+
+
+@pytest.mark.asyncio
+async def test_bootstrap_completes_with_no_pending_objects(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """TC-SH-12: empty owned prefixes — discover finishes without error."""
+    monkeypatch.setenv("LOCAL_S3_ROOT", str(tmp_path))
+    monkeypatch.setenv("INSPECTIO_PERSISTENCE_BACKEND", "local")
+    monkeypatch.delenv("INSPECTIO_S3_BUCKET", raising=False)
+    monkeypatch.delenv("S3_BUCKET", raising=False)
+    monkeypatch.setenv("HOSTNAME", "worker-0")
+    monkeypatch.setenv("TOTAL_SHARDS", "4")
+    monkeypatch.setenv("SHARDS_PER_POD", "4")
+
+    persist_app = create_persistence()
+    async with LifespanManager(persist_app):
+        pc = httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=persist_app),
+            base_url="http://persistence",
+            timeout=30.0,
+        )
+        inner = PersistenceHttpClient(pc)
+        queue = DueWorkQueue()
+        owned = owned_shard_ids(
+            pod_index_from_hostname("worker-0"),
+            shards_per_pod=4,
+            total_shards=4,
+        )
+        persist = RetryingPersistence(inner, base_delay_sec=0.01, max_attempts=3)
+        await discover_owned_pending(owned, persist, queue)
+        assert queue.records == {}
+
+
+@pytest.mark.asyncio
+async def test_bootstrap_does_not_ingest_foreign_shard_pending(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """TC-SH-05 / TC-ID-06: only owned shard prefixes are listed; foreign pending ignored."""
+    monkeypatch.setenv("LOCAL_S3_ROOT", str(tmp_path))
+    monkeypatch.setenv("INSPECTIO_PERSISTENCE_BACKEND", "local")
+    monkeypatch.delenv("INSPECTIO_S3_BUCKET", raising=False)
+    monkeypatch.delenv("S3_BUCKET", raising=False)
+    monkeypatch.setenv("HOSTNAME", "worker-0")
+    monkeypatch.setenv("TOTAL_SHARDS", "256")
+    monkeypatch.setenv("SHARDS_PER_POD", "1")
+
+    foreign_mid = "foreign-only"
+    raw = _pending_body(foreign_mid, 0, 0)
+
+    persist_app = create_persistence()
+    async with LifespanManager(persist_app):
+        pc = httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=persist_app),
+            base_url="http://persistence",
+            timeout=30.0,
+        )
+        key = "state/pending/shard-99/foreign-only.json"
+        put = await pc.post(
+            "/internal/v1/put-object",
+            json={
+                "key": key,
+                "body_b64": base64.b64encode(raw).decode("ascii"),
+                "content_type": "application/json",
+            },
+        )
+        assert put.status_code == 200
+
+        inner = PersistenceHttpClient(pc)
+        queue = DueWorkQueue()
+        owned = owned_shard_ids(
+            pod_index_from_hostname("worker-0"),
+            shards_per_pod=1,
+            total_shards=256,
+        )
+        assert 99 not in owned
+        persist = RetryingPersistence(inner, base_delay_sec=0.01, max_attempts=3)
+        await discover_owned_pending(owned, persist, queue)
+        assert foreign_mid not in queue.records
+
+
+@pytest.mark.asyncio
+async def test_bootstrap_skips_pending_negative_attempt_count(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """TC-RQ-03 / TC-RT-06: negative attemptCount is invalid."""
+    monkeypatch.setenv("LOCAL_S3_ROOT", str(tmp_path))
+    monkeypatch.setenv("INSPECTIO_PERSISTENCE_BACKEND", "local")
+    monkeypatch.delenv("INSPECTIO_S3_BUCKET", raising=False)
+    monkeypatch.delenv("S3_BUCKET", raising=False)
+    monkeypatch.setenv("HOSTNAME", "worker-0")
+    monkeypatch.setenv("TOTAL_SHARDS", "16")
+    monkeypatch.setenv("SHARDS_PER_POD", "16")
+
+    mid = "neg-ac"
+    rec = {
+        "messageId": mid,
+        "status": "pending",
+        "attemptCount": -1,
+        "nextDueAt": 0,
+        "payload": {"to": "+1", "body": "x"},
+    }
+    raw = json.dumps(rec, separators=(",", ":")).encode("utf-8")
+
+    persist_app = create_persistence()
+    async with LifespanManager(persist_app):
+        pc = httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=persist_app),
+            base_url="http://persistence",
+            timeout=30.0,
+        )
+        key = f"state/pending/shard-0/{mid}.json"
+        put = await pc.post(
+            "/internal/v1/put-object",
+            json={
+                "key": key,
+                "body_b64": base64.b64encode(raw).decode("ascii"),
+                "content_type": "application/json",
+            },
+        )
+        assert put.status_code == 200
+
+        inner = PersistenceHttpClient(pc)
+        queue = DueWorkQueue()
+        owned = owned_shard_ids(
+            pod_index_from_hostname("worker-0"),
+            shards_per_pod=16,
+            total_shards=16,
+        )
+        persist = RetryingPersistence(inner, base_delay_sec=0.01, max_attempts=3)
+        await discover_owned_pending(owned, persist, queue)
+        assert mid not in queue.records
+
+
+@pytest.mark.asyncio
+async def test_bootstrap_skips_pending_null_next_due_at(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """TC-RQ-10: JSON null nextDueAt is not a valid integer schedule."""
+    monkeypatch.setenv("LOCAL_S3_ROOT", str(tmp_path))
+    monkeypatch.setenv("INSPECTIO_PERSISTENCE_BACKEND", "local")
+    monkeypatch.delenv("INSPECTIO_S3_BUCKET", raising=False)
+    monkeypatch.delenv("S3_BUCKET", raising=False)
+    monkeypatch.setenv("HOSTNAME", "worker-0")
+    monkeypatch.setenv("TOTAL_SHARDS", "16")
+    monkeypatch.setenv("SHARDS_PER_POD", "16")
+
+    mid = "null-due"
+    rec = {
+        "messageId": mid,
+        "status": "pending",
+        "attemptCount": 0,
+        "nextDueAt": None,
+        "payload": {"to": "+1", "body": "x"},
+    }
+    raw = json.dumps(rec, separators=(",", ":")).encode("utf-8")
+
+    persist_app = create_persistence()
+    async with LifespanManager(persist_app):
+        pc = httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=persist_app),
+            base_url="http://persistence",
+            timeout=30.0,
+        )
+        key = f"state/pending/shard-0/{mid}.json"
+        put = await pc.post(
+            "/internal/v1/put-object",
+            json={
+                "key": key,
+                "body_b64": base64.b64encode(raw).decode("ascii"),
+                "content_type": "application/json",
+            },
+        )
+        assert put.status_code == 200
+
+        inner = PersistenceHttpClient(pc)
+        queue = DueWorkQueue()
+        owned = owned_shard_ids(
+            pod_index_from_hostname("worker-0"),
+            shards_per_pod=16,
+            total_shards=16,
+        )
+        persist = RetryingPersistence(inner, base_delay_sec=0.01, max_attempts=3)
+        await discover_owned_pending(owned, persist, queue)
+        assert mid not in queue.records

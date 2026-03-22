@@ -13,6 +13,12 @@ REPEAT_COUNT_MAX: int = int(os.environ.get("REPEAT_COUNT_MAX", "10000"))
 OUTCOME_QUERY_LIMIT_DEFAULT: int = 100
 OUTCOME_QUERY_LIMIT_MAX: int = 1000
 
+# Public ``POST /messages`` body size cap (characters); ``413`` when exceeded (TEST_LIST TC-NM-07).
+MESSAGE_BODY_MAX_CHARS: int = int(
+    os.environ.get("INSPECTIO_MESSAGE_BODY_MAX_CHARS", str(256 * 1024))
+)
+assert MESSAGE_BODY_MAX_CHARS >= 1
+
 # Outbound ``httpx`` clients to persistence + notification (same env as ``common.http_client``).
 PEER_HTTP_CLIENT_TIMEOUT_SEC: float = HTTP_CLIENT_TIMEOUT_SEC
 

@@ -233,3 +233,70 @@ async def test_hydration_two_success_records_newest_first(
             r = await n2.get("/internal/v1/outcomes/success", params={"limit": 10})
             rows = r.json()
             assert [row["notificationId"] for row in rows] == ["h-new", "h-old"]
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_duplicate_publish_same_notification_record_twice(
+    local_s3_root: None,
+) -> None:
+    """TC-NTF-05: duplicate publish does not break ordering; both rows surface newest-first."""
+    redis = FakeAsyncRedis(decode_responses=True)
+    store = RedisOutcomesHotStore(redis, owns_client=False)
+    persist_app = create_persistence_app()
+
+    body = {
+        "notificationId": "nid-dup",
+        "messageId": "mid-dup",
+        "outcome": "success",
+        "recordedAt": 1_705_000_000_000,
+        "shardId": 0,
+    }
+
+    async with (
+        LifespanManager(persist_app),
+        httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=persist_app),
+            base_url="http://persistence",
+        ) as p_client,
+    ):
+        notify_app = create_notification_app(test_outcomes_store=store, test_http_client=p_client)
+        async with (
+            LifespanManager(notify_app),
+            httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=notify_app),
+                base_url="http://notify",
+            ) as n_client,
+        ):
+            for _ in range(2):
+                r = await n_client.post("/internal/v1/outcomes", json=body)
+                assert r.status_code == 200, r.text
+            q = await n_client.get("/internal/v1/outcomes/success", params={"limit": 10})
+            rows = q.json()
+            assert len(rows) == 2
+            assert all(r["messageId"] == "mid-dup" for r in rows)
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_notification_app_startup_fails_when_redis_unreachable(
+    local_s3_root: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """TC-NTF-07: redis backend with unreachable broker fails fast at lifespan (no silent memory)."""
+    monkeypatch.setenv("OUTCOMES_STORE_BACKEND", "redis")
+    monkeypatch.setenv("REDIS_URL", "redis://127.0.0.1:1/0")
+
+    persist_app = create_persistence_app()
+    async with (
+        LifespanManager(persist_app),
+        httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=persist_app),
+            base_url="http://persistence",
+        ) as p_client,
+    ):
+        with pytest.raises(RuntimeError, match="outcomes store unavailable"):
+            async with LifespanManager(
+                create_notification_app(test_http_client=p_client),
+            ):
+                pass
