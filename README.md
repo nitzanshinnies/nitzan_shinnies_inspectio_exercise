@@ -107,7 +107,7 @@ Open **http://localhost:3000** for the demo UI, or call the API directly at **ht
 
 ## Tests
 
-Layout follows **`plans/TESTS.md`**: `tests/unit/`, `tests/integration/`, `tests/e2e/`. **Integration and e2e** still include **skipped** cases (worker bootstrap harness, multi-component flow, some notification/API outcome wiring) — see `pytest` markers and `tests/integration/README.md`; those are **outside** the worker + mock SMS implementation track until enabled.
+Layout follows **`plans/TESTS.md`**: `tests/unit/`, `tests/integration/`, `tests/e2e/`. The **integration** and **e2e** suites exercise persistence, notification, worker/bootstrap, health monitor, and multi-component flows; see `tests/integration/README.md` for module roles.
 
 **TDD:** Canonical behavior is documented in **`tests/reference_spec.py`** (with notes tying to **`plans/`**). **`inspectio_exercise.domain`** should match that spec; stubs raise **`NotImplementedError`** until implemented — **`pytest tests/unit`** stays **red** until domain, REST contract, and related gates pass.
 
@@ -144,4 +144,4 @@ Configuration lives in **`pyproject.toml`** (`[tool.ruff]`).
 ## Status
 
 - **Implemented (core exercise path):** public API message submission + outcomes proxy, **persistence** service (local + AWS backends), **notification** + Redis, **mock SMS** (`POST /send` + audit), **worker** (shard discovery, retries, terminal writes, outcome publish). **`GET /healthz`** on each service.
-- **Implemented:** **`inspectio-health-monitor`** runs **`plans/HEALTH_MONITOR.md`** reconciliation: **`POST /internal/v1/integrity-check`** (optional **`graceMs`**), **`GET /internal/v1/integrity-status`**, **`GET /healthz`**. **Domain** matches **`tests/reference_spec.py`** where covered by **`pytest`**; expand skipped integration/e2e per **`plans/TESTS.md`** where noted.
+- **Implemented:** **`inspectio-health-monitor`** runs **`plans/HEALTH_MONITOR.md`** reconciliation: **`POST /internal/v1/integrity-check`** (optional **`graceMs`**), **`GET /internal/v1/integrity-status`**, **`GET /healthz`**. **Domain** matches **`tests/reference_spec.py`** where covered by **`pytest`** (unit, integration, and e2e per **`plans/TESTS.md`**).
