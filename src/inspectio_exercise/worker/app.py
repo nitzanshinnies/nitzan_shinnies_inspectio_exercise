@@ -6,11 +6,12 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 import httpx
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request, Response
+from pydantic import BaseModel, ConfigDict, Field
 
 from inspectio_exercise.common.health import register_healthz
 from inspectio_exercise.notification.persistence_client import PersistenceHttpClient
-from inspectio_exercise.worker.config import load_worker_settings
+from inspectio_exercise.worker.config import WORKER_ACTIVATE_PENDING_PATH, load_worker_settings
 from inspectio_exercise.worker.runtime import WorkerRuntime
 
 
@@ -57,6 +58,7 @@ def _lifespan_with_clients(
             settings=settings,
             sms_client=sms_http,
         )
+        app.state.worker_runtime = runtime
         stop = asyncio.Event()
         task = asyncio.create_task(runtime.run_forever(stop), name="worker-scheduler")
         yield
@@ -95,6 +97,34 @@ def create_app(
         ),
     )
     register_healthz(app, "worker")
+
+    class ActivatePendingBody(BaseModel):
+        model_config = ConfigDict(populate_by_name=True)
+
+        pending_key: str = Field(alias="pendingKey")
+
+    @app.post(
+        WORKER_ACTIVATE_PENDING_PATH,
+        tags=["internal"],
+        include_in_schema=False,
+        response_model=None,
+    )
+    async def activate_pending(
+        body: ActivatePendingBody,
+        request: Request,
+    ) -> dict[str, str] | Response:
+        runtime = getattr(request.app.state, "worker_runtime", None)
+        if runtime is None:
+            raise HTTPException(status_code=503, detail="worker runtime not ready")
+        status = await runtime.activate_pending_now(body.pending_key)
+        if status == "not_owner":
+            raise HTTPException(status_code=403, detail="shard not owned by this worker")
+        if status == "missing":
+            return Response(status_code=204)
+        if status == "invalid":
+            raise HTTPException(status_code=400, detail="invalid pending key or record")
+        return {"status": status}
+
     return app
 
 

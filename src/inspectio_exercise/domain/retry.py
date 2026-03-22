@@ -23,3 +23,7 @@ def next_due_at_ms_after_failure(now_ms: int, attempt_count_when_failed: int) ->
     if delay is None:
         return None
     return now_ms + delay
+
+
+# Recent-outcomes API / assignment brief — human-readable terminal failure line.
+BRIEF_REASON_TERMINAL_AFTER_SIX_FAILURES: str = "discarded after six failed send attempts"

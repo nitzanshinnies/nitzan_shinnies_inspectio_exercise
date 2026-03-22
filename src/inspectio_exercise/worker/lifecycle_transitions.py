@@ -8,7 +8,11 @@ import logging
 from collections.abc import Awaitable, Callable
 from typing import Any
 
-from inspectio_exercise.domain.retry import attempt_count_is_terminal, next_due_at_ms_after_failure
+from inspectio_exercise.domain.retry import (
+    BRIEF_REASON_TERMINAL_AFTER_SIX_FAILURES,
+    attempt_count_is_terminal,
+    next_due_at_ms_after_failure,
+)
 from inspectio_exercise.domain.sharding import shard_id_for_message
 from inspectio_exercise.domain.utc_paths import terminal_failed_key, terminal_success_key
 from inspectio_exercise.worker import clocks
@@ -62,11 +66,20 @@ class LifecycleTransitions:
             outcome,
         )
         await self._delete_pending_best_effort(pending_key)
+        try:
+            ac_pub = int(body.get("attemptCount", 0))
+        except (TypeError, ValueError):
+            ac_pub = 0
+        reason_pub = body.get("reason") if outcome == "failed" else None
+        if not isinstance(reason_pub, str):
+            reason_pub = None
         await self._outcomes.publish(
             message_id=mid,
             outcome=outcome,
             recorded_at=recorded_at,
             shard_id=shard_id,
+            attempt_count=ac_pub,
+            brief_reason=reason_pub,
             terminal_storage_key=terminal_key,
         )
         async with self._lock:
@@ -106,6 +119,8 @@ class LifecycleTransitions:
                 outcome="failed",
                 recorded_at=recorded_at,
                 shard_id=shard_id,
+                attempt_count=new_ac,
+                brief_reason=BRIEF_REASON_TERMINAL_AFTER_SIX_FAILURES,
                 terminal_storage_key=terminal_key,
             )
             async with self._lock:
@@ -163,6 +178,8 @@ class LifecycleTransitions:
             outcome="success",
             recorded_at=recorded_at,
             shard_id=shard_id,
+            attempt_count=int(rec["attemptCount"]),
+            brief_reason=None,
             terminal_storage_key=terminal_key,
         )
         async with self._lock:

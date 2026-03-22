@@ -15,6 +15,7 @@ NOTIFICATION_PUBLISH_BASE_DELAY_SEC: float = float(
 )
 NOTIFICATION_PUBLISH_MAX_ATTEMPTS: int = int(os.environ.get("INSPECTIO_WORKER_NOTIFY_RETRIES", "3"))
 OUTCOMES_HTTP_PATH: str = "/internal/v1/outcomes"
+WORKER_ACTIVATE_PENDING_PATH: str = "/internal/v1/activate-pending"
 PERSISTENCE_READ_BASE_DELAY_SEC: float = float(
     os.environ.get("INSPECTIO_WORKER_PERSISTENCE_READ_BACKOFF_SEC", "0.05"),
 )

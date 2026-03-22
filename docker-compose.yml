@@ -13,8 +13,11 @@ services:
       - mock-sms
       - notification
       - persistence
+      - worker
     environment:
       INSPECTIO_API_PORT: "8000"
+      INSPECTIO_WORKER_ACTIVATION_URLS: http://worker:8004
+      INSPECTIO_WORKER_SHARDS_PER_POD: "256"
       NOTIFICATION_SERVICE_URL: http://notification:8002
       PERSISTENCE_SERVICE_URL: http://persistence:8001
       TOTAL_SHARDS: "256"

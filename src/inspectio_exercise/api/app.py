@@ -11,7 +11,12 @@ from fastapi import Depends, FastAPI, HTTPException, Query, Request
 
 from inspectio_exercise.api import config
 from inspectio_exercise.api.schemas import MessageCreate
-from inspectio_exercise.api.use_cases import submit_message
+from inspectio_exercise.api.use_cases import (
+    request_immediate_activation,
+    submit_message,
+    submit_messages_repeat_parallel,
+    worker_activation_base_urls,
+)
 from inspectio_exercise.common.health import register_healthz
 from inspectio_exercise.notification.persistence_client import PersistenceHttpClient
 
@@ -40,11 +45,13 @@ def create_app(
     *,
     persistence: PersistenceHttpClient | None = None,
     notification_http: httpx.AsyncClient | None = None,
+    worker_activation_http: httpx.AsyncClient | None = None,
 ) -> FastAPI:
     """Create the FastAPI app.
 
     For tests, pass ``persistence`` and ``notification_http`` (e.g. ``httpx.MockTransport``).
-    Otherwise clients are built from ``PERSISTENCE_SERVICE_URL`` and ``NOTIFICATION_SERVICE_URL``.
+    Optionally pass ``worker_activation_http`` (ASGI transport to the worker) for immediate
+    attempt #1. Otherwise clients are built from environment URLs.
     """
 
     @asynccontextmanager
@@ -65,9 +72,28 @@ def create_app(
         else:
             app.state.notification_http = notification_http
         app.state.total_shards = config.TOTAL_SHARDS
+        app.state.worker_shards_per_pod = config.WORKER_SHARDS_PER_POD_FOR_ACTIVATION
+        created_worker_clients: list[httpx.AsyncClient] = []
+        if worker_activation_http is not None:
+            app.state.worker_activation_clients = [worker_activation_http]
+            app.state._close_worker_activation_clients = False
+        else:
+            bases = worker_activation_base_urls()
+            for base in bases:
+                created_worker_clients.append(
+                    httpx.AsyncClient(
+                        base_url=base,
+                        timeout=config.PEER_HTTP_CLIENT_TIMEOUT_SEC,
+                    )
+                )
+            app.state.worker_activation_clients = created_worker_clients
+            app.state._close_worker_activation_clients = bool(created_worker_clients)
         yield
         await app.state.persistence.aclose()
         await app.state.notification_http.aclose()
+        if getattr(app.state, "_close_worker_activation_clients", False):
+            for wc in app.state.worker_activation_clients:
+                await wc.aclose()
 
     app = FastAPI(
         title="Inspectio REST API",
@@ -86,25 +112,38 @@ def create_app(
     def get_total_shards(request: Request) -> int:
         return int(request.app.state.total_shards)
 
+    def get_worker_activation_clients(request: Request) -> list[httpx.AsyncClient]:
+        return request.app.state.worker_activation_clients
+
+    def get_worker_shards_per_pod(request: Request) -> int:
+        return int(request.app.state.worker_shards_per_pod)
+
     @app.post("/messages", tags=["messages"], status_code=202)
     async def post_messages(
         body: MessageCreate,
         persistence_client: PersistenceHttpClient = Depends(get_persistence),
         total_shards: int = Depends(get_total_shards),
+        worker_clients: list[httpx.AsyncClient] = Depends(get_worker_activation_clients),
+        shards_per_pod: int = Depends(get_worker_shards_per_pod),
     ) -> dict[str, str]:
         if len(body.body) > config.MESSAGE_BODY_MAX_CHARS:
             raise HTTPException(status_code=413, detail="message body too large")
         try:
-            message_id = await submit_message(
+            submitted = await submit_message(
                 persistence_client,
                 body=body.body,
                 should_fail=body.should_fail,
                 to=body.to,
                 total_shards=total_shards,
             )
+            await request_immediate_activation(
+                worker_clients,
+                submitted=submitted,
+                shards_per_pod=shards_per_pod,
+            )
         except (httpx.HTTPError, OSError) as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
-        return {"messageId": message_id, "status": "pending"}
+        return {"messageId": submitted.message_id, "status": "pending"}
 
     @app.post("/messages/repeat", tags=["messages"])
     async def post_messages_repeat(
@@ -112,21 +151,24 @@ def create_app(
         count: int = Depends(_repeat_count),
         persistence_client: PersistenceHttpClient = Depends(get_persistence),
         total_shards: int = Depends(get_total_shards),
+        worker_clients: list[httpx.AsyncClient] = Depends(get_worker_activation_clients),
+        shards_per_pod: int = Depends(get_worker_shards_per_pod),
     ) -> dict[str, Any]:
         """``?count=N`` with the same JSON body as ``POST /messages``, reused ``N`` times."""
         if len(message.body) > config.MESSAGE_BODY_MAX_CHARS:
             raise HTTPException(status_code=413, detail="message body too large")
-        ids: list[str] = []
         try:
-            for _ in range(count):
-                mid = await submit_message(
-                    persistence_client,
-                    body=message.body,
-                    should_fail=message.should_fail,
-                    to=message.to,
-                    total_shards=total_shards,
-                )
-                ids.append(mid)
+            ids = await submit_messages_repeat_parallel(
+                persistence_client,
+                body=message.body,
+                count=count,
+                should_fail=message.should_fail,
+                to=message.to,
+                total_shards=total_shards,
+                worker_clients=worker_clients,
+                shards_per_pod=shards_per_pod,
+                concurrency=config.REPEAT_SUBMIT_CONCURRENCY,
+            )
         except (httpx.HTTPError, OSError) as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         return {"accepted": count, "messageIds": ids}
