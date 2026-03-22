@@ -1,0 +1,97 @@
+# Headless service for per-pod DNS: worker-0.worker, worker-1.worker, ...
+apiVersion: v1
+kind: Service
+metadata:
+  name: worker
+  namespace: inspectio
+  labels:
+    app.kubernetes.io/name: inspectio-exercise
+    app.kubernetes.io/component: worker
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/component: worker
+  ports:
+    - name: http
+      port: 8004
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: worker
+  namespace: inspectio
+  labels:
+    app.kubernetes.io/name: inspectio-exercise
+    app.kubernetes.io/component: worker
+spec:
+  serviceName: worker
+  replicas: 1
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: worker
+    spec:
+      containers:
+        - name: worker
+          image: inspectio-exercise:latest
+          imagePullPolicy: IfNotPresent
+          command: ["inspectio-worker"]
+          ports:
+            - name: http
+              containerPort: 8004
+          env:
+            - name: HOSTNAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: INSPECTIO_WORKER_PORT
+              value: "8004"
+            - name: PERSISTENCE_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: inspectio-config
+                  key: PERSISTENCE_SERVICE_URL
+            - name: NOTIFICATION_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: inspectio-config
+                  key: NOTIFICATION_SERVICE_URL
+            - name: MOCK_SMS_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: inspectio-config
+                  key: MOCK_SMS_URL
+            - name: TOTAL_SHARDS
+              valueFrom:
+                configMapKeyRef:
+                  name: inspectio-config
+                  key: TOTAL_SHARDS
+            - name: SHARDS_PER_POD
+              valueFrom:
+                configMapKeyRef:
+                  name: inspectio-config
+                  key: SHARDS_PER_POD
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "2"
+              memory: 1Gi

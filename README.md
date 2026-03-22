@@ -121,6 +121,10 @@ docker compose up --build
 
 Open **http://localhost:3000** for the demo UI, or call the API directly at **http://localhost:8000**.
 
+## Kubernetes
+
+A Kustomize bundle mirrors the compose stack (namespace `inspectio`, PVC for local persistence, Redis, Deployments, worker **StatefulSet** with headless `worker` Service for `worker-0.worker` DNS and API activation). See **`deploy/kubernetes/README.md`** for build steps, `kubectl apply -k deploy/kubernetes`, port-forwards, and scaling notes.
+
 ## Tests
 
 Layout follows **`plans/TESTS.md`**: `tests/unit/`, `tests/integration/`, `tests/e2e/`. The **integration** and **e2e** suites exercise persistence, notification, worker/bootstrap, health monitor, and multi-component flows; see `tests/integration/README.md` for module roles.
