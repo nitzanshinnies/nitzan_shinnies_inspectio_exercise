@@ -24,8 +24,13 @@ services:
   health-monitor:
     build: .
     command: ["inspectio-health-monitor"]
+    depends_on:
+      - mock-sms
+      - persistence
     environment:
       INSPECTIO_HEALTH_MONITOR_PORT: "8003"
+      MOCK_SMS_URL: http://mock-sms:8080
+      PERSISTENCE_SERVICE_URL: http://persistence:8001
     ports:
       - "8003:8003"
 
