@@ -22,9 +22,25 @@ cap, and usually set ``INSPECTIO_MOCK_FAILURE_RATE=0`` so sends per message stay
 Restart **mock-sms** and **health-monitor** after changing mock env (both import
 ``mock_sms.config`` at process start).
 
+**In-memory persistence (faster ``list_prefix``):** start the stack with the
+compose override so persistence uses ``INSPECTIO_LOCAL_S3_STORAGE=memory`` (see
+``docker-compose.memory-s3.yml``). Then run this script with ``--in-memory-s3``.
+Drain detection uses ``POST /internal/v1/list-prefix`` (not the host tree); after
+each drain the script calls ``POST /internal/v1/flush-to-disk`` so disk
+invariants and ``--local-s3-root`` inspection match memory state.
+
 Usage::
 
     pip install -e ".[dev]"
+    docker compose -f docker-compose.yml -f docker-compose.memory-s3.yml up -d
+    python scripts/full_flow_load_test.py \\
+        --api-base http://127.0.0.1:3000 \\
+        --health-monitor-base http://127.0.0.1:8003 \\
+        --local-s3-root ./.local-s3 \\
+        --in-memory-s3
+
+File-backed persistence (default compose)::
+
     python scripts/full_flow_load_test.py \\
         --api-base http://127.0.0.1:3000 \\
         --health-monitor-base http://127.0.0.1:8003 \\
@@ -53,9 +69,11 @@ DEFAULT_HEALTH_MONITOR_BASE: str = "http://127.0.0.1:8003"
 DEFAULT_HTTP_TIMEOUT_SEC: float = 120.0
 DEFAULT_INTEGRITY_TIMEOUT_SEC: float = 900.0
 DEFAULT_LOCAL_S3_ROOT: str = "./.local-s3"
+DEFAULT_PERSISTENCE_BASE: str = "http://127.0.0.1:8001"
 DEFAULT_REPEAT_CHUNK_MAX: int = 10_000
 DEFAULT_SIZES: tuple[int, ...] = (10_000, 20_000, 30_000)
 HEADER_INTEGRITY_CHECK_TOKEN: str = "X-Integrity-Check-Token"
+PENDING_PREFIX: str = "state/pending/"
 
 
 @dataclass(frozen=True)
@@ -154,6 +172,71 @@ def wait_for_pending_zero(
     )
 
 
+def persistence_has_pending_objects(
+    client: httpx.Client,
+    persistence_base: str,
+    request_timeout_sec: float,
+) -> bool:
+    """True if persistence still has at least one key under ``state/pending/`` (``max_keys=1``)."""
+    url = f"{persistence_base.rstrip('/')}/internal/v1/list-prefix"
+    response = client.post(
+        url,
+        json={"prefix": PENDING_PREFIX, "max_keys": 1},
+        timeout=request_timeout_sec,
+    )
+    response.raise_for_status()
+    payload = response.json()
+    keys = payload.get("keys")
+    if not isinstance(keys, list):
+        raise RuntimeError(f"list-prefix response missing keys list: {payload!r}")
+    return len(keys) > 0
+
+
+def wait_for_pending_zero_via_persistence(
+    client: httpx.Client,
+    persistence_base: str,
+    poll_sec: float,
+    timeout_sec: float,
+    request_timeout_sec: float,
+) -> None:
+    deadline = time.monotonic() + timeout_sec
+    last_busy: bool | None = None
+    while time.monotonic() < deadline:
+        if not persistence_has_pending_objects(
+            client, persistence_base, request_timeout_sec=request_timeout_sec
+        ):
+            logger.info("drain complete: no pending objects in persistence (list-prefix)")
+            return
+        if last_busy is not True:
+            logger.info("waiting for drain: persistence still has pending keys")
+            last_busy = True
+        time.sleep(poll_sec)
+    raise TimeoutError(
+        f"timed out after {timeout_sec}s waiting for pending=0 via persistence at {persistence_base!r}"
+    )
+
+
+def post_flush_to_disk(
+    client: httpx.Client,
+    persistence_base: str,
+    *,
+    root_override: str | None,
+    request_timeout_sec: float,
+) -> None:
+    """Snapshot memory backend to disk (default root from persistence ``LOCAL_S3_ROOT``)."""
+    url = f"{persistence_base.rstrip('/')}/internal/v1/flush-to-disk"
+    body: dict[str, str] = {}
+    if root_override:
+        body["root"] = root_override
+    response = client.post(url, json=body, timeout=request_timeout_sec)
+    if response.status_code == 501:
+        raise RuntimeError(
+            "flush-to-disk returned 501 — persistence is not using the in-memory backend "
+            "(set INSPECTIO_LOCAL_S3_STORAGE=memory and use docker-compose.memory-s3.yml)."
+        )
+    response.raise_for_status()
+
+
 def post_integrity_check(
     client: httpx.Client,
     health_base: str,
@@ -237,6 +320,27 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="Host path to LOCAL_S3_ROOT (same as persistence volume mount).",
     )
     parser.add_argument(
+        "--persistence-base",
+        default=DEFAULT_PERSISTENCE_BASE,
+        help="Persistence service base URL (for --in-memory-s3 drain + flush).",
+    )
+    parser.add_argument(
+        "--in-memory-s3",
+        action="store_true",
+        help=(
+            "Drain via persistence list-prefix; flush to disk before disk scans "
+            "(compose: add docker-compose.memory-s3.yml)."
+        ),
+    )
+    parser.add_argument(
+        "--flush-root",
+        default=None,
+        help=(
+            "Optional JSON root for flush-to-disk when it must differ from persistence "
+            "LOCAL_S3_ROOT (container path); omit for default."
+        ),
+    )
+    parser.add_argument(
         "--integrity-token",
         default=None,
         help="Optional INTEGRITY_CHECK_TOKEN value for X-Integrity-Check-Token header.",
@@ -293,13 +397,16 @@ def main(argv: list[str] | None = None) -> int:
     root = args.local_s3_root.expanduser().resolve()
 
     logger.info(
-        "plan batches=%s cumulative=%s api=%s health_monitor=%s local_s3_root=%s chunk_max=%s",
+        "plan batches=%s cumulative=%s api=%s health_monitor=%s local_s3_root=%s "
+        "chunk_max=%s in_memory_s3=%s persistence_base=%s",
         sizes,
         sum(sizes),
         args.api_base,
         args.health_monitor_base,
         root,
         args.repeat_chunk_max,
+        args.in_memory_s3,
+        args.persistence_base,
     )
     if args.dry_run:
         return 0
@@ -350,11 +457,26 @@ def main(argv: list[str] | None = None) -> int:
             if accepted != batch:
                 raise SystemExit(f"batch {i}: expected {batch} accepted, got {accepted}")
 
-            wait_for_pending_zero(
-                root,
-                poll_sec=args.drain_poll_sec,
-                timeout_sec=args.drain_timeout_sec,
-            )
+            if args.in_memory_s3:
+                wait_for_pending_zero_via_persistence(
+                    client,
+                    persistence_base=args.persistence_base,
+                    poll_sec=args.drain_poll_sec,
+                    timeout_sec=args.drain_timeout_sec,
+                    request_timeout_sec=args.http_timeout_sec,
+                )
+                post_flush_to_disk(
+                    client,
+                    args.persistence_base,
+                    root_override=args.flush_root,
+                    request_timeout_sec=args.http_timeout_sec,
+                )
+            else:
+                wait_for_pending_zero(
+                    root,
+                    poll_sec=args.drain_poll_sec,
+                    timeout_sec=args.drain_timeout_sec,
+                )
 
             integrity = post_integrity_check(
                 client,

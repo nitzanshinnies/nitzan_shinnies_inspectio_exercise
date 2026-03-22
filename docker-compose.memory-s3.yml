@@ -1,0 +1,8 @@
+# Opt-in: in-process persistence dict + periodic flush for on-disk inspection.
+# Use with: docker compose -f docker-compose.yml -f docker-compose.memory-s3.yml up -d
+#
+# Keep LOCAL_S3_ROOT so flush-to-disk (default root) matches the volume mount.
+services:
+  persistence:
+    environment:
+      INSPECTIO_LOCAL_S3_STORAGE: memory
