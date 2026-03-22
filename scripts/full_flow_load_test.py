@@ -47,6 +47,23 @@ File-backed persistence (default compose)::
         --local-s3-root ./.local-s3
 
 When the API is reached directly (no nginx), pass ``--api-base http://127.0.0.1:8000``.
+
+**Kubernetes (file-backed persistence in-cluster):** port-forward the same logical
+services the UI uses, then run with ``--kubernetes`` so drain and object counts go
+through the persistence API (no host ``LOCAL_S3_ROOT``)::
+
+    kubectl -n inspectio port-forward svc/web 3000:80 &
+    kubectl -n inspectio port-forward svc/health-monitor 8003:8003 &
+    kubectl -n inspectio port-forward svc/persistence 8001:8001 &
+    python scripts/full_flow_load_test.py --kubernetes \\
+        --api-base http://127.0.0.1:3000 \\
+        --health-monitor-base http://127.0.0.1:8003 \\
+        --persistence-base http://127.0.0.1:8001 \\
+        --http-timeout-sec 300
+
+Large batches: raise mock SMS audit caps on the cluster (same env vars as compose)
+and increase ``--http-timeout-sec`` / ``--integrity-timeout-sec`` so list-prefix and
+integrity-check can scan many keys.
 """
 
 from __future__ import annotations
@@ -108,6 +125,51 @@ def scan_local_s3(root: Path) -> LifecycleDiskCounts:
         notifications=count_json_files(root, "state/notifications"),
         pending=count_json_files(root, "state/pending"),
         success=count_json_files(root, "state/success"),
+    )
+
+
+def count_json_keys_list_prefix(
+    client: httpx.Client,
+    persistence_base: str,
+    prefix: str,
+    request_timeout_sec: float,
+) -> int:
+    """Count ``*.json`` keys under ``prefix`` via persistence ``list-prefix`` (``max_keys`` omitted = full list)."""
+    url = f"{persistence_base.rstrip('/')}/internal/v1/list-prefix"
+    response = client.post(
+        url,
+        json={"prefix": prefix},
+        timeout=request_timeout_sec,
+    )
+    response.raise_for_status()
+    payload = response.json()
+    keys = payload.get("keys")
+    if not isinstance(keys, list):
+        raise RuntimeError(f"list-prefix response missing keys list: {payload!r}")
+    n = 0
+    for row in keys:
+        if not isinstance(row, dict):
+            continue
+        key = row.get("Key")
+        if isinstance(key, str) and key.endswith(".json"):
+            n += 1
+    return n
+
+
+def scan_persistence_lifecycle(
+    client: httpx.Client,
+    persistence_base: str,
+    request_timeout_sec: float,
+) -> LifecycleDiskCounts:
+    """Lifecycle object counts through persistence HTTP (for Kubernetes / remote persistence)."""
+    base = persistence_base.rstrip("/")
+    return LifecycleDiskCounts(
+        failed=count_json_keys_list_prefix(client, base, "state/failed/", request_timeout_sec),
+        notifications=count_json_keys_list_prefix(
+            client, base, "state/notifications/", request_timeout_sec
+        ),
+        pending=count_json_keys_list_prefix(client, base, "state/pending/", request_timeout_sec),
+        success=count_json_keys_list_prefix(client, base, "state/success/", request_timeout_sec),
     )
 
 
@@ -272,16 +334,16 @@ def assert_integrity_ok(data: dict[str, Any]) -> None:
         raise AssertionError(f"integrity check ok is not True: {data!r}")
 
 
-def validate_disk_invariants(
+def validate_lifecycle_invariants(
     *,
-    root: Path,
     cumulative_messages: int,
     counts: LifecycleDiskCounts,
     baseline: LifecycleDiskCounts,
+    context: str,
 ) -> None:
     if counts.pending != 0:
         raise AssertionError(
-            f"expected no pending JSON after drain, got pending={counts.pending} (root={root})"
+            f"expected no pending JSON after drain, got pending={counts.pending} ({context})"
         )
     delta_terminal = counts.terminals - baseline.terminals
     if delta_terminal != cumulative_messages:
@@ -299,9 +361,27 @@ def validate_disk_invariants(
         )
 
 
+def validate_disk_invariants(
+    *,
+    root: Path,
+    cumulative_messages: int,
+    counts: LifecycleDiskCounts,
+    baseline: LifecycleDiskCounts,
+) -> None:
+    validate_lifecycle_invariants(
+        cumulative_messages=cumulative_messages,
+        counts=counts,
+        baseline=baseline,
+        context=f"root={root}",
+    )
+
+
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Load-test Inspectio via public API + health monitor + local S3 tree.",
+        description=(
+            "Load-test Inspectio via public API + health monitor + lifecycle counts "
+            "(host filesystem or --kubernetes persistence HTTP)."
+        ),
     )
     parser.add_argument(
         "--api-base",
@@ -330,6 +410,17 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help=(
             "Drain via persistence list-prefix; flush to disk before disk scans "
             "(compose: add docker-compose.memory-s3.yml)."
+        ),
+    )
+    parser.add_argument(
+        "--kubernetes",
+        "--k8s",
+        action="store_true",
+        dest="kubernetes",
+        help=(
+            "Use persistence HTTP for drain and lifecycle counts (no host LOCAL_S3_ROOT). "
+            "Point --api-base, --health-monitor-base, and --persistence-base at port-forwards "
+            "or Ingress URLs. Incompatible with --in-memory-s3."
         ),
     )
     parser.add_argument(
@@ -396,9 +487,12 @@ def main(argv: list[str] | None = None) -> int:
     sizes = parse_sizes_csv(args.sizes)
     root = args.local_s3_root.expanduser().resolve()
 
+    if args.kubernetes and args.in_memory_s3:
+        raise SystemExit("--kubernetes and --in-memory-s3 cannot be used together")
+
     logger.info(
         "plan batches=%s cumulative=%s api=%s health_monitor=%s local_s3_root=%s "
-        "chunk_max=%s in_memory_s3=%s persistence_base=%s",
+        "chunk_max=%s in_memory_s3=%s kubernetes=%s persistence_base=%s",
         sizes,
         sum(sizes),
         args.api_base,
@@ -406,33 +500,46 @@ def main(argv: list[str] | None = None) -> int:
         root,
         args.repeat_chunk_max,
         args.in_memory_s3,
+        args.kubernetes,
         args.persistence_base,
     )
     if args.dry_run:
         return 0
 
-    if not root.is_dir():
+    if not args.kubernetes and not root.is_dir():
         raise SystemExit(f"LOCAL_S3_ROOT is not a directory: {root}")
 
-    baseline = scan_local_s3(root)
-    logger.info(
-        "baseline disk terminals=%s notifications=%s pending=%s (success=%s failed=%s)",
-        baseline.terminals,
-        baseline.notifications,
-        baseline.pending,
-        baseline.success,
-        baseline.failed,
-    )
-    if baseline.terminals > 0 or baseline.notifications > 0:
-        logger.warning(
-            "Non-empty S3 state at start — integrity-check may fail for older terminals "
-            "outside the mock audit window. For a clean 60k-scale run, remove "
-            "%s before starting (and restart the stack if needed).",
-            root / "state",
-        )
+    list_timeout = max(args.http_timeout_sec, 60.0)
 
     cumulative = 0
     with httpx.Client() as client:
+        if args.kubernetes:
+            baseline = scan_persistence_lifecycle(
+                client,
+                persistence_base=args.persistence_base,
+                request_timeout_sec=list_timeout,
+            )
+        else:
+            baseline = scan_local_s3(root)
+        logger.info(
+            "baseline terminals=%s notifications=%s pending=%s (success=%s failed=%s)",
+            baseline.terminals,
+            baseline.notifications,
+            baseline.pending,
+            baseline.success,
+            baseline.failed,
+        )
+        if baseline.terminals > 0 or baseline.notifications > 0:
+            warn_loc = (
+                f"persistence {args.persistence_base!r}" if args.kubernetes else str(root / "state")
+            )
+            logger.warning(
+                "Non-empty S3 state at start — integrity-check may fail for older terminals "
+                "outside the mock audit window. For a clean 60k-scale run, clear %s "
+                "before starting (and restart the stack if needed).",
+                warn_loc,
+            )
+
         for i, batch in enumerate(sizes, start=1):
             body = f"load-test batch {i} t={int(time.time())}"
             logger.info("--- batch %s size=%s body=%r ---", i, batch, body)
@@ -471,6 +578,14 @@ def main(argv: list[str] | None = None) -> int:
                     root_override=args.flush_root,
                     request_timeout_sec=args.http_timeout_sec,
                 )
+            elif args.kubernetes:
+                wait_for_pending_zero_via_persistence(
+                    client,
+                    persistence_base=args.persistence_base,
+                    poll_sec=args.drain_poll_sec,
+                    timeout_sec=args.drain_timeout_sec,
+                    request_timeout_sec=args.http_timeout_sec,
+                )
             else:
                 wait_for_pending_zero(
                     root,
@@ -490,15 +605,28 @@ def main(argv: list[str] | None = None) -> int:
                 integrity.get("summary", {}),
             )
 
-            counts = scan_local_s3(root)
-            validate_disk_invariants(
-                root=root,
-                cumulative_messages=cumulative,
-                counts=counts,
-                baseline=baseline,
-            )
+            if args.kubernetes:
+                counts = scan_persistence_lifecycle(
+                    client,
+                    persistence_base=args.persistence_base,
+                    request_timeout_sec=list_timeout,
+                )
+                validate_lifecycle_invariants(
+                    cumulative_messages=cumulative,
+                    counts=counts,
+                    baseline=baseline,
+                    context=f"persistence={args.persistence_base!r}",
+                )
+            else:
+                counts = scan_local_s3(root)
+                validate_disk_invariants(
+                    root=root,
+                    cumulative_messages=cumulative,
+                    counts=counts,
+                    baseline=baseline,
+                )
             logger.info(
-                "disk ok success=%s failed=%s pending=%s notifications=%s",
+                "lifecycle ok success=%s failed=%s pending=%s notifications=%s",
                 counts.success,
                 counts.failed,
                 counts.pending,

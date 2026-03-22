@@ -56,6 +56,36 @@ kubectl -n inspectio get pods
 
 - **Ingress:** uncomment `ingress.yaml` in `kustomization.yaml` resources, set `ingressClassName` and host to match your controller, then `kubectl apply -k deploy/kubernetes`.
 
+- **Health monitor + persistence** (for `scripts/full_flow_load_test.py`): in another terminal, forward:
+
+  ```bash
+  kubectl -n inspectio port-forward svc/health-monitor 8003:8003
+  kubectl -n inspectio port-forward svc/persistence 8001:8001
+  ```
+
+## Full-flow load test
+
+[`scripts/full_flow_load_test.py`](../scripts/full_flow_load_test.py) exercises `POST /messages/repeat`, waits for pending to drain, runs the health monitor integrity check, and validates lifecycle object counts. For Kubernetes, use **`--kubernetes`** so counts and drain use the persistence API (data stays in the PVC; no host `LOCAL_S3_ROOT`).
+
+With port-forwards for **web** (or **api**), **health-monitor**, and **persistence**:
+
+```bash
+pip install -e ".[dev]"
+kubectl -n inspectio port-forward svc/web 3000:80 &
+kubectl -n inspectio port-forward svc/health-monitor 8003:8003 &
+kubectl -n inspectio port-forward svc/persistence 8001:8001 &
+python scripts/full_flow_load_test.py --kubernetes \
+  --api-base http://127.0.0.1:3000 \
+  --health-monitor-base http://127.0.0.1:8003 \
+  --persistence-base http://127.0.0.1:8001 \
+  --http-timeout-sec 300 \
+  --integrity-timeout-sec 900
+```
+
+**Smoke** (small batches): add e.g. `--sizes 5,10` so default mock audit limits are not exceeded.
+
+**Large batches** (default `10_000,20_000,30_000`): patch **mock-sms** and **health-monitor** Deployments with the same env as compose (`INSPECTIO_MOCK_FAILURE_RATE=0`, raised `INSPECTIO_MOCK_AUDIT_LOG_MAX_ENTRIES` / `INSPECTIO_MOCK_AUDIT_SENDS_MAX_LIMIT`), then restart those pods.
+
 ## Configuration
 
 - **`configmap.yaml`:** `TOTAL_SHARDS`, `SHARDS_PER_POD`, service URLs, `INSPECTIO_WORKER_ACTIVATION_URLS` (default targets `worker-0` on the headless `worker` Service).
