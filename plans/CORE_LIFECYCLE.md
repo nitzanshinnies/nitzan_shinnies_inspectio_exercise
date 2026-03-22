@@ -130,7 +130,7 @@ After a **durable** terminal write to `state/success/...` or `state/failed/...`,
 
 - **Order:** S3 terminal object committed **first**, then **notify** (retry notify on transient failures; see notification service doc).
 - **Content:** at minimum `messageId`, `outcome` (`success` | `failed`), `recordedAt`, `notificationId`; align with the durable `state/notifications/...` record.
-- **Downstream:** the notification service persists that record and updates **Redis** hot streams ([`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) §4–§5); workers do **not** talk to Redis.
+- **Downstream:** the notification service persists that record and updates **`OutcomesHotStore`** hot streams ([`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) §3.1, §4–§5); workers do **not** talk to Redis or the hot store.
 
 ## 6) Failure handling and safety constraints
 

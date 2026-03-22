@@ -91,7 +91,7 @@ Query parameters:
   - If provided, must be a positive integer; API may enforce a configured **maximum** (e.g. cap at 1000) and reject out-of-range values.
 
 Performance requirement:
-- Must serve from the **notification service**, which reads **Redis** (see [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) §4, §6).
+- Must serve from the **notification service**, which reads **`OutcomesHotStore`** (Redis plugin in default deployment; see [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) §3.1, §4, §6).
 - Must not list broad `state/success/` or `state/failed/` prefixes to assemble the response.
 
 ### 3.4 `GET /messages/failed`
@@ -121,14 +121,14 @@ Response expectation:
 - Fast, lightweight response indicating service health status.
 - Clarify in implementation whether this is **liveness-only** (process up) vs **readiness** (dependencies OK); the exercise minimum is a lightweight liveness-style response unless you extend the spec.
 
-## 4) Recent outcomes (notification service + Redis)
+## 4) Recent outcomes (notification service + hot store)
 
-Recent outcomes are **not** stored in the **API** process. They live in **Redis** (dedicated container), updated by the **outcomes notification service** ([`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md)):
+Recent outcomes are **not** stored in the **API** process. They live in the **notification service’s hot store** (`OutcomesHotStore`; **Redis** when `OUTCOMES_STORE_BACKEND=redis`), updated by the **outcomes notification service** ([`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md)):
 
-- **Redis** holds **bounded** **success** and **failed** streams (e.g. **LIST** or **ZSET**, **~10,000** entries cap)—large enough for the API’s **maximum `limit`** (including default **100** when `limit` is omitted).
-- Workers **publish** to the **notification service** **after** durable terminal S3 writes; the service **puts** `state/notifications/...` and **updates Redis**.
-- The API **queries the notification service** (HTTP) for `GET /messages/success` and `GET /messages/failed`—the API **must not** use a Redis client for outcomes.
-- **Startup:** the notification service **hydrates Redis** from **`state/notifications/...`** in S3 (up to **`HYDRATION_MAX`**, default 10k). That **cold-start** scan is **not** executed per `GET` request.
+- The **hot store** holds **bounded** **success** and **failed** streams (Redis plugin: **LIST** or **ZSET**, **~10,000** entries cap)—large enough for the API’s **maximum `limit`** (including default **100** when `limit` is omitted).
+- Workers **publish** to the **notification service** **after** durable terminal S3 writes; the service **puts** `state/notifications/...` and **updates the hot store**.
+- The API **queries the notification service** (HTTP) for `GET /messages/success` and `GET /messages/failed`—the API **must not** use a Redis client or **`OutcomesHotStore`** for outcomes.
+- **Startup:** the notification service **hydrates the hot store** from **`state/notifications/...`** in S3 (up to **`HYDRATION_MAX`**, default 10k). That **cold-start** scan is **not** executed per `GET` request.
 - **Per-request rule:** outcome endpoints must **not** list broad `state/success/` or `state/failed/` trees to build the response.
 
 ## 5) API contract consistency requirements
@@ -185,7 +185,7 @@ The REST API plan is considered complete when:
 
 1. All required endpoints are defined and scoped.
 2. Input validation expectations are explicit for each endpoint class.
-3. Recent outcomes are served via the **notification service** + **Redis** ([`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md)) with bounded streams and documented **S3 → Redis** hydration on notification service startup.
+3. Recent outcomes are served via the **notification service** + **`OutcomesHotStore`** ([`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md)) with bounded streams and documented **S3 → hot store** hydration on notification service startup.
 4. No-broad-`state/success/` / `state/failed/` listing on each `GET` for outcomes is explicit.
 5. Response/error contract consistency is defined.
 6. API observability and operational guardrails are included.
@@ -207,6 +207,6 @@ flowchart LR
 
   GetSuccess --> NotifyQ[NotificationServiceQuery]
   GetFailed --> NotifyQ
-  NotifyQ --> Redis[(Redis)]
+  NotifyQ --> HotStore[(Hot store)]
 ```
 
