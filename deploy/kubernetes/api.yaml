@@ -68,6 +68,21 @@ spec:
                 configMapKeyRef:
                   name: inspectio-config
                   key: INSPECTIO_WORKER_SHARDS_PER_POD
+            - name: INSPECTIO_HTTPX_MAX_CONNECTIONS
+              valueFrom:
+                configMapKeyRef:
+                  name: inspectio-config
+                  key: INSPECTIO_HTTPX_MAX_CONNECTIONS
+            - name: INSPECTIO_HTTPX_MAX_KEEPALIVE_CONNECTIONS
+              valueFrom:
+                configMapKeyRef:
+                  name: inspectio-config
+                  key: INSPECTIO_HTTPX_MAX_KEEPALIVE_CONNECTIONS
+            - name: INSPECTIO_HTTPX_POOL_TIMEOUT_SEC
+              valueFrom:
+                configMapKeyRef:
+                  name: inspectio-config
+                  key: INSPECTIO_HTTPX_POOL_TIMEOUT_SEC
           readinessProbe:
             httpGet:
               path: /healthz

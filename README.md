@@ -44,7 +44,7 @@ Or `uvicorn` directly, e.g. `uvicorn inspectio_exercise.api.app:app --host 0.0.0
 
 ### Peer HTTP clients (`inspectio-api`, `inspectio-worker`)
 
-Outbound `httpx` pools and timeouts (`inspectio_exercise.common.http_client`). **`docker-compose.yml`** sets the same defaults on **`api`** and **`worker`**. In Kubernetes or other orchestration, map the same variable names into workload env or a ConfigMap.
+Outbound `httpx` pools and timeouts (`inspectio_exercise.common.http_client`). **`docker-compose.yml`** sets the same defaults on **`api`** and **`worker`**. With this repo’s Kubernetes bundle, **`deploy/kubernetes/configmap.yaml`** (`inspectio-config`) supplies the same keys to the **api** Deployment and **worker** StatefulSet (see **Kubernetes** below). Elsewhere, map the same variable names into workload env or a ConfigMap.
 
 | Variable | Default | Purpose |
 |----------|---------|---------|

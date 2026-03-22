@@ -38,6 +38,10 @@ kubectl -n inspectio rollout status deployment/api --timeout=120s
 kubectl -n inspectio get pods
 ```
 
+## Peer HTTP tuning (ConfigMap)
+
+`inspectio-config` includes **`INSPECTIO_HTTPX_MAX_CONNECTIONS`**, **`INSPECTIO_HTTPX_MAX_KEEPALIVE_CONNECTIONS`**, **`INSPECTIO_HTTPX_POOL_TIMEOUT_SEC`**, and **`INSPECTIO_WORKER_MAX_PARALLEL_HANDLES`** (defaults match `inspectio_exercise.common.http_client` and the worker runtime). The **api** Deployment and **worker** StatefulSet read these keys. Edit the ConfigMap and restart workloads to tune pools or per-tick parallelism (e.g. before large load tests or when using AWS S3).
+
 ## Access
 
 - **Port-forward UI (same paths as compose):**

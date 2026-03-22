@@ -18,3 +18,9 @@ data:
   OUTCOMES_STORE_BACKEND: redis
   INSPECTIO_PERSISTENCE_BACKEND: local
   LOCAL_S3_ROOT: /data/local-s3
+  # Peer httpx pools (API + worker); defaults match inspectio_exercise.common.http_client.
+  INSPECTIO_HTTPX_MAX_CONNECTIONS: "256"
+  INSPECTIO_HTTPX_MAX_KEEPALIVE_CONNECTIONS: "64"
+  INSPECTIO_HTTPX_POOL_TIMEOUT_SEC: "30"
+  # Worker tick: max concurrent message handles (see inspectio_exercise.worker.runtime).
+  INSPECTIO_WORKER_MAX_PARALLEL_HANDLES: "128"
