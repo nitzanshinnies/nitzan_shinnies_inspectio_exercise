@@ -18,6 +18,7 @@ from inspectio_exercise.api.use_cases import (
     worker_activation_base_urls,
 )
 from inspectio_exercise.common.health import register_healthz
+from inspectio_exercise.common.performance_logging import register_performance_logging
 from inspectio_exercise.notification.persistence_client import PersistenceHttpClient
 
 logger = logging.getLogger(__name__)
@@ -102,6 +103,7 @@ def create_app(
         lifespan=lifespan,
     )
     register_healthz(app, "api")
+    register_performance_logging(app, component="api")
 
     def get_persistence(request: Request) -> PersistenceHttpClient:
         return request.app.state.persistence

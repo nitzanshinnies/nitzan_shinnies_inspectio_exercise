@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from inspectio_exercise.common.health import register_healthz
+from inspectio_exercise.common.performance_logging import register_performance_logging
 from inspectio_exercise.mock_sms import config
 from inspectio_exercise.mock_sms.audit import recent_audit_rows
 from inspectio_exercise.mock_sms.send_handler import handle_send_request
@@ -28,6 +29,7 @@ def create_app() -> FastAPI:
         description="POST /send + audit per plans/MOCK_SMS.md — behavior from mock_sms.config.",
     )
     register_healthz(app, "mock_sms")
+    register_performance_logging(app, component="mock_sms")
 
     @app.get("/audit/sends", tags=["audit"])
     async def get_audit_sends(limit: int = config.AUDIT_SENDS_DEFAULT_LIMIT) -> list[dict]:
