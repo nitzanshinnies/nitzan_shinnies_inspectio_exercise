@@ -10,6 +10,7 @@ from fastapi import FastAPI, HTTPException, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 
 from inspectio_exercise.common.health import register_healthz
+from inspectio_exercise.common.http_client import peer_httpx_limits, peer_httpx_timeout
 from inspectio_exercise.common.performance_logging import register_performance_logging
 from inspectio_exercise.notification.persistence_client import PersistenceHttpClient
 from inspectio_exercise.worker.config import WORKER_ACTIVATE_PENDING_PATH, load_worker_settings
@@ -28,12 +29,15 @@ def _lifespan_with_clients(
         created_persist = test_persistence_client is None
         created_sms = test_sms_client is None
         created_notify = test_notify_client is None
+        peer_timeout = peer_httpx_timeout(total_sec=settings.http_timeout_sec)
+        peer_limits = peer_httpx_limits()
         persist_http = (
             test_persistence_client
             if test_persistence_client is not None
             else httpx.AsyncClient(
                 base_url=settings.persistence_url,
-                timeout=settings.http_timeout_sec,
+                limits=peer_limits,
+                timeout=peer_timeout,
             )
         )
         sms_http = (
@@ -41,7 +45,8 @@ def _lifespan_with_clients(
             if test_sms_client is not None
             else httpx.AsyncClient(
                 base_url=settings.mock_sms_url,
-                timeout=settings.http_timeout_sec,
+                limits=peer_limits,
+                timeout=peer_timeout,
             )
         )
         notify_http = (
@@ -49,7 +54,8 @@ def _lifespan_with_clients(
             if test_notify_client is not None
             else httpx.AsyncClient(
                 base_url=settings.notification_url,
-                timeout=settings.http_timeout_sec,
+                limits=peer_limits,
+                timeout=peer_timeout,
             )
         )
         persistence = PersistenceHttpClient(persist_http)

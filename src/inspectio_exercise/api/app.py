@@ -18,6 +18,7 @@ from inspectio_exercise.api.use_cases import (
     worker_activation_base_urls,
 )
 from inspectio_exercise.common.health import register_healthz
+from inspectio_exercise.common.http_client import peer_httpx_limits, peer_httpx_timeout
 from inspectio_exercise.common.performance_logging import register_performance_logging
 from inspectio_exercise.notification.persistence_client import PersistenceHttpClient
 
@@ -57,10 +58,13 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        peer_limits = peer_httpx_limits()
+        peer_timeout = peer_httpx_timeout(total_sec=config.PEER_HTTP_CLIENT_TIMEOUT_SEC)
         if persistence is None:
             persist_raw = httpx.AsyncClient(
                 base_url=config.PERSISTENCE_SERVICE_URL,
-                timeout=config.PEER_HTTP_CLIENT_TIMEOUT_SEC,
+                limits=peer_limits,
+                timeout=peer_timeout,
             )
             app.state.persistence = PersistenceHttpClient(persist_raw)
         else:
@@ -68,7 +72,8 @@ def create_app(
         if notification_http is None:
             app.state.notification_http = httpx.AsyncClient(
                 base_url=config.NOTIFICATION_SERVICE_URL,
-                timeout=config.PEER_HTTP_CLIENT_TIMEOUT_SEC,
+                limits=peer_limits,
+                timeout=peer_timeout,
             )
         else:
             app.state.notification_http = notification_http
@@ -84,7 +89,8 @@ def create_app(
                 created_worker_clients.append(
                     httpx.AsyncClient(
                         base_url=base,
-                        timeout=config.PEER_HTTP_CLIENT_TIMEOUT_SEC,
+                        limits=peer_limits,
+                        timeout=peer_timeout,
                     )
                 )
             app.state.worker_activation_clients = created_worker_clients
