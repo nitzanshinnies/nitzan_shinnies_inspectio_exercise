@@ -7,7 +7,7 @@ import json
 import logging
 import time
 import uuid
-from collections.abc import Sequence
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 
 import httpx
@@ -18,6 +18,8 @@ from inspectio_exercise.notification.persistence_client import PersistenceHttpCl
 from inspectio_exercise.persistence.object_write import ObjectWrite
 
 logger = logging.getLogger(__name__)
+
+PersistPendingBatchFn = Callable[[Sequence[ObjectWrite]], Awaitable[None]]
 
 
 def _now_ms() -> int:
@@ -70,6 +72,7 @@ async def submit_message(
     should_fail: bool = False,
     to: str,
     total_shards: int,
+    persist_pending_batch: PersistPendingBatchFn | None = None,
 ) -> SubmittedMessage:
     """Persist a new pending record; return ids for activation routing."""
     submitted, ow = _pending_submission_record(
@@ -78,7 +81,8 @@ async def submit_message(
         to=to,
         total_shards=total_shards,
     )
-    await persistence.put_objects((ow,))
+    writer = persist_pending_batch if persist_pending_batch is not None else persistence.put_objects
+    await writer((ow,))
     return submitted
 
 
@@ -122,6 +126,7 @@ async def submit_messages_repeat_parallel(
     worker_clients: Sequence[httpx.AsyncClient],
     shards_per_pod: int,
     concurrency: int,
+    persist_pending_batch: PersistPendingBatchFn | None = None,
 ) -> list[str]:
     """Create ``count`` messages with bounded parallel persistence + activation."""
     rows = [
@@ -133,10 +138,11 @@ async def submit_messages_repeat_parallel(
         )
         for _ in range(count)
     ]
+    writer = persist_pending_batch if persist_pending_batch is not None else persistence.put_objects
     batch = max(1, config.REPEAT_SUBMIT_PUT_BATCH_SIZE)
     for offset in range(0, len(rows), batch):
         chunk = rows[offset : offset + batch]
-        await persistence.put_objects(ow for _, ow in chunk)
+        await writer([ow for _, ow in chunk])
 
     sem = asyncio.Semaphore(max(1, concurrency))
 

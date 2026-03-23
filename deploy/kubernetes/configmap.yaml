@@ -15,6 +15,8 @@ data:
   NOTIFICATION_SERVICE_URL: http://notification:8002
   MOCK_SMS_URL: http://mock-sms:8080
   REDIS_URL: redis://redis:6379/0
+  # API stages pending in Redis Stream; worker reads staging before S3 (unset "0" for direct persistence only).
+  INSPECTIO_PENDING_INGEST_VIA_REDIS_STREAM: "1"
   OUTCOMES_STORE_BACKEND: redis
   INSPECTIO_PERSISTENCE_BACKEND: local
   LOCAL_S3_ROOT: /data/local-s3

@@ -13,6 +13,7 @@ services:
       - mock-sms
       - notification
       - persistence
+      - redis
       - worker
     environment:
       INSPECTIO_API_PORT: "8000"
@@ -24,6 +25,9 @@ services:
       INSPECTIO_WORKER_SHARDS_PER_POD: "256"
       NOTIFICATION_SERVICE_URL: http://notification:8002
       PERSISTENCE_SERVICE_URL: http://persistence:8001
+      # Fast accept: stage pending in Redis Stream, background flush to persistence/S3 (worker reads staging first).
+      INSPECTIO_PENDING_INGEST_VIA_REDIS_STREAM: "1"
+      REDIS_URL: redis://redis:6379/0
       TOTAL_SHARDS: "256"
     ports:
       - "8000:8000"
@@ -92,8 +96,10 @@ services:
       - mock-sms
       - notification
       - persistence
+      - redis
     environment:
       HOSTNAME: worker-0
+      INSPECTIO_PENDING_INGEST_VIA_REDIS_STREAM: "1"
       INSPECTIO_HTTPX_MAX_CONNECTIONS: "256"
       INSPECTIO_HTTPX_MAX_KEEPALIVE_CONNECTIONS: "64"
       INSPECTIO_HTTPX_POOL_TIMEOUT_SEC: "30"
@@ -102,6 +108,7 @@ services:
       MOCK_SMS_URL: http://mock-sms:8080
       NOTIFICATION_SERVICE_URL: http://notification:8002
       PERSISTENCE_SERVICE_URL: http://persistence:8001
+      REDIS_URL: redis://redis:6379/0
       SHARDS_PER_POD: "256"
       TOTAL_SHARDS: "256"
     ports:
