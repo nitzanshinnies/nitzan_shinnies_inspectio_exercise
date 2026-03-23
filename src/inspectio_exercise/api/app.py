@@ -24,8 +24,7 @@ from inspectio_exercise.api.pending_stream_ingest import (
 from inspectio_exercise.api.schemas import MessageCreate
 from inspectio_exercise.api.use_cases import (
     PersistPendingBatchFn,
-    request_immediate_activation,
-    schedule_background_worker_activation,
+    enqueue_worker_activation,
     submit_message,
     submit_messages_repeat_parallel,
     worker_activation_base_urls,
@@ -205,12 +204,10 @@ def create_app(
                 total_shards=total_shards,
                 persist_pending_batch=persist_pending_batch,
             )
-            schedule_background_worker_activation(
-                request_immediate_activation(
-                    worker_clients,
-                    submitted=submitted,
-                    shards_per_pod=shards_per_pod,
-                )
+            enqueue_worker_activation(
+                worker_clients,
+                submitted=(submitted,),
+                shards_per_pod=shards_per_pod,
             )
         except (httpx.HTTPError, OSError, RedisError) as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
