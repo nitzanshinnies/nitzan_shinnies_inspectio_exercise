@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 import time
@@ -24,6 +25,7 @@ PersistPendingBatchFn = Callable[[Sequence[ObjectWrite]], Awaitable[None]]
 OPERATION_API_ENQUEUE_BATCH: str = "api_enqueue_batch"
 OPERATION_API_REPEAT_ENQUEUE: str = "api_repeat_enqueue"
 OPERATION_API_ACTIVATION_BATCH: str = "api_activation_batch"
+OPERATION_API_ACTIVATION_COALESCE_FLUSH: str = "api_activation_coalesce_flush"
 
 
 def _now_ms() -> int:
@@ -183,6 +185,96 @@ def schedule_background_worker_activation(awaitable: Awaitable[None]) -> None:
     asyncio.create_task(_run())
 
 
+class ActivationCoalescer:
+    """Collect nearby activation submissions and flush as one deduplicated batch."""
+
+    def __init__(self) -> None:
+        self._lock = asyncio.Lock()
+        self._pending_by_message_id: dict[str, SubmittedMessage] = {}
+        self._flush_task: asyncio.Task[None] | None = None
+        self._worker_clients: Sequence[httpx.AsyncClient] = ()
+        self._shards_per_pod: int = 1
+
+    async def submit(
+        self,
+        *,
+        worker_clients: Sequence[httpx.AsyncClient],
+        submitted: Sequence[SubmittedMessage],
+        shards_per_pod: int,
+    ) -> None:
+        if not worker_clients or not submitted:
+            return
+        flush_now = False
+        async with self._lock:
+            self._worker_clients = worker_clients
+            self._shards_per_pod = shards_per_pod
+            for row in submitted:
+                self._pending_by_message_id[row.message_id] = row
+            if self._flush_task is None or self._flush_task.done():
+                self._flush_task = asyncio.create_task(self._flush_when_due())
+            if len(self._pending_by_message_id) >= config.WORKER_ACTIVATION_COALESCE_MAX_PENDING:
+                flush_now = True
+        if flush_now:
+            await self.flush_now()
+
+    async def flush_now(self) -> None:
+        async with self._lock:
+            flush_task = self._flush_task
+            self._flush_task = None
+        if flush_task is not None and not flush_task.done():
+            flush_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await flush_task
+        await self._flush()
+
+    async def _flush_when_due(self) -> None:
+        try:
+            await asyncio.sleep(config.WORKER_ACTIVATION_COALESCE_WINDOW_MS / 1000.0)
+            await self._flush()
+        except asyncio.CancelledError:
+            return
+
+    async def _flush(self) -> None:
+        flush_start = time.perf_counter()
+        async with self._lock:
+            submitted = list(self._pending_by_message_id.values())
+            self._pending_by_message_id.clear()
+            worker_clients = self._worker_clients
+            shards_per_pod = self._shards_per_pod
+        if not worker_clients or not submitted:
+            return
+        await request_immediate_activation_batch(
+            worker_clients,
+            submitted=submitted,
+            shards_per_pod=shards_per_pod,
+        )
+        log_performance(
+            component="api",
+            operation=OPERATION_API_ACTIVATION_COALESCE_FLUSH,
+            coalesced_size=len(submitted),
+            duration_ms=duration_ms_since(flush_start),
+        )
+
+
+_ACTIVATION_COALESCER = ActivationCoalescer()
+
+
+def enqueue_worker_activation(
+    worker_clients: Sequence[httpx.AsyncClient],
+    *,
+    submitted: Sequence[SubmittedMessage],
+    shards_per_pod: int,
+) -> None:
+    """Schedule best-effort activation through coalesced background batching."""
+    schedule_background_worker_activation(
+        _ACTIVATION_COALESCER.submit(
+            worker_clients=worker_clients,
+            submitted=submitted,
+            shards_per_pod=shards_per_pod,
+        )
+    )
+
+
 async def _persist_repeat_rows(
     rows: Sequence[tuple[SubmittedMessage, ObjectWrite]],
     *,
@@ -247,11 +339,9 @@ async def submit_messages_repeat_parallel(
         enqueue_concurrency=max(1, config.REPEAT_SUBMIT_PUT_MAX_CONCURRENCY),
         duration_ms=duration_ms_since(repeat_start),
     )
-    schedule_background_worker_activation(
-        request_immediate_activation_batch(
-            worker_clients,
-            submitted=submitted_list,
-            shards_per_pod=shards_per_pod,
-        )
+    enqueue_worker_activation(
+        worker_clients,
+        submitted=submitted_list,
+        shards_per_pod=shards_per_pod,
     )
     return [s.message_id for s, _ in rows]
