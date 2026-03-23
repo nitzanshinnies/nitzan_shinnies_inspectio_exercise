@@ -24,3 +24,6 @@ def test_frontend_entry_and_proxy_hints_exist() -> None:
     assert "proxy_pass http://api:8000" in nginx
     assert "location /messages" in nginx
     assert "location /healthz" in nginx
+    assert "proxy_read_timeout 300s;" in nginx
+    assert "proxy_send_timeout 300s;" in nginx
+    assert "proxy_connect_timeout 30s;" in nginx

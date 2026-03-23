@@ -90,7 +90,9 @@ python scripts/full_flow_load_test.py --kubernetes \
   --integrity-timeout-sec 900
 ```
 
-**Smoke** (small batches): add e.g. `--sizes 5,10` so default mock audit limits are not exceeded.
+On **EKS + S3**, the same flow applies; you can use **`--aws`** with **`INSPECTIO_TEST_*`** env vars for bases (see `scripts/full_flow_load_test.py` docstring and [`deploy/eks/README.md`](../eks/README.md)).
+
+**Smoke** (small batches): add e.g. `--sizes 5,10` or **`--smoke`** so default mock audit limits are not exceeded.
 
 **Large batches** (default `10_000,20_000,30_000`): patch **mock-sms** and **health-monitor** Deployments with the same env as compose (`INSPECTIO_MOCK_FAILURE_RATE=0`, raised `INSPECTIO_MOCK_AUDIT_LOG_MAX_ENTRIES` / `INSPECTIO_MOCK_AUDIT_SENDS_MAX_LIMIT`), then restart those pods.
 
@@ -102,6 +104,8 @@ python scripts/full_flow_load_test.py --kubernetes \
 ## AWS S3 persistence
 
 Switch persistence Deployment env from ConfigMap `local` keys to a **Secret** (or patched Deployment) with `INSPECTIO_PERSISTENCE_BACKEND=aws`, `INSPECTIO_S3_BUCKET`, and usual `AWS_*` credentials. Remove or do not mount the PVC when using S3.
+
+**EKS + S3:** use Kustomize overlays [`overlays/aws-s3-eks`](overlays/aws-s3-eks) (IRSA) or [`overlays/aws-s3-eks-iam-user`](overlays/aws-s3-eks-iam-user) (IAM user Secret); full steps in [`deploy/eks/README.md`](../eks/README.md).
 
 ## Delete
 
