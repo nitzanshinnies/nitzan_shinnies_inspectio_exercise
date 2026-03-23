@@ -4,8 +4,9 @@ Python services map these hooks as follows:
 
 - ``send(Message)`` → HTTP ``POST`` to mock SMS (``worker.mock_sms_client.post_mock_send``).
 - ``newMessage(Message)`` → durable pending put (``api.use_cases.submit_message``) plus
-  best-effort ``request_immediate_activation`` (worker ``activate_pending_now``) for attempt #1
-  at 0s; otherwise the 500ms ``wakeup`` tick picks up due work.
+  best-effort background ``request_immediate_activation`` (worker ``activate_pending_now``:
+  enqueue + wake scheduler so attempt #1 runs on the next ``run_tick`` without blocking the API);
+  otherwise the 500ms ``wakeup`` tick picks up due work.
 - ``wakeup()`` → ``WorkerRuntime.run_tick`` driven by ``run_forever_with_tick_interval``.
 """
 

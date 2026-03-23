@@ -7,7 +7,7 @@ Details: README.md **Worker env**. Implementation: ``due_work_queue``, ``pending
 from __future__ import annotations
 
 import asyncio
-import json
+from collections.abc import Sequence
 from functools import partial
 from typing import Any
 
@@ -32,10 +32,7 @@ from inspectio_exercise.worker.message_dispatch import MessageDispatch
 from inspectio_exercise.worker.outcome_notifier import OutcomeNotifier
 from inspectio_exercise.worker.pending_delete import delete_pending_best_effort
 from inspectio_exercise.worker.pending_discovery import discover_owned_pending
-from inspectio_exercise.worker.pending_record import (
-    is_valid_pending_row,
-    message_id_from_pending_key,
-)
+from inspectio_exercise.worker.pending_record import message_id_from_pending_key
 from inspectio_exercise.worker.persistence_port import PersistenceAsyncPort
 from inspectio_exercise.worker.retrying_persistence import RetryingPersistence
 from inspectio_exercise.worker.terminal_scanner import TerminalScanner
@@ -112,6 +109,7 @@ class WorkerRuntime:
             sms=sms_client,
         )
         self._max_parallel_handles = max(1, settings.max_parallel_handles)
+        self._wake_scheduler = asyncio.Event()
 
     def _message_lock_for(self, message_id: str) -> asyncio.Lock:
         lock = self._message_locks.get(message_id)
@@ -120,34 +118,67 @@ class WorkerRuntime:
             self._message_locks[message_id] = lock
         return lock
 
-    async def activate_pending_now(self, pending_key: str) -> str:
-        """Run attempt logic immediately for ``pending_key`` if this pod owns the shard.
-
-        Used by the public API for assignment **attempt #1 at 0s** semantics. Returns a short
-        status token: ``processed``, ``not_owner``, ``missing``, ``invalid``.
-        """
+    async def _activate_pending_enqueue(self, pending_key: str, *, wake: bool) -> str:
+        """Load pending JSON into the due queue; optional scheduler wake (API activation path)."""
         mid = message_id_from_pending_key(pending_key)
         if mid is None:
             return "invalid"
         shard = shard_id_for_message(mid, self._total_shards)
         if shard not in self._owned:
             return "not_owner"
-        async with self._message_lock_for(mid):
-            try:
-                raw = await self._persist.get_object(pending_key)
-            except KeyError:
-                return "missing"
-            try:
-                data = json.loads(raw.decode("utf-8"))
-            except (UnicodeDecodeError, json.JSONDecodeError):
-                return "invalid"
-            if not is_valid_pending_row(mid, data):
-                return "invalid"
-            await self._dispatch.handle_one_core(mid, dict(data), pending_key)
-        return "processed"
+        try:
+            raw = await self._persist.get_object(pending_key)
+        except KeyError:
+            return "missing"
+        ok = await self._queue.upsert_pending(mid, pending_key, raw)
+        if not ok:
+            return "invalid"
+        if wake:
+            self._wake_scheduler.set()
+        return "scheduled"
+
+    async def activate_pending_now(self, pending_key: str) -> str:
+        """Enqueue ``pending_key`` for the next tick(s) and wake the scheduler (fast HTTP).
+
+        Attempt #1 runs on ``run_tick`` — not inline with this handler — so the API is not
+        blocked on mock SMS latency. Returns ``scheduled`` on success.
+        """
+        return await self._activate_pending_enqueue(pending_key, wake=True)
+
+    def _record_activation_status(self, status: str, counts: dict[str, int]) -> None:
+        if status == "scheduled":
+            counts["accepted"] += 1
+            return
+        if status == "not_owner":
+            counts["notOwner"] += 1
+            return
+        if status == "missing":
+            counts["missing"] += 1
+            return
+        counts["invalid"] += 1
+
+    async def activate_pending_batch(self, pending_keys: Sequence[str]) -> dict[str, int]:
+        """Enqueue many keys; wake once if at least one row was scheduled."""
+        counts = {
+            "accepted": 0,
+            "notOwner": 0,
+            "missing": 0,
+            "invalid": 0,
+        }
+        for pk in pending_keys:
+            st = await self._activate_pending_enqueue(pk, wake=False)
+            self._record_activation_status(st, counts)
+        if counts["accepted"] > 0:
+            self._wake_scheduler.set()
+        return counts
 
     async def run_forever(self, stop: asyncio.Event) -> None:
-        await run_forever_with_tick_interval(self.run_tick, self._tick_interval, stop)
+        await run_forever_with_tick_interval(
+            self.run_tick,
+            self._tick_interval,
+            stop,
+            wake=self._wake_scheduler,
+        )
 
     async def run_tick(self) -> None:
         await discover_owned_pending(self._owned, self._persist, self._queue)

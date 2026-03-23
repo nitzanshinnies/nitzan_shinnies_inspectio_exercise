@@ -62,6 +62,8 @@ Validation expectations:
 - Reject malformed or empty payload fields.
 - Enforce schema-level validation before persistence/activation.
 
+**Activation (throughput):** After the pending object is **durable**, the API **schedules** best-effort worker activation in the **background** (so **`202`** is not blocked on mock SMS or worker send latency): outbound HTTP to the worker’s **`/internal/v1/activate-pending`**, which **enqueues** the row and **wakes** the scheduler for the next **`run_tick`**. If activation is disabled or fails, the worker’s **500ms** tick still discovers due work ([`CORE_LIFECYCLE.md`](CORE_LIFECYCLE.md) §3).
+
 ### 3.2 `POST /messages/repeat?count=N`
 
 Purpose:
@@ -76,7 +78,7 @@ Request body (JSON):
 Behavior:
 - Creates **`count`** independent messages with distinct `messageId`s.
 - Each created message enters normal lifecycle flow.
-- **Implementation note (throughput):** the API may persist pending objects via the persistence service’s **`put_objects`** batch in **chunks** (configurable batch size, e.g. env **`INSPECTIO_REPEAT_SUBMIT_PUT_BATCH_SIZE`**) rather than one HTTP round-trip per row—behavior and durable outcome remain the same as **`count`** sequential **`put_object`** calls.
+- **Implementation note:** persistence may use **`put_objects`** in chunks (env batch size); worker activation may use **`POST /internal/v1/activate-pending-batch`** grouped per worker (chunk size capped, e.g. **`INSPECTIO_WORKER_ACTIVATION_BATCH_MAX_KEYS`**) instead of one HTTP POST per message.
 
 Response expectations:
 - JSON including **`accepted`** (equals **`count`**) and **`messageIds`** (length **`count`**, distinct UUIDs), or an equivalent summary plus identifiers.

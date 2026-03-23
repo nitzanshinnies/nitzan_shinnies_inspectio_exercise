@@ -10,12 +10,12 @@ The system is composed of logical services/services-with-containers:
    - Exposes the REST endpoints required by the architect.
    - Creates the durable pending message state in S3 (through the dedicated persistence service).
    - Serves `GET /messages/success` and `GET /messages/failed` by **querying the notification service** (not by listing `state/success/` or `state/failed/` on each request).
-   - Triggers the worker “newMessage” flow for attempt #1 (0s delay).
+   - Triggers the worker “newMessage” path after persistence: **best-effort background** HTTP to **`/internal/v1/activate-pending`** (or **`activate-pending-batch`** for **`/repeat`**) so the worker **enqueues** the row and **wakes** its scheduler—attempt #1 runs on the next **`run_tick`** (0s **`nextDueAt`**, not blocked on the public **`202`** response).
 
 2. **Worker scheduler** (Kubernetes StatefulSet; pods `worker-0`, `worker-1`, …)
    - Provides deterministic sharding by claiming an exclusive contiguous shard range in S3 based on `HOSTNAME` (`pod_index`) and configured `shards_per_pod`.
    - Bootstraps on startup by scanning the worker-owned pending shards in S3 and reconstructing the due-work view from persisted `nextDueAt`.
-   - Runs a wakeup loop with a cadence of **exactly every 500ms** (same as [`plans/PLAN.md`](PLAN.md) §5).
+   - Runs a wakeup loop with a cadence of **exactly every 500ms** (same as [`plans/PLAN.md`](PLAN.md) §5), optionally **woken early** when the API calls internal **`/internal/v1/activate-pending`** or **`/internal/v1/activate-pending-batch`** (enqueue + wake—attempt #1 still runs inside **`run_tick`**).
    - Executes due message sends concurrently within each tick and applies the exact retry timeline transitions.
 
 3. **Dedicated S3 persistence service (required boundary)**

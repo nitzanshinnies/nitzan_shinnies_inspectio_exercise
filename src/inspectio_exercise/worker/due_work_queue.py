@@ -67,3 +67,19 @@ class DueWorkQueue:
         """Push due time (caller must hold ``lock`` when mutating a tracked message)."""
         self._seq += 1
         heapq.heappush(self._heap, (due_ms, self._seq, mid))
+
+    async def upsert_pending(self, mid: str, key: str, raw: bytes) -> bool:
+        """Replace or insert a pending record and schedule ``nextDueAt`` (activation / refresh)."""
+        try:
+            data = json.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            logger.warning("skipping non-JSON pending object key=%s", key)
+            return False
+        if not is_valid_pending_row(mid, data):
+            logger.warning("skipping invalid pending record key=%s", key)
+            return False
+        async with self._lock:
+            self.records[mid] = data
+            self.pending_keys[mid] = key
+            self.schedule_locked(mid, int(data["nextDueAt"]))
+        return True
