@@ -6,6 +6,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
+from inspectio_exercise.persistence import config as persistence_config
 from inspectio_exercise.persistence.key_policy import (
     validate_list_prefix,
     validate_max_keys,
@@ -67,6 +68,20 @@ class PutObjectRequest(BaseModel):
     @classmethod
     def key_shape(cls, value: str) -> str:
         validate_object_key(value)
+        return value
+
+
+class PutObjectsRequest(BaseModel):
+    """Batch put — same semantics as repeated ``PutObjectRequest`` (order preserved)."""
+
+    objects: list[PutObjectRequest]
+
+    @field_validator("objects")
+    @classmethod
+    def objects_len(cls, value: list[PutObjectRequest]) -> list[PutObjectRequest]:
+        max_items = persistence_config.HTTP_PUT_OBJECTS_MAX_ITEMS
+        if len(value) > max_items:
+            raise ValueError(f"at most {max_items} objects per request")
         return value
 
 

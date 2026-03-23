@@ -83,6 +83,11 @@ spec:
                 configMapKeyRef:
                   name: inspectio-config
                   key: INSPECTIO_HTTPX_POOL_TIMEOUT_SEC
+            - name: INSPECTIO_REPEAT_SUBMIT_PUT_BATCH_SIZE
+              valueFrom:
+                configMapKeyRef:
+                  name: inspectio-config
+                  key: INSPECTIO_REPEAT_SUBMIT_PUT_BATCH_SIZE
           readinessProbe:
             httpGet:
               path: /healthz

@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
+
+from inspectio_exercise.persistence.object_write import ObjectWrite
 
 
 class RecordingPersistence:
@@ -37,5 +40,9 @@ class RecordingPersistence:
     async def put_object(
         self, key: str, body: bytes, content_type: str = "application/json"
     ) -> None:
-        self.puts.append((key, body))
-        self._objects[key] = body
+        await self.put_objects((ObjectWrite(key=key, body=body, content_type=content_type),))
+
+    async def put_objects(self, items: Sequence[ObjectWrite]) -> None:
+        for ow in items:
+            self.puts.append((ow.key, ow.body))
+            self._objects[ow.key] = ow.body

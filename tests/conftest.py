@@ -17,6 +17,8 @@ def _api_mock_transport() -> httpx.MockTransport:
         path = request.url.path
         if path == "/internal/v1/put-object":
             return httpx.Response(200, json={"status": "ok"})
+        if path == "/internal/v1/put-objects":
+            return httpx.Response(200, json={"status": "ok", "written": 1})
         if path.startswith("/internal/v1/outcomes/success"):
             return httpx.Response(200, json=[])
         if path.startswith("/internal/v1/outcomes/failed"):

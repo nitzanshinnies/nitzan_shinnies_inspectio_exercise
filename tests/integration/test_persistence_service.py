@@ -104,6 +104,33 @@ def test_list_prefix_http_scoped_to_pending_shard_prefix(
     assert r.json()["keys"] == [{"Key": k7}]
 
 
+def test_put_objects_batch_writes_all_keys(
+    persistence_local_client: TestClient,
+) -> None:
+    client = persistence_local_client
+    keys = ("state/pending/shard-0/a.json", "state/pending/shard-0/b.json")
+    bodies = (b'{"a":1}', b'{"b":2}')
+    put = client.post(
+        "/internal/v1/put-objects",
+        json={
+            "objects": [
+                {
+                    "key": k,
+                    "body_b64": base64.b64encode(b).decode("ascii"),
+                    "content_type": "application/json",
+                }
+                for k, b in zip(keys, bodies, strict=True)
+            ],
+        },
+    )
+    assert put.status_code == 200
+    assert put.json() == {"status": "ok", "written": 2}
+    for k, b in zip(keys, bodies, strict=True):
+        got = client.post("/internal/v1/get-object", json={"key": k})
+        assert got.status_code == 200
+        assert base64.b64decode(got.json()["body_b64"]) == b
+
+
 def test_put_object_rejects_invalid_key_and_malformed_base64(
     persistence_local_client: TestClient,
 ) -> None:

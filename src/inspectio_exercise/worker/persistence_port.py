@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any, Protocol
+
+from inspectio_exercise.persistence.object_write import ObjectWrite
 
 
 class PersistenceAsyncPort(Protocol):
@@ -15,3 +18,5 @@ class PersistenceAsyncPort(Protocol):
     ) -> list[dict[str, Any]]: ...
 
     async def put_object(self, key: str, body: bytes, content_type: str = ...) -> None: ...
+
+    async def put_objects(self, items: Sequence[ObjectWrite]) -> None: ...

@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
 from inspectio_exercise.notification.persistence_client import PersistenceHttpClient
+from inspectio_exercise.persistence.object_write import ObjectWrite
 
 
 class SpyPersistenceClient:
@@ -31,3 +33,6 @@ class SpyPersistenceClient:
         self, key: str, body: bytes, content_type: str = "application/json"
     ) -> None:
         await self._inner.put_object(key, body, content_type=content_type)
+
+    async def put_objects(self, items: Sequence[ObjectWrite]) -> None:
+        await self._inner.put_objects(items)

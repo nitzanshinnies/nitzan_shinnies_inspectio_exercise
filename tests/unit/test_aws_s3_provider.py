@@ -7,6 +7,7 @@ import pytest
 from moto import mock_aws
 
 from inspectio_exercise.persistence.aws_s3 import AwsS3Provider
+from inspectio_exercise.persistence.object_write import ObjectWrite
 
 _BUCKET = "inspectio-test-bucket"
 _REGION = "us-east-1"
@@ -71,6 +72,30 @@ async def test_list_prefix_sorted_and_max_keys() -> None:
 
 @pytest.mark.unit
 @pytest.mark.asyncio
+async def test_put_objects_parallel_round_trip() -> None:
+    with mock_aws():
+        boto3.client("s3", region_name=_REGION).create_bucket(Bucket=_BUCKET)
+        s3 = AwsS3Provider(_BUCKET, region_name=_REGION)
+        items = [
+            ObjectWrite(key=f"state/pending/shard-0/m{i}.json", body=str(i).encode("ascii"))
+            for i in range(12)
+        ]
+        await s3.put_objects(items)
+        for i, ow in enumerate(items):
+            assert await s3.get_object(ow.key) == str(i).encode("ascii")
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_put_objects_empty_noop() -> None:
+    with mock_aws():
+        boto3.client("s3", region_name=_REGION).create_bucket(Bucket=_BUCKET)
+        s3 = AwsS3Provider(_BUCKET, region_name=_REGION)
+        await s3.put_objects(())
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
 async def test_rejects_bad_keys_like_local_policy() -> None:
     with mock_aws():
         boto3.client("s3", region_name=_REGION).create_bucket(Bucket=_BUCKET)
@@ -79,3 +104,5 @@ async def test_rejects_bad_keys_like_local_policy() -> None:
             await s3.put_object("", b"x")
         with pytest.raises(ValueError):
             await s3.put_object("/abs", b"x")
+        with pytest.raises(ValueError):
+            await s3.put_objects((ObjectWrite(key="", body=b"x"),))

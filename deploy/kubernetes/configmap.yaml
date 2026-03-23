@@ -18,6 +18,10 @@ data:
   OUTCOMES_STORE_BACKEND: redis
   INSPECTIO_PERSISTENCE_BACKEND: local
   LOCAL_S3_ROOT: /data/local-s3
+  # Batch writes: parallel PutObject threads (persistence) + API repeat batch size + HTTP batch cap.
+  INSPECTIO_PERSISTENCE_PUT_MAX_WORKERS: "32"
+  INSPECTIO_HTTP_PUT_OBJECTS_MAX_ITEMS: "512"
+  INSPECTIO_REPEAT_SUBMIT_PUT_BATCH_SIZE: "64"
   # Peer httpx pools (API + worker); defaults match inspectio_exercise.common.http_client.
   INSPECTIO_HTTPX_MAX_CONNECTIONS: "256"
   INSPECTIO_HTTPX_MAX_KEEPALIVE_CONNECTIONS: "64"

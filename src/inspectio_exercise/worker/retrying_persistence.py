@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
+from inspectio_exercise.persistence.object_write import ObjectWrite
 from inspectio_exercise.worker.persistence_port import PersistenceAsyncPort
 from inspectio_exercise.worker.persistence_retry import run_with_persistence_retries
 
@@ -61,6 +63,23 @@ class RetryingPersistence:
 
         await run_with_persistence_retries(
             f"put_object:{key!r}",
+            call,
+            max_attempts=self._max_attempts,
+            base_delay_sec=self._base_delay_sec,
+        )
+
+    async def put_objects(self, items: Sequence[ObjectWrite]) -> None:
+        materialized = list(items)
+        if not materialized:
+            return
+
+        async def call() -> None:
+            await self._inner.put_objects(materialized)
+
+        keys_preview = ",".join(repr(ow.key) for ow in materialized[:3])
+        suffix = "..." if len(materialized) > 3 else ""
+        await run_with_persistence_retries(
+            f"put_objects:[{keys_preview}{suffix}] n={len(materialized)}",
             call,
             max_attempts=self._max_attempts,
             base_delay_sec=self._base_delay_sec,
