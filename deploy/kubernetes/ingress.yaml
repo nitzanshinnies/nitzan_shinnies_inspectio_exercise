@@ -7,6 +7,10 @@ metadata:
   namespace: inspectio
   labels:
     app.kubernetes.io/name: inspectio-exercise
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
 spec:
   ingressClassName: nginx
   rules:

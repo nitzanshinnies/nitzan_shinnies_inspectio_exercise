@@ -6,6 +6,8 @@ metadata:
   labels:
     app.kubernetes.io/name: inspectio-exercise
     app.kubernetes.io/component: web
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout: "300"
 spec:
   selector:
     app.kubernetes.io/component: web
