@@ -61,6 +61,21 @@ through the persistence API (no host ``LOCAL_S3_ROOT``)::
         --persistence-base http://127.0.0.1:8001 \\
         --http-timeout-sec 300
 
+**AWS EKS (S3 persistence):** the stack still needs **health-monitor** and
+**persistence** reachable from your machine. The **web** Service is often a public
+LoadBalancer; the other two are usually ClusterIP — port-forward them::
+
+    export INSPECTIO_TEST_API_BASE=http://<elb-hostname>/
+    export INSPECTIO_TEST_HEALTH_MONITOR_BASE=http://127.0.0.1:8003
+    export INSPECTIO_TEST_PERSISTENCE_BASE=http://127.0.0.1:8001
+    kubectl -n inspectio port-forward svc/health-monitor 8003:8003 &
+    kubectl -n inspectio port-forward svc/persistence 8001:8001 &
+    python scripts/full_flow_load_test.py --aws \\
+        --http-timeout-sec 300 --integrity-timeout-sec 1800
+
+Or pass the same URLs explicitly with ``--kubernetes`` (no ``--aws``). ``--aws`` is
+shorthand for remote persistence mode plus optional env-based bases.
+
 Large batches: raise mock SMS audit caps on the cluster (same env vars as compose)
 and increase ``--http-timeout-sec`` / ``--integrity-timeout-sec`` so list-prefix and
 integrity-check can scan many keys.
@@ -70,6 +85,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -81,6 +97,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_API_BASE: str = "http://127.0.0.1:3000"
 DEFAULT_DRAIN_POLL_SEC: float = 2.0
+DEFAULT_REMOTE_DRAIN_POLL_SEC: float = 8.0
 DEFAULT_DRAIN_TIMEOUT_SEC: float = 7200.0
 DEFAULT_HEALTH_MONITOR_BASE: str = "http://127.0.0.1:8003"
 DEFAULT_HTTP_TIMEOUT_SEC: float = 120.0
@@ -89,8 +106,12 @@ DEFAULT_LOCAL_S3_ROOT: str = "./.local-s3"
 DEFAULT_PERSISTENCE_BASE: str = "http://127.0.0.1:8001"
 DEFAULT_REPEAT_CHUNK_MAX: int = 10_000
 DEFAULT_SIZES: tuple[int, ...] = (10_000, 20_000, 30_000)
+ENV_TEST_API_BASE: str = "INSPECTIO_TEST_API_BASE"
+ENV_TEST_HEALTH_MONITOR_BASE: str = "INSPECTIO_TEST_HEALTH_MONITOR_BASE"
+ENV_TEST_PERSISTENCE_BASE: str = "INSPECTIO_TEST_PERSISTENCE_BASE"
 HEADER_INTEGRITY_CHECK_TOKEN: str = "X-Integrity-Check-Token"
 PENDING_PREFIX: str = "state/pending/"
+REMOTE_DRAIN_POLL_TRIGGER_BATCH_SIZE: int = 10_000
 
 
 @dataclass(frozen=True)
@@ -110,6 +131,38 @@ def parse_sizes_csv(raw: str) -> tuple[int, ...]:
     if not parts:
         raise ValueError("at least one batch size is required")
     return tuple(int(p, 10) for p in parts)
+
+
+def apply_aws_env_base_urls(
+    *,
+    api_base: str,
+    health_monitor_base: str,
+    persistence_base: str,
+) -> tuple[str, str, str]:
+    """Override bases from env when set (used with ``--aws``)."""
+    return (
+        os.environ.get(ENV_TEST_API_BASE, api_base).strip(),
+        os.environ.get(ENV_TEST_HEALTH_MONITOR_BASE, health_monitor_base).strip(),
+        os.environ.get(ENV_TEST_PERSISTENCE_BASE, persistence_base).strip(),
+    )
+
+
+def resolve_drain_poll_sec(
+    *,
+    requested_poll_sec: float,
+    remote_persistence: bool,
+    sizes: tuple[int, ...],
+) -> float:
+    """Use a less aggressive default poll interval for large remote runs."""
+    if requested_poll_sec <= 0:
+        raise ValueError("drain poll must be > 0")
+    if not remote_persistence:
+        return requested_poll_sec
+    if requested_poll_sec != DEFAULT_DRAIN_POLL_SEC:
+        return requested_poll_sec
+    if max(sizes) < REMOTE_DRAIN_POLL_TRIGGER_BATCH_SIZE:
+        return requested_poll_sec
+    return DEFAULT_REMOTE_DRAIN_POLL_SEC
 
 
 def count_json_files(root: Path, relative_subdir: str) -> int:
@@ -380,7 +433,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
             "Load-test Inspectio via public API + health monitor + lifecycle counts "
-            "(host filesystem or --kubernetes persistence HTTP)."
+            "(host filesystem, or --kubernetes / --aws persistence HTTP for K8s/S3)."
         ),
     )
     parser.add_argument(
@@ -422,6 +475,21 @@ def build_arg_parser() -> argparse.ArgumentParser:
             "Point --api-base, --health-monitor-base, and --persistence-base at port-forwards "
             "or Ingress URLs. Incompatible with --in-memory-s3."
         ),
+    )
+    parser.add_argument(
+        "--aws",
+        action="store_true",
+        help=(
+            "AWS/EKS-friendly remote run: enables the same behavior as --kubernetes (S3 or any "
+            "remote persistence). When set, base URLs may be overridden by environment variables "
+            f"{ENV_TEST_API_BASE}, {ENV_TEST_HEALTH_MONITOR_BASE}, and {ENV_TEST_PERSISTENCE_BASE} "
+            "if those variables are non-empty."
+        ),
+    )
+    parser.add_argument(
+        "--smoke",
+        action="store_true",
+        help="Run a tiny batch plan (sizes 5 and 10) for quick remote smoke tests.",
     )
     parser.add_argument(
         "--flush-root",
@@ -484,15 +552,31 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_arg_parser()
     args = parser.parse_args(argv)
 
-    sizes = parse_sizes_csv(args.sizes)
+    if args.smoke and args.sizes != ",".join(str(s) for s in DEFAULT_SIZES):
+        raise SystemExit("--smoke cannot be combined with a custom --sizes")
+    sizes = (5, 10) if args.smoke else parse_sizes_csv(args.sizes)
     root = args.local_s3_root.expanduser().resolve()
 
-    if args.kubernetes and args.in_memory_s3:
-        raise SystemExit("--kubernetes and --in-memory-s3 cannot be used together")
+    remote_persistence = bool(args.kubernetes or args.aws)
+    if args.aws:
+        args.api_base, args.health_monitor_base, args.persistence_base = apply_aws_env_base_urls(
+            api_base=args.api_base,
+            health_monitor_base=args.health_monitor_base,
+            persistence_base=args.persistence_base,
+        )
+
+    if remote_persistence and args.in_memory_s3:
+        raise SystemExit("--kubernetes/--aws and --in-memory-s3 cannot be used together")
+    effective_drain_poll_sec = resolve_drain_poll_sec(
+        requested_poll_sec=args.drain_poll_sec,
+        remote_persistence=remote_persistence,
+        sizes=sizes,
+    )
 
     logger.info(
         "plan batches=%s cumulative=%s api=%s health_monitor=%s local_s3_root=%s "
-        "chunk_max=%s in_memory_s3=%s kubernetes=%s persistence_base=%s",
+        "chunk_max=%s in_memory_s3=%s remote_persistence=%s persistence_base=%s aws=%s "
+        "drain_poll_sec=%s",
         sizes,
         sum(sizes),
         args.api_base,
@@ -500,20 +584,22 @@ def main(argv: list[str] | None = None) -> int:
         root,
         args.repeat_chunk_max,
         args.in_memory_s3,
-        args.kubernetes,
+        remote_persistence,
         args.persistence_base,
+        args.aws,
+        effective_drain_poll_sec,
     )
     if args.dry_run:
         return 0
 
-    if not args.kubernetes and not root.is_dir():
+    if not remote_persistence and not root.is_dir():
         raise SystemExit(f"LOCAL_S3_ROOT is not a directory: {root}")
 
     list_timeout = max(args.http_timeout_sec, 60.0)
 
     cumulative = 0
     with httpx.Client() as client:
-        if args.kubernetes:
+        if remote_persistence:
             baseline = scan_persistence_lifecycle(
                 client,
                 persistence_base=args.persistence_base,
@@ -531,7 +617,9 @@ def main(argv: list[str] | None = None) -> int:
         )
         if baseline.terminals > 0 or baseline.notifications > 0:
             warn_loc = (
-                f"persistence {args.persistence_base!r}" if args.kubernetes else str(root / "state")
+                f"persistence {args.persistence_base!r}"
+                if remote_persistence
+                else str(root / "state")
             )
             logger.warning(
                 "Non-empty S3 state at start — integrity-check may fail for older terminals "
@@ -568,7 +656,7 @@ def main(argv: list[str] | None = None) -> int:
                 wait_for_pending_zero_via_persistence(
                     client,
                     persistence_base=args.persistence_base,
-                    poll_sec=args.drain_poll_sec,
+                    poll_sec=effective_drain_poll_sec,
                     timeout_sec=args.drain_timeout_sec,
                     request_timeout_sec=args.http_timeout_sec,
                 )
@@ -578,18 +666,18 @@ def main(argv: list[str] | None = None) -> int:
                     root_override=args.flush_root,
                     request_timeout_sec=args.http_timeout_sec,
                 )
-            elif args.kubernetes:
+            elif remote_persistence:
                 wait_for_pending_zero_via_persistence(
                     client,
                     persistence_base=args.persistence_base,
-                    poll_sec=args.drain_poll_sec,
+                    poll_sec=effective_drain_poll_sec,
                     timeout_sec=args.drain_timeout_sec,
                     request_timeout_sec=args.http_timeout_sec,
                 )
             else:
                 wait_for_pending_zero(
                     root,
-                    poll_sec=args.drain_poll_sec,
+                    poll_sec=effective_drain_poll_sec,
                     timeout_sec=args.drain_timeout_sec,
                 )
 
@@ -605,7 +693,7 @@ def main(argv: list[str] | None = None) -> int:
                 integrity.get("summary", {}),
             )
 
-            if args.kubernetes:
+            if remote_persistence:
                 counts = scan_persistence_lifecycle(
                     client,
                     persistence_base=args.persistence_base,
