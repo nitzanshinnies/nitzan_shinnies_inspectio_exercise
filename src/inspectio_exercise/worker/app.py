@@ -25,6 +25,18 @@ from inspectio_exercise.worker.runtime import WorkerRuntime
 from inspectio_exercise.worker.staging_persistence import StagingPersistence
 
 
+class ActivatePendingBody(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    pending_key: str = Field(alias="pendingKey")
+
+
+class ActivatePendingBatchBody(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    pending_keys: list[str] = Field(alias="pendingKeys", max_length=WORKER_ACTIVATE_BATCH_MAX_KEYS)
+
+
 def _lifespan_with_clients(
     *,
     test_notify_client: httpx.AsyncClient | None,
@@ -125,18 +137,6 @@ def create_app(
     register_healthz(app, "worker")
     register_performance_logging(app, component="worker")
 
-    class ActivatePendingBody(BaseModel):
-        model_config = ConfigDict(populate_by_name=True)
-
-        pending_key: str = Field(alias="pendingKey")
-
-    class ActivatePendingBatchBody(BaseModel):
-        model_config = ConfigDict(populate_by_name=True)
-
-        pending_keys: list[str] = Field(
-            alias="pendingKeys", max_length=WORKER_ACTIVATE_BATCH_MAX_KEYS
-        )
-
     @app.post(
         WORKER_ACTIVATE_PENDING_PATH,
         tags=["internal"],
@@ -144,13 +144,13 @@ def create_app(
         response_model=None,
     )
     async def activate_pending(
-        body: ActivatePendingBody,
         request: Request,
+        payload: ActivatePendingBody,
     ) -> dict[str, str] | Response:
         runtime = getattr(request.app.state, "worker_runtime", None)
         if runtime is None:
             raise HTTPException(status_code=503, detail="worker runtime not ready")
-        status = await runtime.activate_pending_now(body.pending_key)
+        status = await runtime.activate_pending_now(payload.pending_key)
         if status == "not_owner":
             raise HTTPException(status_code=403, detail="shard not owned by this worker")
         if status == "missing":
@@ -165,13 +165,13 @@ def create_app(
         include_in_schema=False,
     )
     async def activate_pending_batch(
-        body: ActivatePendingBatchBody,
         request: Request,
+        payload: ActivatePendingBatchBody,
     ) -> dict[str, int]:
         runtime = getattr(request.app.state, "worker_runtime", None)
         if runtime is None:
             raise HTTPException(status_code=503, detail="worker runtime not ready")
-        return await runtime.activate_pending_batch(body.pending_keys)
+        return await runtime.activate_pending_batch(payload.pending_keys)
 
     return app
 
