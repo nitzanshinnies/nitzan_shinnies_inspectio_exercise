@@ -145,30 +145,32 @@ class WorkerRuntime:
         """
         return await self._activate_pending_enqueue(pending_key, wake=True)
 
+    def _record_activation_status(self, status: str, counts: dict[str, int]) -> None:
+        if status == "scheduled":
+            counts["accepted"] += 1
+            return
+        if status == "not_owner":
+            counts["notOwner"] += 1
+            return
+        if status == "missing":
+            counts["missing"] += 1
+            return
+        counts["invalid"] += 1
+
     async def activate_pending_batch(self, pending_keys: Sequence[str]) -> dict[str, int]:
         """Enqueue many keys; wake once if at least one row was scheduled."""
-        accepted = 0
-        not_owner = 0
-        missing = 0
-        invalid = 0
+        counts = {
+            "accepted": 0,
+            "notOwner": 0,
+            "missing": 0,
+            "invalid": 0,
+        }
         for pk in pending_keys:
             st = await self._activate_pending_enqueue(pk, wake=False)
-            if st == "scheduled":
-                accepted += 1
-            elif st == "not_owner":
-                not_owner += 1
-            elif st == "missing":
-                missing += 1
-            else:
-                invalid += 1
-        if accepted > 0:
+            self._record_activation_status(st, counts)
+        if counts["accepted"] > 0:
             self._wake_scheduler.set()
-        return {
-            "accepted": accepted,
-            "notOwner": not_owner,
-            "missing": missing,
-            "invalid": invalid,
-        }
+        return counts
 
     async def run_forever(self, stop: asyncio.Event) -> None:
         await run_forever_with_tick_interval(
