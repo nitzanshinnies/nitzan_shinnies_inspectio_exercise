@@ -23,6 +23,12 @@ class MemoryOutcomesHotStore:
     async def ping(self) -> None:
         return None
 
+    async def begin_shared_hydration_if_leader(self) -> bool:
+        return True
+
+    async def end_shared_hydration(self) -> None:
+        return None
+
     async def clear_all_streams(self) -> None:
         self._success.clear()
         self._failed.clear()

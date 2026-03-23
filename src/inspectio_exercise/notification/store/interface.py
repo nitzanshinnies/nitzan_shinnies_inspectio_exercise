@@ -19,6 +19,12 @@ class OutcomesHotStore(Protocol):
     async def ping(self) -> None:
         """Verify the store is reachable; raise OutcomesStoreError on failure."""
 
+    async def begin_shared_hydration_if_leader(self) -> bool:
+        """Return True if this instance should run the S3 hydration scan (Redis: one leader per cluster)."""
+
+    async def end_shared_hydration(self) -> None:
+        """Release hydration leader lock (Redis) after S3 scan or on skip."""
+
     async def clear_all_streams(self) -> None:
         """Remove both outcome streams before hydration."""
 

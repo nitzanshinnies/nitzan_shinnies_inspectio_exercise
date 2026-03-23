@@ -42,6 +42,10 @@ kubectl -n inspectio get pods
 
 `inspectio-config` includes **`INSPECTIO_HTTPX_MAX_CONNECTIONS`**, **`INSPECTIO_HTTPX_MAX_KEEPALIVE_CONNECTIONS`**, **`INSPECTIO_HTTPX_POOL_TIMEOUT_SEC`**, and **`INSPECTIO_WORKER_MAX_PARALLEL_HANDLES`** (defaults match `inspectio_exercise.common.http_client` and the worker runtime). The **api** Deployment and **worker** StatefulSet read these keys. Edit the ConfigMap and restart workloads to tune pools or per-tick parallelism (e.g. before large load tests or when using AWS S3).
 
+## Notification replicas
+
+The **notification** Deployment defaults to **2** replicas. All pods use the same **`REDIS_URL`**; publish paths use atomic Redis list updates. Startup **S3 → Redis hydration** runs on **one** pod at a time (Redis lock + wait-for-peer) so concurrent pods do not each `DEL` and rebuild the shared outcome lists. Tune **`INSPECTIO_NOTIFICATION_HYDRATION_LOCK_TTL_SEC`** and **`INSPECTIO_NOTIFICATION_HYDRATION_WAIT_PEER_SEC`** in the notification container env if needed.
+
 ## Access
 
 - **Port-forward UI (same paths as compose):**
