@@ -21,6 +21,10 @@ NOTIFICATION_PUBLISH_BASE_DELAY_SEC: float = float(
 NOTIFICATION_PUBLISH_MAX_ATTEMPTS: int = int(os.environ.get("INSPECTIO_WORKER_NOTIFY_RETRIES", "3"))
 OUTCOMES_HTTP_PATH: str = "/internal/v1/outcomes"
 WORKER_ACTIVATE_PENDING_PATH: str = "/internal/v1/activate-pending"
+WORKER_ACTIVATE_PENDING_BATCH_PATH: str = "/internal/v1/activate-pending-batch"
+WORKER_ACTIVATE_BATCH_MAX_KEYS: int = max(
+    1, int(os.environ.get("INSPECTIO_WORKER_ACTIVATION_BATCH_MAX_KEYS", "512"))
+)
 PERSISTENCE_READ_BASE_DELAY_SEC: float = float(
     os.environ.get("INSPECTIO_WORKER_PERSISTENCE_READ_BACKOFF_SEC", "0.05"),
 )

@@ -14,7 +14,12 @@ from inspectio_exercise.common.health import register_healthz
 from inspectio_exercise.common.http_client import peer_httpx_limits, peer_httpx_timeout
 from inspectio_exercise.common.performance_logging import register_performance_logging
 from inspectio_exercise.notification.persistence_client import PersistenceHttpClient
-from inspectio_exercise.worker.config import WORKER_ACTIVATE_PENDING_PATH, load_worker_settings
+from inspectio_exercise.worker.config import (
+    WORKER_ACTIVATE_BATCH_MAX_KEYS,
+    WORKER_ACTIVATE_PENDING_BATCH_PATH,
+    WORKER_ACTIVATE_PENDING_PATH,
+    load_worker_settings,
+)
 from inspectio_exercise.worker.persistence_port import PersistenceAsyncPort
 from inspectio_exercise.worker.runtime import WorkerRuntime
 from inspectio_exercise.worker.staging_persistence import StagingPersistence
@@ -125,6 +130,13 @@ def create_app(
 
         pending_key: str = Field(alias="pendingKey")
 
+    class ActivatePendingBatchBody(BaseModel):
+        model_config = ConfigDict(populate_by_name=True)
+
+        pending_keys: list[str] = Field(
+            alias="pendingKeys", max_length=WORKER_ACTIVATE_BATCH_MAX_KEYS
+        )
+
     @app.post(
         WORKER_ACTIVATE_PENDING_PATH,
         tags=["internal"],
@@ -146,6 +158,20 @@ def create_app(
         if status == "invalid":
             raise HTTPException(status_code=400, detail="invalid pending key or record")
         return {"status": status}
+
+    @app.post(
+        WORKER_ACTIVATE_PENDING_BATCH_PATH,
+        tags=["internal"],
+        include_in_schema=False,
+    )
+    async def activate_pending_batch(
+        body: ActivatePendingBatchBody,
+        request: Request,
+    ) -> dict[str, int]:
+        runtime = getattr(request.app.state, "worker_runtime", None)
+        if runtime is None:
+            raise HTTPException(status_code=503, detail="worker runtime not ready")
+        return await runtime.activate_pending_batch(body.pending_keys)
 
     return app
 

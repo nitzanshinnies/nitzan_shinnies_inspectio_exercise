@@ -55,7 +55,7 @@ When a message enters processing flow:
 2. **Durable pending persistence**
    - API creates the pending object first under:
      - `state/pending/shard-<shard_id>/<messageId>.json`
-   - Worker `newMessage` activation validates this persisted pending object before attempt #1.
+   - Worker activation (HTTP **activate-pending** or **`activate-pending-batch`**) may **enqueue** the row into the worker’s due-work structure and **wake** the scheduler; **`run_tick`** / **`handle_one`** still load and validate the persisted object before attempt #1 (same path as discovery-only).
 
 3. **Immediate first attempt**
    - Attempt #1 must execute with 0s delay.

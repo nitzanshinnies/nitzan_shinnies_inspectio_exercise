@@ -92,7 +92,7 @@ async def request_immediate_activation(
     submitted: SubmittedMessage,
     shards_per_pod: int,
 ) -> None:
-    """Best-effort: run worker attempt #1 immediately (assignment ``newMessage`` semantics)."""
+    """Best-effort: worker enqueues pending row and wakes scheduler (attempt #1 on next tick)."""
     if not worker_clients:
         return
     idx = submitted.shard_id // shards_per_pod % len(worker_clients)
@@ -115,6 +115,56 @@ async def request_immediate_activation(
         )
 
 
+async def request_immediate_activation_batch(
+    worker_clients: Sequence[httpx.AsyncClient],
+    *,
+    submitted: Sequence[SubmittedMessage],
+    shards_per_pod: int,
+) -> None:
+    """Best-effort: one or more batch HTTP calls per worker (``activate-pending-batch``)."""
+    if not worker_clients or not submitted:
+        return
+    batch_max = config.WORKER_ACTIVATION_BATCH_MAX_KEYS
+    idx_to_keys: dict[int, list[str]] = {}
+    for s in submitted:
+        idx = s.shard_id // shards_per_pod % len(worker_clients)
+        idx_to_keys.setdefault(idx, []).append(s.pending_key)
+    for idx, keys in idx_to_keys.items():
+        if not keys:
+            continue
+        client = worker_clients[idx]
+        offset = 0
+        while offset < len(keys):
+            chunk = keys[offset : offset + batch_max]
+            offset += len(chunk)
+            try:
+                response = await client.post(
+                    config.WORKER_ACTIVATE_PENDING_BATCH_HTTP_PATH,
+                    json={"pendingKeys": chunk},
+                    timeout=config.PEER_HTTP_CLIENT_TIMEOUT_SEC,
+                )
+                response.raise_for_status()
+            except httpx.HTTPError:
+                logger.warning(
+                    "worker batch activation failed worker_index=%s chunk_len=%s",
+                    idx,
+                    len(chunk),
+                    exc_info=True,
+                )
+
+
+def schedule_background_worker_activation(awaitable: Awaitable[None]) -> None:
+    """Run activation without blocking the HTTP response (best-effort; errors logged)."""
+
+    async def _run() -> None:
+        try:
+            await awaitable
+        except Exception:
+            logger.exception("background worker activation failed")
+
+    asyncio.create_task(_run())
+
+
 async def submit_messages_repeat_parallel(
     persistence: PersistenceHttpClient,
     *,
@@ -125,10 +175,9 @@ async def submit_messages_repeat_parallel(
     total_shards: int,
     worker_clients: Sequence[httpx.AsyncClient],
     shards_per_pod: int,
-    concurrency: int,
     persist_pending_batch: PersistPendingBatchFn | None = None,
 ) -> list[str]:
-    """Create ``count`` messages with bounded parallel persistence + activation."""
+    """Create ``count`` messages; chunked persistence + background batch activation."""
     rows = [
         _pending_submission_record(
             body=body,
@@ -144,15 +193,12 @@ async def submit_messages_repeat_parallel(
         chunk = rows[offset : offset + batch]
         await writer([ow for _, ow in chunk])
 
-    sem = asyncio.Semaphore(max(1, concurrency))
-
-    async def _activate(submitted: SubmittedMessage) -> str:
-        async with sem:
-            await request_immediate_activation(
-                worker_clients,
-                submitted=submitted,
-                shards_per_pod=shards_per_pod,
-            )
-            return submitted.message_id
-
-    return list(await asyncio.gather(*(_activate(s) for s, _ in rows)))
+    submitted_list = [s for s, _ in rows]
+    schedule_background_worker_activation(
+        request_immediate_activation_batch(
+            worker_clients,
+            submitted=submitted_list,
+            shards_per_pod=shards_per_pod,
+        )
+    )
+    return [s.message_id for s, _ in rows]
