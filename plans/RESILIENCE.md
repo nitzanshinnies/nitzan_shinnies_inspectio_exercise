@@ -101,7 +101,7 @@ The worker should enter normal processing only after owned shard bootstrap has c
 
 The **notification service** ([`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md)) must:
 
-- On process start, after the **hot store** is reachable (e.g. **`ping`** when using the Redis backend), run **hydration**: load up to **`HYDRATION_MAX`** (default **10,000**) **newest** notification records from `state/notifications/...` via the persistence service and **write them into the hot store**—**before** treating the service as **ready** (or document degraded mode).
+- On process start, after the **hot store** is reachable (e.g. **`ping`** when using the Redis backend), run **hydration**: load up to **`HYDRATION_MAX`** (default **10,000**) **newest** notification records from `state/notifications/...` via the persistence service and **write them into the hot store**—**before** treating the service as **ready** (or document degraded mode). With **several notification replicas** sharing Redis, only the **hydration leader** performs **`clear_all_streams` + rebuild**; other pods skip or wait per [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) §3.1 / §8.
 - Use **bounded** pagination when listing hour prefixes; **do not** assume unbounded RAM in the notification service **process** (the **hot store** backend—e.g. **Redis**—holds the shared cache when using that plugin).
 - If the **hot store** is unavailable (e.g. **Redis** down with `OUTCOMES_STORE_BACKEND=redis`): **readiness** fails or **degraded** mode (no publish / query)—**document**.
 - If hydration fails after retries: emit **startup-degraded** telemetry; outcome `GET` endpoints may **503** or return **empty** until recovered—**document** the choice.

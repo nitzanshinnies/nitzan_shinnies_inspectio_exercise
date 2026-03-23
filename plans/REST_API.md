@@ -76,6 +76,7 @@ Request body (JSON):
 Behavior:
 - Creates **`count`** independent messages with distinct `messageId`s.
 - Each created message enters normal lifecycle flow.
+- **Implementation note (throughput):** the API may persist pending objects via the persistence service’s **`put_objects`** batch in **chunks** (configurable batch size, e.g. env **`INSPECTIO_REPEAT_SUBMIT_PUT_BATCH_SIZE`**) rather than one HTTP round-trip per row—behavior and durable outcome remain the same as **`count`** sequential **`put_object`** calls.
 
 Response expectations:
 - JSON including **`accepted`** (equals **`count`**) and **`messageIds`** (length **`count`**, distinct UUIDs), or an equivalent summary plus identifiers.
