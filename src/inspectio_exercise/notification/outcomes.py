@@ -15,6 +15,17 @@ async def hydrate_from_persistence(
     store: OutcomesHotStore, persistence: PersistenceHttpClient
 ) -> int:
     """Load up to ``HYDRATION_MAX`` newest notification records from persistence into the store."""
+    if not await store.begin_shared_hydration_if_leader():
+        return 0
+    try:
+        return await _hydrate_from_persistence_body(store, persistence)
+    finally:
+        await store.end_shared_hydration()
+
+
+async def _hydrate_from_persistence_body(
+    store: OutcomesHotStore, persistence: PersistenceHttpClient
+) -> int:
     rows = await persistence.list_prefix("state/notifications/", max_keys=None)
     records: list[dict[str, Any]] = []
     for row in rows:

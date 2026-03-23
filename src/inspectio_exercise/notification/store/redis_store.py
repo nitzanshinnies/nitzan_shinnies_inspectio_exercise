@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
+import time
+
 from redis.asyncio import Redis
 from redis.exceptions import RedisError
 
@@ -34,6 +38,54 @@ class RedisOutcomesHotStore:
             await self._client.ping()
         except RedisError as exc:
             raise OutcomesStoreError(str(exc)) from exc
+
+    async def _streams_non_empty(self) -> bool:
+        try:
+            sc = await self._client.llen(self._success_key)
+            fc = await self._client.llen(self._failed_key)
+        except RedisError as exc:
+            raise OutcomesStoreError(str(exc)) from exc
+        return sc > 0 or fc > 0
+
+    async def begin_shared_hydration_if_leader(self) -> bool:
+        """Acquire leader lock when lists are empty, or wait for a peer to hydrate shared Redis."""
+        lock_key = config.HYDRATION_REDIS_LOCK_KEY
+        ttl = config.HYDRATION_REDIS_LOCK_TTL_SEC
+        wait_sec = config.HYDRATION_REDIS_WAIT_PEER_SEC
+
+        async def try_lock() -> bool:
+            try:
+                return bool(await self._client.set(lock_key, "1", nx=True, ex=ttl))
+            except RedisError as exc:
+                raise OutcomesStoreError(str(exc)) from exc
+
+        async def release_lock() -> None:
+            with contextlib.suppress(RedisError):
+                await self._client.delete(lock_key)
+
+        got = await try_lock()
+        if not got:
+            deadline = time.monotonic() + wait_sec
+            while time.monotonic() < deadline:
+                if await self._streams_non_empty():
+                    return False
+                await asyncio.sleep(0.15)
+            got = await try_lock()
+            if not got:
+                return False
+
+        try:
+            if await self._streams_non_empty():
+                await release_lock()
+                return False
+            return True
+        except Exception:
+            await release_lock()
+            raise
+
+    async def end_shared_hydration(self) -> None:
+        with contextlib.suppress(RedisError):
+            await self._client.delete(config.HYDRATION_REDIS_LOCK_KEY)
 
     async def clear_all_streams(self) -> None:
         try:

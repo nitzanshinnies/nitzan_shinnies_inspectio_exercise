@@ -237,6 +237,57 @@ async def test_hydration_two_success_records_newest_first(
 
 @pytest.mark.integration
 @pytest.mark.asyncio
+async def test_second_stack_skips_hydration_when_redis_shared_and_warm(
+    local_s3_root: None,
+) -> None:
+    """Second notification process sharing Redis does not re-run destructive S3 hydration."""
+    redis = FakeAsyncRedis(decode_responses=True)
+    store1 = RedisOutcomesHotStore(redis, owns_client=False)
+    persist_app = create_persistence_app()
+
+    async with (
+        LifespanManager(persist_app),
+        httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=persist_app),
+            base_url="http://persistence",
+        ) as p_client,
+    ):
+        app1 = create_notification_app(test_outcomes_store=store1, test_http_client=p_client)
+        async with (
+            LifespanManager(app1),
+            httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=app1),
+                base_url="http://n1",
+            ) as n1,
+        ):
+            await n1.post(
+                "/internal/v1/outcomes",
+                json={
+                    "notificationId": "nid-shared-replica",
+                    "messageId": "m-shared",
+                    "outcome": "failed",
+                    "recordedAt": 1_705_312_900_000,
+                    "shardId": 0,
+                },
+            )
+
+        store2 = RedisOutcomesHotStore(redis, owns_client=False)
+        app2 = create_notification_app(test_outcomes_store=store2, test_http_client=p_client)
+        async with (
+            LifespanManager(app2),
+            httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=app2),
+                base_url="http://n2",
+            ) as n2,
+        ):
+            assert app2.state.hydration_count == 0
+            r = await n2.get("/internal/v1/outcomes/failed", params={"limit": 5})
+            assert r.status_code == 200
+            assert any(row["notificationId"] == "nid-shared-replica" for row in r.json())
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
 async def test_duplicate_publish_same_notification_record_twice(
     local_s3_root: None,
 ) -> None:
