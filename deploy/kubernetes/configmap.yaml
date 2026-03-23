@@ -15,9 +15,15 @@ data:
   NOTIFICATION_SERVICE_URL: http://notification:8002
   MOCK_SMS_URL: http://mock-sms:8080
   REDIS_URL: redis://redis:6379/0
+  # API stages pending in Redis Stream; worker reads staging before S3 (unset "0" for direct persistence only).
+  INSPECTIO_PENDING_INGEST_VIA_REDIS_STREAM: "1"
   OUTCOMES_STORE_BACKEND: redis
   INSPECTIO_PERSISTENCE_BACKEND: local
   LOCAL_S3_ROOT: /data/local-s3
+  # Batch writes: parallel PutObject threads (persistence) + API repeat batch size + HTTP batch cap.
+  INSPECTIO_PERSISTENCE_PUT_MAX_WORKERS: "32"
+  INSPECTIO_HTTP_PUT_OBJECTS_MAX_ITEMS: "512"
+  INSPECTIO_REPEAT_SUBMIT_PUT_BATCH_SIZE: "64"
   # Peer httpx pools (API + worker); defaults match inspectio_exercise.common.http_client.
   INSPECTIO_HTTPX_MAX_CONNECTIONS: "256"
   INSPECTIO_HTTPX_MAX_KEEPALIVE_CONNECTIONS: "64"

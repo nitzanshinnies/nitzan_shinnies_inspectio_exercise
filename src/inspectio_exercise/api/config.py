@@ -6,6 +6,11 @@ import os
 
 from inspectio_exercise.common.http_client import HTTP_CLIENT_TIMEOUT_SEC
 
+
+def _env_flag(name: str) -> bool:
+    return os.environ.get(name, "").strip().lower() in ("1", "true", "yes")
+
+
 PERSISTENCE_SERVICE_URL: str = os.environ.get("PERSISTENCE_SERVICE_URL", "http://127.0.0.1:8001")
 NOTIFICATION_SERVICE_URL: str = os.environ.get("NOTIFICATION_SERVICE_URL", "http://127.0.0.1:8002")
 TOTAL_SHARDS: int = int(os.environ.get("TOTAL_SHARDS", "256"))
@@ -18,6 +23,9 @@ WORKER_SHARDS_PER_POD_FOR_ACTIVATION: int = int(
     )
 )
 REPEAT_SUBMIT_CONCURRENCY: int = int(os.environ.get("INSPECTIO_REPEAT_SUBMIT_CONCURRENCY", "64"))
+REPEAT_SUBMIT_PUT_BATCH_SIZE: int = max(
+    1, int(os.environ.get("INSPECTIO_REPEAT_SUBMIT_PUT_BATCH_SIZE", "64"))
+)
 REPEAT_COUNT_MAX: int = int(os.environ.get("REPEAT_COUNT_MAX", "10000"))
 OUTCOME_QUERY_LIMIT_DEFAULT: int = 100
 OUTCOME_QUERY_LIMIT_MAX: int = 1000
@@ -36,3 +44,12 @@ WORKER_ACTIVATE_PENDING_HTTP_PATH: str = "/internal/v1/activate-pending"
 
 # Default SMS `to` / body for public REST (plans/REST_API.md §3.1–3.2)
 DEFAULT_MESSAGE_TO: str = "+10000000000"
+
+
+def pending_ingest_via_redis_stream_enabled() -> bool:
+    """When true, API stages pending bodies in Redis and a task flushes to persistence/S3."""
+    return _env_flag("INSPECTIO_PENDING_INGEST_VIA_REDIS_STREAM")
+
+
+def pending_stream_redis_url() -> str | None:
+    return os.environ.get("INSPECTIO_PENDING_STREAM_REDIS_URL") or os.environ.get("REDIS_URL")

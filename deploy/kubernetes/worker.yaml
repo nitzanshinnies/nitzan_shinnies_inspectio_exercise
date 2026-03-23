@@ -96,6 +96,16 @@ spec:
                 configMapKeyRef:
                   name: inspectio-config
                   key: INSPECTIO_WORKER_MAX_PARALLEL_HANDLES
+            - name: REDIS_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: inspectio-config
+                  key: REDIS_URL
+            - name: INSPECTIO_PENDING_INGEST_VIA_REDIS_STREAM
+              valueFrom:
+                configMapKeyRef:
+                  name: inspectio-config
+                  key: INSPECTIO_PENDING_INGEST_VIA_REDIS_STREAM
           readinessProbe:
             httpGet:
               path: /healthz

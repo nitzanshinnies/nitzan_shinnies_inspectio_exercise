@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import base64
+from collections.abc import Sequence
 from typing import Any
 
 import httpx
+
+from inspectio_exercise.persistence.object_write import ObjectWrite
 
 
 class PersistenceHttpClient:
@@ -46,4 +49,21 @@ class PersistenceHttpClient:
             "content_type": content_type,
         }
         response = await self._client.post("/internal/v1/put-object", json=payload)
+        response.raise_for_status()
+
+    async def put_objects(self, items: Sequence[ObjectWrite]) -> None:
+        materialized = list(items)
+        if not materialized:
+            return
+        payload = {
+            "objects": [
+                {
+                    "key": ow.key,
+                    "body_b64": base64.b64encode(ow.body).decode("ascii"),
+                    "content_type": ow.content_type,
+                }
+                for ow in materialized
+            ],
+        }
+        response = await self._client.post("/internal/v1/put-objects", json=payload)
         response.raise_for_status()

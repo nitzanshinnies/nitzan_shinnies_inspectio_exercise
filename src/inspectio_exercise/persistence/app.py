@@ -16,6 +16,7 @@ from inspectio_exercise.persistence import config as persistence_config
 from inspectio_exercise.persistence.backend import build_persistence_backend
 from inspectio_exercise.persistence.interface import PersistencePort
 from inspectio_exercise.persistence.memory_s3 import MemoryLocalS3Provider
+from inspectio_exercise.persistence.object_write import ObjectWrite
 from inspectio_exercise.persistence.schemas import (
     DeleteObjectRequest,
     FlushToDiskRequest,
@@ -24,6 +25,7 @@ from inspectio_exercise.persistence.schemas import (
     ListPrefixRequest,
     ListPrefixResponse,
     PutObjectRequest,
+    PutObjectsRequest,
 )
 
 
@@ -101,6 +103,24 @@ def create_app() -> FastAPI:
             ) from exc
         await backend.put_object(body.key, raw, content_type=body.content_type)
         return {"status": "ok"}
+
+    @app.post("/internal/v1/put-objects", tags=["persistence"])
+    async def put_objects(
+        body: PutObjectsRequest,
+        backend: PersistencePort = Depends(require_backend),
+    ) -> dict[str, str | int]:
+        writes: list[ObjectWrite] = []
+        for obj in body.objects:
+            try:
+                raw = base64.b64decode(obj.body_b64, validate=True)
+            except binascii.Error as exc:
+                raise HTTPException(
+                    status_code=422,
+                    detail="body_b64 is not valid base64",
+                ) from exc
+            writes.append(ObjectWrite(key=obj.key, body=raw, content_type=obj.content_type))
+        await backend.put_objects(writes)
+        return {"status": "ok", "written": len(writes)}
 
     @app.post("/internal/v1/flush-to-disk", tags=["persistence"], include_in_schema=False)
     async def flush_to_disk(

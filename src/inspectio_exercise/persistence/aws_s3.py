@@ -10,6 +10,8 @@ or other components.
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Sequence
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 import boto3
@@ -23,6 +25,7 @@ from inspectio_exercise.persistence.key_policy import (
     validate_max_keys,
     validate_object_key,
 )
+from inspectio_exercise.persistence.object_write import ObjectWrite
 
 _NOSUCHKEY_CODES = frozenset({"NoSuchKey", "404"})
 
@@ -95,6 +98,22 @@ class AwsS3Provider:
             ContentType=content_type,
         )
 
+    def _put_objects_parallel_sync(self, items: list[tuple[str, bytes, str]]) -> None:
+        if not items:
+            return
+        workers = min(len(items), config.PERSISTENCE_PUT_MAX_WORKERS)
+        if workers <= 1:
+            for key, body, content_type in items:
+                self._put_object_sync(key, body, content_type)
+            return
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            futures = [
+                pool.submit(self._put_object_sync, key, body, content_type)
+                for key, body, content_type in items
+            ]
+            for fut in as_completed(futures):
+                fut.result()
+
     async def delete_object(self, key: str) -> None:
         validate_object_key(key)
         await asyncio.to_thread(self._delete_object_sync, key)
@@ -113,3 +132,13 @@ class AwsS3Provider:
     ) -> None:
         validate_object_key(key)
         await asyncio.to_thread(self._put_object_sync, key, body, content_type)
+
+    async def put_objects(self, items: Sequence[ObjectWrite]) -> None:
+        materialized = list(items)
+        if not materialized:
+            return
+        triples: list[tuple[str, bytes, str]] = []
+        for ow in materialized:
+            validate_object_key(ow.key)
+            triples.append((ow.key, ow.body, ow.content_type))
+        await asyncio.to_thread(self._put_objects_parallel_sync, triples)

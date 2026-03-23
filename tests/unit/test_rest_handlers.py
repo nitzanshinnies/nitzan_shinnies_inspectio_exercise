@@ -23,6 +23,29 @@ from inspectio_exercise.api.app import create_app
 from inspectio_exercise.notification.persistence_client import PersistenceHttpClient
 
 
+def _respond_persistence_put(
+    request: httpx.Request,
+    puts: list[dict] | None,
+) -> httpx.Response | None:
+    """Handle ``put-object`` / ``put-objects``; optionally record decoded pending JSON rows."""
+    path = request.url.path
+    if path == "/internal/v1/put-object":
+        if puts is not None:
+            outer = json.loads(request.content.decode("utf-8"))
+            inner = json.loads(base64.b64decode(outer["body_b64"]))
+            puts.append(inner)
+        return httpx.Response(200, json={"status": "ok"})
+    if path == "/internal/v1/put-objects":
+        payload = json.loads(request.content.decode("utf-8"))
+        objects = payload["objects"]
+        if puts is not None:
+            for obj in objects:
+                inner = json.loads(base64.b64decode(obj["body_b64"]))
+                puts.append(inner)
+        return httpx.Response(200, json={"status": "ok", "written": len(objects)})
+    return None
+
+
 @pytest.mark.unit
 def test_post_messages_valid_body_returns_accepted_metadata(api_client: TestClient) -> None:
     """REST_API.md §3.1 — accepted message metadata including messageId; pending or accepted state."""
@@ -50,11 +73,9 @@ def test_post_messages_should_fail_persisted_in_payload() -> None:
 
     def handler(request: httpx.Request) -> httpx.Response:
         path = request.url.path
-        if path == "/internal/v1/put-object":
-            outer = json.loads(request.content.decode("utf-8"))
-            inner = json.loads(base64.b64decode(outer["body_b64"]))
-            puts.append(inner)
-            return httpx.Response(200, json={"status": "ok"})
+        put_resp = _respond_persistence_put(request, puts)
+        if put_resp is not None:
+            return put_resp
         if path.startswith("/internal/v1/outcomes/success"):
             return httpx.Response(200, json=[])
         if path.startswith("/internal/v1/outcomes/failed"):
@@ -78,11 +99,9 @@ def test_post_messages_omits_should_fail_from_payload_when_absent() -> None:
 
     def handler(request: httpx.Request) -> httpx.Response:
         path = request.url.path
-        if path == "/internal/v1/put-object":
-            outer = json.loads(request.content.decode("utf-8"))
-            inner = json.loads(base64.b64decode(outer["body_b64"]))
-            puts.append(inner)
-            return httpx.Response(200, json={"status": "ok"})
+        put_resp = _respond_persistence_put(request, puts)
+        if put_resp is not None:
+            return put_resp
         if path.startswith("/internal/v1/outcomes/success"):
             return httpx.Response(200, json=[])
         if path.startswith("/internal/v1/outcomes/failed"):
@@ -139,11 +158,9 @@ def test_post_messages_unicode_body_round_trip_on_put(api_client: TestClient) ->
 
     def handler(request: httpx.Request) -> httpx.Response:
         path = request.url.path
-        if path == "/internal/v1/put-object":
-            outer = json.loads(request.content.decode("utf-8"))
-            inner = json.loads(base64.b64decode(outer["body_b64"]))
-            puts.append(inner)
-            return httpx.Response(200, json={"status": "ok"})
+        put_resp = _respond_persistence_put(request, puts)
+        if put_resp is not None:
+            return put_resp
         if path.startswith("/internal/v1/outcomes/success"):
             return httpx.Response(200, json=[])
         if path.startswith("/internal/v1/outcomes/failed"):
@@ -170,11 +187,9 @@ def test_post_messages_unicode_to_round_trip_on_put() -> None:
 
     def handler(request: httpx.Request) -> httpx.Response:
         path = request.url.path
-        if path == "/internal/v1/put-object":
-            outer = json.loads(request.content.decode("utf-8"))
-            inner = json.loads(base64.b64decode(outer["body_b64"]))
-            puts.append(inner)
-            return httpx.Response(200, json={"status": "ok"})
+        put_resp = _respond_persistence_put(request, puts)
+        if put_resp is not None:
+            return put_resp
         if path.startswith("/internal/v1/outcomes/success"):
             return httpx.Response(200, json=[])
         if path.startswith("/internal/v1/outcomes/failed"):
@@ -243,11 +258,9 @@ def test_post_messages_repeat_templates_should_fail_on_each_put() -> None:
 
     def handler(request: httpx.Request) -> httpx.Response:
         path = request.url.path
-        if path == "/internal/v1/put-object":
-            outer = json.loads(request.content.decode("utf-8"))
-            inner = json.loads(base64.b64decode(outer["body_b64"]))
-            puts.append(inner)
-            return httpx.Response(200, json={"status": "ok"})
+        put_resp = _respond_persistence_put(request, puts)
+        if put_resp is not None:
+            return put_resp
         if path.startswith("/internal/v1/outcomes/success"):
             return httpx.Response(200, json=[])
         if path.startswith("/internal/v1/outcomes/failed"):
@@ -294,8 +307,9 @@ def test_get_messages_success_forwards_default_limit_to_notification() -> None:
 
     def handler(request: httpx.Request) -> httpx.Response:
         path = request.url.path
-        if path == "/internal/v1/put-object":
-            return httpx.Response(200, json={"status": "ok"})
+        put_resp = _respond_persistence_put(request, None)
+        if put_resp is not None:
+            return put_resp
         if path.startswith("/internal/v1/outcomes/success"):
             limits.append(request.url.params.get("limit"))
             return httpx.Response(200, json=[])
@@ -320,8 +334,9 @@ def test_get_messages_failed_forwards_default_limit_to_notification() -> None:
 
     def handler(request: httpx.Request) -> httpx.Response:
         path = request.url.path
-        if path == "/internal/v1/put-object":
-            return httpx.Response(200, json={"status": "ok"})
+        put_resp = _respond_persistence_put(request, None)
+        if put_resp is not None:
+            return put_resp
         if path.startswith("/internal/v1/outcomes/success"):
             return httpx.Response(200, json=[])
         if path.startswith("/internal/v1/outcomes/failed"):
@@ -399,8 +414,9 @@ def test_post_messages_repeat_count_above_cap_rejected(
 
     def handler(request: httpx.Request) -> httpx.Response:
         path = request.url.path
-        if path == "/internal/v1/put-object":
-            return httpx.Response(200, json={"status": "ok"})
+        put_resp = _respond_persistence_put(request, None)
+        if put_resp is not None:
+            return put_resp
         if path.startswith("/internal/v1/outcomes/success"):
             return httpx.Response(200, json=[])
         if path.startswith("/internal/v1/outcomes/failed"):
@@ -456,8 +472,9 @@ async def test_concurrent_post_messages_yield_distinct_ids() -> None:
 
     def handler(request: httpx.Request) -> httpx.Response:
         path = request.url.path
-        if path == "/internal/v1/put-object":
-            return httpx.Response(200, json={"status": "ok"})
+        put_resp = _respond_persistence_put(request, None)
+        if put_resp is not None:
+            return put_resp
         if path.startswith("/internal/v1/outcomes/success"):
             return httpx.Response(200, json=[])
         if path.startswith("/internal/v1/outcomes/failed"):

@@ -8,13 +8,16 @@ from contextlib import asynccontextmanager
 import httpx
 from fastapi import FastAPI, HTTPException, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
+from redis.asyncio import Redis
 
 from inspectio_exercise.common.health import register_healthz
 from inspectio_exercise.common.http_client import peer_httpx_limits, peer_httpx_timeout
 from inspectio_exercise.common.performance_logging import register_performance_logging
 from inspectio_exercise.notification.persistence_client import PersistenceHttpClient
 from inspectio_exercise.worker.config import WORKER_ACTIVATE_PENDING_PATH, load_worker_settings
+from inspectio_exercise.worker.persistence_port import PersistenceAsyncPort
 from inspectio_exercise.worker.runtime import WorkerRuntime
+from inspectio_exercise.worker.staging_persistence import StagingPersistence
 
 
 def _lifespan_with_clients(
@@ -58,10 +61,19 @@ def _lifespan_with_clients(
                 timeout=peer_timeout,
             )
         )
-        persistence = PersistenceHttpClient(persist_http)
+        persistence_http = PersistenceHttpClient(persist_http)
+        staging_redis: Redis | None = None
+        persistence_port: PersistenceAsyncPort = persistence_http
+        if settings.pending_staging_redis_url:
+            staging_redis = Redis.from_url(
+                settings.pending_staging_redis_url, decode_responses=False
+            )
+            await staging_redis.ping()
+            persistence_port = StagingPersistence(staging_redis, persistence_http)
+        app.state._staging_redis = staging_redis
         runtime = WorkerRuntime(
             notify_client=notify_http,
-            persistence=persistence,
+            persistence=persistence_port,
             settings=settings,
             sms_client=sms_http,
         )
@@ -73,6 +85,8 @@ def _lifespan_with_clients(
         task.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await task
+        if staging_redis is not None:
+            await staging_redis.aclose()
         if created_persist:
             await persist_http.aclose()
         if created_sms:

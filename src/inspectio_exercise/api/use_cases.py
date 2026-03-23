@@ -7,7 +7,7 @@ import json
 import logging
 import time
 import uuid
-from collections.abc import Sequence
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 
 import httpx
@@ -15,8 +15,11 @@ import httpx
 from inspectio_exercise.api import config
 from inspectio_exercise.domain.sharding import pending_prefix_for_shard, shard_id_for_message
 from inspectio_exercise.notification.persistence_client import PersistenceHttpClient
+from inspectio_exercise.persistence.object_write import ObjectWrite
 
 logger = logging.getLogger(__name__)
+
+PersistPendingBatchFn = Callable[[Sequence[ObjectWrite]], Awaitable[None]]
 
 
 def _now_ms() -> int:
@@ -34,15 +37,14 @@ def worker_activation_base_urls() -> list[str]:
     return [u.strip() for u in config.INSPECTIO_WORKER_ACTIVATION_URLS.split(",") if u.strip()]
 
 
-async def submit_message(
-    persistence: PersistenceHttpClient,
+def _pending_submission_record(
     *,
     body: str,
-    should_fail: bool = False,
+    should_fail: bool,
     to: str,
     total_shards: int,
-) -> SubmittedMessage:
-    """Persist a new pending record; return ids for activation routing."""
+) -> tuple[SubmittedMessage, ObjectWrite]:
+    """Build pending key + JSON bytes + routing metadata (no I/O)."""
     message_id = str(uuid.uuid4())
     shard_id = shard_id_for_message(message_id, total_shards)
     key = f"{pending_prefix_for_shard(shard_id)}{message_id}.json"
@@ -59,8 +61,29 @@ async def submit_message(
         "history": [],
     }
     raw = json.dumps(record, separators=(",", ":")).encode("utf-8")
-    await persistence.put_object(key, raw)
-    return SubmittedMessage(message_id=message_id, pending_key=key, shard_id=shard_id)
+    submitted = SubmittedMessage(message_id=message_id, pending_key=key, shard_id=shard_id)
+    return submitted, ObjectWrite(key=key, body=raw, content_type="application/json")
+
+
+async def submit_message(
+    persistence: PersistenceHttpClient,
+    *,
+    body: str,
+    should_fail: bool = False,
+    to: str,
+    total_shards: int,
+    persist_pending_batch: PersistPendingBatchFn | None = None,
+) -> SubmittedMessage:
+    """Persist a new pending record; return ids for activation routing."""
+    submitted, ow = _pending_submission_record(
+        body=body,
+        should_fail=should_fail,
+        to=to,
+        total_shards=total_shards,
+    )
+    writer = persist_pending_batch if persist_pending_batch is not None else persistence.put_objects
+    await writer((ow,))
+    return submitted
 
 
 async def request_immediate_activation(
@@ -103,19 +126,28 @@ async def submit_messages_repeat_parallel(
     worker_clients: Sequence[httpx.AsyncClient],
     shards_per_pod: int,
     concurrency: int,
+    persist_pending_batch: PersistPendingBatchFn | None = None,
 ) -> list[str]:
     """Create ``count`` messages with bounded parallel persistence + activation."""
+    rows = [
+        _pending_submission_record(
+            body=body,
+            should_fail=should_fail,
+            to=to,
+            total_shards=total_shards,
+        )
+        for _ in range(count)
+    ]
+    writer = persist_pending_batch if persist_pending_batch is not None else persistence.put_objects
+    batch = max(1, config.REPEAT_SUBMIT_PUT_BATCH_SIZE)
+    for offset in range(0, len(rows), batch):
+        chunk = rows[offset : offset + batch]
+        await writer([ow for _, ow in chunk])
+
     sem = asyncio.Semaphore(max(1, concurrency))
 
-    async def _one() -> str:
+    async def _activate(submitted: SubmittedMessage) -> str:
         async with sem:
-            submitted = await submit_message(
-                persistence,
-                body=body,
-                should_fail=should_fail,
-                to=to,
-                total_shards=total_shards,
-            )
             await request_immediate_activation(
                 worker_clients,
                 submitted=submitted,
@@ -123,4 +155,4 @@ async def submit_messages_repeat_parallel(
             )
             return submitted.message_id
 
-    return list(await asyncio.gather(*(_one() for _ in range(count))))
+    return list(await asyncio.gather(*(_activate(s) for s, _ in rows)))

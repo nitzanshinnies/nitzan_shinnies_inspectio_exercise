@@ -7,6 +7,7 @@ Spec: same key/list semantics as ``plans/LOCAL_S3.md`` §2–§4. Optional
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +16,7 @@ from inspectio_exercise.persistence.key_policy import (
     validate_max_keys,
     validate_object_key,
 )
+from inspectio_exercise.persistence.object_write import ObjectWrite
 
 
 class MemoryLocalS3Provider:
@@ -62,7 +64,13 @@ class MemoryLocalS3Provider:
     async def put_object(
         self, key: str, body: bytes, content_type: str = "application/json"
     ) -> None:
-        del content_type
-        validate_object_key(key)
+        await self.put_objects((ObjectWrite(key=key, body=body, content_type=content_type),))
+
+    async def put_objects(self, items: Sequence[ObjectWrite]) -> None:
+        materialized = list(items)
+        if not materialized:
+            return
         async with self._lock:
-            self._objects[key] = body
+            for ow in materialized:
+                validate_object_key(ow.key)
+                self._objects[ow.key] = ow.body

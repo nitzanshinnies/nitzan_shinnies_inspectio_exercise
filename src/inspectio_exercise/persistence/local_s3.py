@@ -7,14 +7,18 @@ Spec: ``plans/LOCAL_S3.md``. Blocking filesystem calls run in a thread pool via
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Sequence
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any
 
+from inspectio_exercise.persistence import config
 from inspectio_exercise.persistence.key_policy import (
     validate_list_prefix,
     validate_max_keys,
     validate_object_key,
 )
+from inspectio_exercise.persistence.object_write import ObjectWrite
 
 
 class LocalS3Provider:
@@ -30,6 +34,19 @@ class LocalS3Provider:
     def _put_sync(self, path: Path, body: bytes) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(body)
+
+    def _put_many_sync(self, pairs: list[tuple[Path, bytes]]) -> None:
+        if not pairs:
+            return
+        workers = min(len(pairs), config.PERSISTENCE_PUT_MAX_WORKERS)
+        if workers <= 1:
+            for path, body in pairs:
+                self._put_sync(path, body)
+            return
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            futures = [pool.submit(self._put_sync, path, body) for path, body in pairs]
+            for fut in as_completed(futures):
+                fut.result()
 
     def _get_sync(self, path: Path, key: str) -> bytes:
         if not path.is_file():
@@ -73,3 +90,12 @@ class LocalS3Provider:
         del content_type  # LOCAL_S3.md §3 — bytes only on disk; ignored until sidecar exists
         path = self._object_path(key)
         await asyncio.to_thread(self._put_sync, path, body)
+
+    async def put_objects(self, items: Sequence[ObjectWrite]) -> None:
+        materialized = list(items)
+        if not materialized:
+            return
+        pairs: list[tuple[Path, bytes]] = []
+        for ow in materialized:
+            pairs.append((self._object_path(ow.key), ow.body))
+        await asyncio.to_thread(self._put_many_sync, pairs)

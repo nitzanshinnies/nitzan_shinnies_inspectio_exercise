@@ -25,6 +25,22 @@ S3_BOTOCORE_CONNECT_TIMEOUT_SEC: float = float(
 S3_BOTOCORE_MAX_RETRY_ATTEMPTS: int = int(os.environ.get("INSPECTIO_S3_MAX_RETRY_ATTEMPTS", "5"))
 S3_BOTOCORE_READ_TIMEOUT_SEC: float = float(os.environ.get("INSPECTIO_S3_READ_TIMEOUT_SEC", "60"))
 
+# Thread pool size for parallel ``put_objects`` (AWS S3 and optional local file writes).
+PERSISTENCE_PUT_MAX_WORKERS: int = max(
+    1,
+    int(
+        os.environ.get(
+            "INSPECTIO_PERSISTENCE_PUT_MAX_WORKERS",
+            os.environ.get("INSPECTIO_S3_PUT_MAX_WORKERS", "32"),
+        )
+    ),
+)
+
+# Max objects per ``POST /internal/v1/put-objects`` (request body size / fairness).
+HTTP_PUT_OBJECTS_MAX_ITEMS: int = max(
+    1, int(os.environ.get("INSPECTIO_HTTP_PUT_OBJECTS_MAX_ITEMS", "512"))
+)
+
 
 def aws_region_name() -> str | None:
     """Explicit region for the S3 client, or ``None`` to use the default resolver chain."""

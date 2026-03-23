@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import json
+from collections.abc import Sequence
 from typing import Any
 
 import httpx
@@ -16,6 +17,7 @@ from asgi_lifespan import LifespanManager
 from inspectio_exercise.domain.sharding import owned_shard_ids, pod_index_from_hostname
 from inspectio_exercise.notification.persistence_client import PersistenceHttpClient
 from inspectio_exercise.persistence.app import create_app as create_persistence
+from inspectio_exercise.persistence.object_write import ObjectWrite
 from inspectio_exercise.worker.due_work_queue import DueWorkQueue
 from inspectio_exercise.worker.pending_discovery import discover_owned_pending
 from inspectio_exercise.worker.retrying_persistence import RetryingPersistence
@@ -59,6 +61,9 @@ class _FlakyListPersistence:
         self, key: str, body: bytes, content_type: str = "application/json"
     ) -> None:
         await self._inner.put_object(key, body, content_type)
+
+    async def put_objects(self, items: Sequence[ObjectWrite]) -> None:
+        await self._inner.put_objects(items)
 
 
 @pytest.mark.asyncio

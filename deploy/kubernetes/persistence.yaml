@@ -53,6 +53,16 @@ spec:
                 configMapKeyRef:
                   name: inspectio-config
                   key: LOCAL_S3_ROOT
+            - name: INSPECTIO_PERSISTENCE_PUT_MAX_WORKERS
+              valueFrom:
+                configMapKeyRef:
+                  name: inspectio-config
+                  key: INSPECTIO_PERSISTENCE_PUT_MAX_WORKERS
+            - name: INSPECTIO_HTTP_PUT_OBJECTS_MAX_ITEMS
+              valueFrom:
+                configMapKeyRef:
+                  name: inspectio-config
+                  key: INSPECTIO_HTTP_PUT_OBJECTS_MAX_ITEMS
           volumeMounts:
             - name: local-s3
               mountPath: /data/local-s3

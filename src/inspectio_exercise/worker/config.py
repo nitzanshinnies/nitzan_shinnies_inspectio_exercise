@@ -10,6 +10,11 @@ from dataclasses import dataclass
 
 from inspectio_exercise.common.http_client import HTTP_CLIENT_TIMEOUT_SEC
 
+
+def _worker_env_flag(name: str) -> bool:
+    return os.environ.get(name, "").strip().lower() in ("1", "true", "yes")
+
+
 NOTIFICATION_PUBLISH_BASE_DELAY_SEC: float = float(
     os.environ.get("INSPECTIO_WORKER_NOTIFY_BACKOFF_SEC", "0.05"),
 )
@@ -42,9 +47,12 @@ class WorkerSettings:
     total_shards: int
     http_timeout_sec: float
     max_parallel_handles: int = 128
+    pending_staging_redis_url: str | None = None
 
 
 def load_worker_settings() -> WorkerSettings:
+    stream_ingest = _worker_env_flag("INSPECTIO_PENDING_INGEST_VIA_REDIS_STREAM")
+    redis_url = os.environ.get("INSPECTIO_PENDING_STREAM_REDIS_URL") or os.environ.get("REDIS_URL")
     settings = WorkerSettings(
         hostname=os.environ.get("HOSTNAME", "worker-0"),
         mock_sms_url=os.environ.get("MOCK_SMS_URL", "http://127.0.0.1:8080"),
@@ -54,6 +62,7 @@ def load_worker_settings() -> WorkerSettings:
         total_shards=int(os.environ.get("TOTAL_SHARDS", "256")),
         http_timeout_sec=HTTP_CLIENT_TIMEOUT_SEC,
         max_parallel_handles=max(1, WORKER_MAX_PARALLEL_HANDLES),
+        pending_staging_redis_url=redis_url if stream_ingest and redis_url else None,
     )
     if settings.total_shards <= 0 or settings.shards_per_pod <= 0:
         msg = (
