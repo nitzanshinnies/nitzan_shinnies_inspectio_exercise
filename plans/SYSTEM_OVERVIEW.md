@@ -23,6 +23,7 @@ The system is composed of logical services/services-with-containers:
    - **Exception (read-only):** the **health monitor** may use the persistence service’s **read** API or a **read-only** direct S3 client for lifecycle prefixes only—see [`HEALTH_MONITOR.md`](HEALTH_MONITOR.md) §2.2.
    - **AWS mode**: uses `aioboto3` for async S3 operations.
    - **Local dev mode**: uses an in-process mock S3 implementation that performs file reader/writer semantics on a local directory while presenting the same persistence interface — **detailed spec and tests:** [`plans/LOCAL_S3.md`](LOCAL_S3.md).
+   - **`PersistencePort`** includes **`put_objects`** (batch) with the same logical semantics as ordered **`put_object`** calls—used for high-volume paths (e.g. **`POST /messages/repeat`**, Redis Stream pending flush). Contract: [`LOCAL_S3.md`](LOCAL_S3.md) §2.
 
 4. **Redis (dedicated container — optional when using the Redis hot-store backend)**
    - When **`OUTCOMES_STORE_BACKEND=redis`** (default in docker-compose), runs as its **own container** (e.g. official Redis image).
@@ -33,7 +34,7 @@ The system is composed of logical services/services-with-containers:
    - Accepts **publish** requests from workers after terminal S3 writes.
    - Writes the **durable** log to `state/notifications/...` in S3 (via persistence service) and **updates the configured hot store** (`OutcomesHotStore`).
    - Exposes **query** endpoints (or internal HTTP) used by the **REST API** for `GET /messages/success` and `GET /messages/failed`.
-   - On startup, **hydrates the hot store** from S3 with up to **`HYDRATION_MAX`** records (default **10,000**), walking **recent hour prefixes** backward (acceptable **cold-start** listing; not per user request).
+   - On startup, **hydrates the hot store** from S3 with up to **`HYDRATION_MAX`** records (default **10,000**), walking **recent hour prefixes** backward (acceptable **cold-start** listing; not per user request). With **multiple pods** and **Redis**, **one leader** runs the destructive list rebuild; others coordinate via **`OutcomesHotStore.begin_shared_hydration_if_leader`** (see [`NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md) §3.1, §7–§8).
    - **Detailed plan:** [`plans/NOTIFICATION_SERVICE.md`](NOTIFICATION_SERVICE.md).
 
 6. **Mock SMS provider (separate single container)**

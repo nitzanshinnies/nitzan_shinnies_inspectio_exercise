@@ -75,7 +75,12 @@ The **REST API** does **not** connect to Redis or the hot store directly; it **q
 
 ## 3.1) Hot store port (`OutcomesHotStore`)
 
-The notification service uses a small **async port** (prepend + trim per stream, clear both streams, range reads newest-first, `ping`, `aclose`). **Redis** and **memory** implementations ship in-repo; additional backends (e.g. another KV) implement the same contract.
+The notification service uses a small **async port** (prepend + trim per stream, clear both streams, range reads newest-first, `ping`, `aclose`), plus **shared hydration coordination** for horizontal scale:
+
+- **`begin_shared_hydration_if_leader()`** → **`bool`**: returns **`True`** only on instances that should run the **destructive** S3 scan and rebuild of Redis lists. With **`OUTCOMES_STORE_BACKEND=redis`**, the reference implementation uses a **Redis `SET key NX` lock** (TTL) and a **short wait/retry** loop so **at most one pod** clears and repopulates shared lists while peers observe populated lists or take over if the leader stalls. The **`memory`** backend always returns **`True`** (single-process).
+- **`end_shared_hydration()`**: releases the leader lock after hydration completes or is skipped (Redis); no-op for **memory**.
+
+**Redis** and **memory** implementations ship in-repo; additional backends (e.g. another KV) implement the same contract.
 
 - **Errors:** store failures surface as **`OutcomesStoreError`** (or equivalent) so HTTP handlers stay free of `redis` imports.
 - **Reference LIST semantics:** the **Redis** plugin uses **`LPUSH`** + **`LTRIM`** + **`LRANGE`** as specified in §4; the **memory** plugin mirrors that ordering for tests.
@@ -147,7 +152,7 @@ The notification service uses a small **async port** (prepend + trim per stream,
 2. Sort by **`recordedAt`** desc (or ULID desc), take **HYDRATION_MAX**.
 3. **`DEL outcomes:success`** / **`DEL outcomes:failed`** (optional: **merge** if preserving multi-writer—exercise: **replace** on cold hydration) then **`RPUSH`** in chronological batch or **`LPUSH`** in reverse order so **`LRANGE 0 N-1`** returns newest first—**document** order contract.
 
-**Frequency:** **once per notification-service startup**, not per user `GET`.
+**Frequency:** **once per notification-service process startup**, not per user `GET`. With **multiple notification pods** sharing one Redis, **only the hydration leader** runs the **`clear_all_streams` + list rebuild** path; **followers** skip the body of hydration (lists already filled by the leader, or they wait briefly for a peer—see §3.1 / §8).
 
 **Redis empty but running** (when using Redis backend): if Redis **persisted** RDB/AOF and data present, either **skip** full hydration or **merge** with cap—exercise default: **always re-hydrate from S3** on notification service boot to **match** S3 truth (simpler).
 
@@ -161,7 +166,10 @@ The notification service uses a small **async port** (prepend + trim per stream,
 ## 8) Scaling and replicas
 
 - **Redis:** single primary for exercise (`replica=1`). **Redis Cluster** out of scope.
-- **Notification service:** **≥1** replicas **safe for reads** if all **writes** are **idempotent** and share one **hot store** backend (e.g. one Redis; duplicate `LPUSH` still needs dedupe policy). **Simplest:** **1 replica** for notification service to avoid double-processing publishes without distributed locks.
+- **Notification service:** **≥1** replicas **safe** when all instances share **one** Redis **`OutcomesHotStore`** and **publishes** remain **idempotent** on **`notificationId`** (S3 put + **`LPUSH`** semantics). **Hydration** must **not** run destructive **`DEL`/rebuild on every pod concurrently:** use **`begin_shared_hydration_if_leader` / `end_shared_hydration`** (§3.1) so **one** pod repopulates shared lists per cold start wave. **Configuration (reference implementation):**
+  - **`INSPECTIO_NOTIFICATION_HYDRATION_LOCK_KEY`** — Redis key for **`SET NX`** (default `inspectio:outcomes:hydration-lock`).
+  - **`INSPECTIO_NOTIFICATION_HYDRATION_LOCK_TTL_SEC`** — lock TTL seconds (default **600**).
+  - **`INSPECTIO_NOTIFICATION_HYDRATION_WAIT_PEER_SEC`** — how long a non-leader waits for lists to populate before retrying lock (default **120**).
 - **API:** can scale horizontally; each instance calls notification service **query** URL (load-balanced).
 
 ---
@@ -181,6 +189,7 @@ The notification service uses a small **async port** (prepend + trim per stream,
 4. **Hydration** fills the **hot store** up to **`HYDRATION_MAX`** from `state/notifications/...`.
 5. **API** does not import Redis or **`OutcomesHotStore`** for outcomes—only the **notification service** uses the hot store (through its chosen backend).
 6. Publish **retries** do not corrupt terminal S3 or the hot cache beyond documented dedupe.
+7. **Multiple notification pods** + **Redis**: **hydration** uses **leader election** (§3.1 / §8) so concurrent startups do not each **`DEL`** and race-rebuild the shared outcome lists.
 
 ---
 

@@ -52,6 +52,7 @@ The provider **must** implement **`PersistencePort`**:
 | Method | Expected behavior |
 |--------|-------------------|
 | `put_object(key, body, content_type=...)` | Create or overwrite object at `key`; create parent directories as needed. |
+| `put_objects(items)` | Batch create/overwrite: **same semantics as** calling **`put_object`** for each **`ObjectWrite`** in order (order preserved; partial failure policy matches the persistence HTTP layer / implementation—typically **all-or-nothing** per request). Used for throughput on **`POST /messages/repeat`** and pending-stream flush paths. |
 | `get_object(key)` | Return **bytes**; if missing, raise **`KeyError`** (match existing test/fake conventions). |
 | `delete_object(key)` | Remove object if present; **idempotent** (no error if already absent). |
 | `list_prefix(prefix, max_keys=None)` | Return **`[{"Key": str}, ...]`** sorted by **`Key`** ascending, only keys that **start with** `prefix`, then truncated to the first **`max_keys`** (see §4.1). If **`max_keys`** is set and **`< 1`**, **`ValueError`**. Same row shape as S3 list v2 style used in tests. |
