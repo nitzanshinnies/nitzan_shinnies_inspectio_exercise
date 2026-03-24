@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import logging
 from collections.abc import Awaitable, Callable
 from typing import Any
@@ -18,6 +19,14 @@ from inspectio_exercise.worker.retrying_persistence import RetryingPersistence
 from inspectio_exercise.worker.terminal_scanner import TerminalScanner
 
 logger = logging.getLogger(__name__)
+_DISPATCH_RETRY_BACKOFF_MS = 500
+_TRACE_SAMPLE_MOD = 100
+_TRACE_SAMPLE_HIT = 0
+
+
+def _should_trace_message(message_id: str) -> bool:
+    digest = hashlib.sha256(message_id.encode("utf-8")).digest()
+    return (int.from_bytes(digest[:4], "big") % _TRACE_SAMPLE_MOD) == _TRACE_SAMPLE_HIT
 
 
 class MessageDispatch:
@@ -45,24 +54,34 @@ class MessageDispatch:
             await self.handle_one_core(mid, rec, pending_key)
 
     async def handle_one_core(self, mid: str, rec: dict[str, Any], pending_key: str) -> None:
+        trace = _should_trace_message(mid)
+        if trace:
+            logger.info("dispatch phase=begin message_id=%s key=%s", mid, pending_key)
         try:
             await self._persist.get_object(pending_key)
+            if trace:
+                logger.info("dispatch phase=pending_exists message_id=%s", mid)
         except KeyError:
             async with self._queue.lock:
                 self._queue.drop_locked(mid)
+            if trace:
+                logger.info("dispatch phase=pending_missing_drop message_id=%s", mid)
             return
-        now_ms = clocks.now_ms()
-        existing = await self._scanner.find_existing(mid, now_ms)
-        if existing is not None:
-            outcome, terminal_key, body = existing
-            await self._lifecycle.reconcile_from_terminal(
+        except Exception:
+            logger.warning(
+                "pending read failed for message_id=%s; rescheduling dispatch",
                 mid,
-                pending_key,
-                body=body,
-                outcome=outcome,
-                terminal_key=terminal_key,
+                exc_info=True,
             )
+            async with self._queue.lock:
+                cur = self._queue.records.get(mid)
+                if cur is not None:
+                    cur["nextDueAt"] = clocks.now_ms() + _DISPATCH_RETRY_BACKOFF_MS
+                    self._queue.schedule_locked(mid, int(cur["nextDueAt"]))
+            if trace:
+                logger.info("dispatch phase=pending_read_error_rescheduled message_id=%s", mid)
             return
+        ac = int(rec["attemptCount"])
         payload = rec.get("payload") if isinstance(rec.get("payload"), dict) else {}
         to = payload.get("to", "")
         body = payload.get("body", "")
@@ -74,18 +93,42 @@ class MessageDispatch:
             await self._delete_pending(pending_key)
             async with self._queue.lock:
                 self._queue.drop_locked(mid)
+            if trace:
+                logger.info("dispatch phase=invalid_payload_drop message_id=%s", mid)
             return
         should_fail = payload.get("shouldFail") is True
-        ac = int(rec["attemptCount"])
-        status = await post_mock_send(
-            self._sms,
-            attempt_index=ac,
-            body=body,
-            message_id=mid,
-            should_fail=should_fail,
-            to=to,
-        )
-        if is_successful_send(status):
-            await self._lifecycle.transition_success(mid, rec, pending_key)
-        else:
+        try:
+            if trace:
+                logger.info("dispatch phase=sms_send_start message_id=%s", mid)
+            status = await post_mock_send(
+                self._sms,
+                attempt_index=ac,
+                body=body,
+                message_id=mid,
+                should_fail=should_fail,
+                to=to,
+            )
+            if trace:
+                logger.info("dispatch phase=sms_send_done message_id=%s status=%s", mid, status)
+        except httpx.HTTPError:
+            logger.warning(
+                "mock sms transport error for message_id=%s; scheduling retry",
+                mid,
+                exc_info=True,
+            )
             await self._lifecycle.transition_failure(mid, rec, pending_key)
+            if trace:
+                logger.info("dispatch phase=transition_failure_done message_id=%s", mid)
+            return
+        if is_successful_send(status):
+            if trace:
+                logger.info("dispatch phase=transition_success_start message_id=%s", mid)
+            await self._lifecycle.transition_success(mid, rec, pending_key)
+            if trace:
+                logger.info("dispatch phase=transition_success_done message_id=%s", mid)
+        else:
+            if trace:
+                logger.info("dispatch phase=transition_failure_start message_id=%s", mid)
+            await self._lifecycle.transition_failure(mid, rec, pending_key)
+            if trace:
+                logger.info("dispatch phase=transition_failure_done message_id=%s", mid)

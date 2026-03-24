@@ -36,6 +36,7 @@ WORKER_TICK_INTERVAL_SEC: float = float(os.environ.get("INSPECTIO_WORKER_TICK_SE
 WORKER_MAX_PARALLEL_HANDLES: int = int(
     os.environ.get("INSPECTIO_WORKER_MAX_PARALLEL_HANDLES", "128"),
 )
+RETRY_ONLY_PERSISTENCE_ENABLED: bool = _worker_env_flag("INSPECTIO_RETRY_ONLY_PERSISTENCE")
 
 assert PERSISTENCE_READ_MAX_ATTEMPTS >= 1
 assert TERMINAL_LOOKBACK_HOURS >= 0
@@ -66,7 +67,9 @@ def load_worker_settings() -> WorkerSettings:
         total_shards=int(os.environ.get("TOTAL_SHARDS", "256")),
         http_timeout_sec=HTTP_CLIENT_TIMEOUT_SEC,
         max_parallel_handles=max(1, WORKER_MAX_PARALLEL_HANDLES),
-        pending_staging_redis_url=redis_url if stream_ingest and redis_url else None,
+        pending_staging_redis_url=(
+            redis_url if (stream_ingest or RETRY_ONLY_PERSISTENCE_ENABLED) and redis_url else None
+        ),
     )
     if settings.total_shards <= 0 or settings.shards_per_pod <= 0:
         msg = (
