@@ -23,7 +23,7 @@ metadata:
     app.kubernetes.io/name: inspectio-exercise
     app.kubernetes.io/component: mock-sms
 spec:
-  replicas: 1
+  replicas: 4
   selector:
     matchLabels:
       app.kubernetes.io/component: mock-sms

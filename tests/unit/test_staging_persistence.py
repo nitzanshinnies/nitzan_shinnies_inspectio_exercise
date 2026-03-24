@@ -48,3 +48,29 @@ async def test_delete_object_clears_staging_and_inner() -> None:
     assert await redis.get(stage_key_for_pending(key)) is None
     with pytest.raises(KeyError):
         await inner.get_object(key)
+
+
+@pytest.mark.asyncio
+async def test_list_prefix_merges_inner_and_staging_rows() -> None:
+    redis = faker_aioredis.FakeRedis(decode_responses=False)
+    inner = RecordingPersistence()
+    key_staged = "state/pending/shard-1/staged.json"
+    key_inner = "state/pending/shard-1/inner.json"
+    await redis.set(stage_key_for_pending(key_staged), b"staged")
+    await inner.put_object(key_inner, b"inner")
+    sp = StagingPersistence(redis, inner)
+    rows = await sp.list_prefix("state/pending/shard-1/")
+    keys = [row["Key"] for row in rows]
+    assert keys == sorted([key_inner, key_staged])
+
+
+@pytest.mark.asyncio
+async def test_put_object_clears_staging_for_same_key() -> None:
+    redis = faker_aioredis.FakeRedis(decode_responses=False)
+    inner = RecordingPersistence()
+    key = "state/pending/shard-1/retry.json"
+    await redis.set(stage_key_for_pending(key), b'{"attemptCount":0}')
+    sp = StagingPersistence(redis, inner)
+    await sp.put_object(key, b'{"attemptCount":1}')
+    assert await redis.get(stage_key_for_pending(key)) is None
+    assert await inner.get_object(key) == b'{"attemptCount":1}'
