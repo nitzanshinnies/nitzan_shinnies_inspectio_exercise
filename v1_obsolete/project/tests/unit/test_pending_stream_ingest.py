@@ -14,7 +14,6 @@ from inspectio_exercise.api.pending_stream_ingest import (
     ensure_pending_stream_group,
     stage_key_for_pending,
     stage_pending_writes,
-    stage_pending_writes_with_policy,
 )
 from inspectio_exercise.notification.persistence_client import PersistenceHttpClient
 from inspectio_exercise.persistence.object_write import ObjectWrite
@@ -61,21 +60,3 @@ async def test_stage_then_drain_flushes_put_objects_and_clears_staging() -> None
 async def test_stage_empty_is_noop() -> None:
     redis = faker_aioredis.FakeRedis(decode_responses=False)
     await stage_pending_writes(redis, [])
-
-
-@pytest.mark.unit
-@pytest.mark.asyncio
-async def test_stage_with_no_flush_policy_keeps_item_staged_only() -> None:
-    redis = faker_aioredis.FakeRedis(decode_responses=False)
-    await ensure_pending_stream_group(redis)
-    key = "state/pending/shard-0/no-flush.json"
-    body = b'{"messageId":"no-flush"}'
-    await stage_pending_writes_with_policy(
-        redis,
-        [ObjectWrite(key=key, body=body, content_type="application/json")],
-        enqueue_for_flush=False,
-    )
-    assert await redis.get(stage_key_for_pending(key)) == body
-    stub = _StubPersistenceClient()
-    await drain_pending_stream_once(redis, cast(PersistenceHttpClient, stub))
-    assert stub.batches == []

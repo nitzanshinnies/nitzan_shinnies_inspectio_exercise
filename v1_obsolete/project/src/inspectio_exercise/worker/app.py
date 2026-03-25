@@ -24,9 +24,6 @@ from inspectio_exercise.worker.persistence_port import PersistenceAsyncPort
 from inspectio_exercise.worker.runtime import WorkerRuntime
 from inspectio_exercise.worker.staging_persistence import StagingPersistence
 
-_SMS_HTTP_TIMEOUT_SEC = 2.0
-_PERSISTENCE_HTTP_TIMEOUT_SEC = 5.0
-
 
 class ActivatePendingBody(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
@@ -60,9 +57,7 @@ def _lifespan_with_clients(
             else httpx.AsyncClient(
                 base_url=settings.persistence_url,
                 limits=peer_limits,
-                timeout=peer_httpx_timeout(
-                    total_sec=min(settings.http_timeout_sec, _PERSISTENCE_HTTP_TIMEOUT_SEC)
-                ),
+                timeout=peer_timeout,
             )
         )
         sms_http = (
@@ -71,9 +66,7 @@ def _lifespan_with_clients(
             else httpx.AsyncClient(
                 base_url=settings.mock_sms_url,
                 limits=peer_limits,
-                timeout=peer_httpx_timeout(
-                    total_sec=min(settings.http_timeout_sec, _SMS_HTTP_TIMEOUT_SEC)
-                ),
+                timeout=peer_timeout,
             )
         )
         notify_http = (

@@ -55,30 +55,19 @@ async def ensure_pending_stream_group(redis: Redis) -> None:
 
 async def stage_pending_writes(redis: Redis, items: Sequence[ObjectWrite]) -> None:
     """Write staging keys and enqueue flush work (atomic per pipeline round)."""
-    await stage_pending_writes_with_policy(redis, items, enqueue_for_flush=True)
-
-
-async def stage_pending_writes_with_policy(
-    redis: Redis,
-    items: Sequence[ObjectWrite],
-    *,
-    enqueue_for_flush: bool,
-) -> None:
-    """Write staging keys; optionally enqueue stream entries for S3 flush."""
     materialized = list(items)
     if not materialized:
         return
     async with redis.pipeline(transaction=True) as pipe:
         for ow in materialized:
             pipe.set(stage_key_for_pending(ow.key), ow.body, ex=_PENDING_STAGE_TTL_SEC)
-            if enqueue_for_flush:
-                pipe.xadd(
-                    PENDING_STREAM_KEY,
-                    {
-                        PENDING_STREAM_FIELD_KEY: ow.key.encode("utf-8"),
-                        PENDING_STREAM_FIELD_BODY: ow.body,
-                    },
-                )
+            pipe.xadd(
+                PENDING_STREAM_KEY,
+                {
+                    PENDING_STREAM_FIELD_KEY: ow.key.encode("utf-8"),
+                    PENDING_STREAM_FIELD_BODY: ow.body,
+                },
+            )
         await pipe.execute()
 
 

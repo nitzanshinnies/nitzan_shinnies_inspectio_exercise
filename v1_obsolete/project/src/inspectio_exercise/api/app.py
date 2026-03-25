@@ -19,7 +19,7 @@ from inspectio_exercise.api.pending_stream_ingest import (
     drain_pending_stream_once,
     ensure_pending_stream_group,
     run_pending_stream_flush_loop,
-    stage_pending_writes_with_policy,
+    stage_pending_writes,
 )
 from inspectio_exercise.api.schemas import MessageCreate
 from inspectio_exercise.api.use_cases import (
@@ -87,36 +87,30 @@ def create_app(
         app.state._redis_ingest = None
         app.state._flush_stop = None
         app.state._flush_task = None
-        retry_only_persistence = config.retry_only_persistence_enabled() and persistence is None
         ingest_stream = config.pending_ingest_via_redis_stream_enabled() and persistence is None
-        if retry_only_persistence or ingest_stream:
+        if ingest_stream:
             redis_url = config.pending_stream_redis_url()
             if not redis_url:
                 msg = (
-                    "Redis pending staging is enabled but neither "
+                    "INSPECTIO_PENDING_INGEST_VIA_REDIS_STREAM is set but neither "
                     "REDIS_URL nor INSPECTIO_PENDING_STREAM_REDIS_URL is configured"
                 )
                 raise RuntimeError(msg)
             redis_ingest = Redis.from_url(redis_url, decode_responses=False)
             await redis_ingest.ping()
+            await ensure_pending_stream_group(redis_ingest)
             app.state._redis_ingest = redis_ingest
+            flush_stop = asyncio.Event()
+            app.state._flush_stop = flush_stop
 
             async def _persist_batch(items: Sequence[ObjectWrite]) -> None:
-                await stage_pending_writes_with_policy(
-                    redis_ingest,
-                    items,
-                    enqueue_for_flush=not retry_only_persistence,
-                )
+                await stage_pending_writes(redis_ingest, items)
 
             app.state.persist_pending_batch = _persist_batch
-            if not retry_only_persistence:
-                await ensure_pending_stream_group(redis_ingest)
-                flush_stop = asyncio.Event()
-                app.state._flush_stop = flush_stop
-                app.state._flush_task = asyncio.create_task(
-                    run_pending_stream_flush_loop(redis_ingest, app.state.persistence, flush_stop),
-                    name="pending-stream-flush",
-                )
+            app.state._flush_task = asyncio.create_task(
+                run_pending_stream_flush_loop(redis_ingest, app.state.persistence, flush_stop),
+                name="pending-stream-flush",
+            )
         if notification_http is None:
             app.state.notification_http = httpx.AsyncClient(
                 base_url=config.NOTIFICATION_SERVICE_URL,
@@ -153,9 +147,8 @@ def create_app(
             flush_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await flush_task
-        if redis_ingest is not None and not retry_only_persistence:
-            await drain_pending_stream_once(redis_ingest, app.state.persistence)
         if redis_ingest is not None:
+            await drain_pending_stream_once(redis_ingest, app.state.persistence)
             await redis_ingest.aclose()
         await app.state.persistence.aclose()
         await app.state.notification_http.aclose()
