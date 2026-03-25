@@ -87,6 +87,18 @@ class LifecycleTransitions:
 
     async def transition_failure(self, mid: str, rec: dict[str, Any], pending_key: str) -> None:
         now_ms = clocks.now_ms()
+        probe = await self._scanner.find_existing(mid, now_ms)
+        if probe is not None:
+            outcome, terminal_key, body = probe
+            await self.reconcile_from_terminal(
+                mid,
+                pending_key,
+                body=body,
+                outcome=outcome,
+                terminal_key=terminal_key,
+            )
+            return
+
         ac = int(rec["attemptCount"])
         new_ac = ac + 1
         shard_id = shard_id_for_message(mid, self._total_shards)
@@ -130,7 +142,26 @@ class LifecycleTransitions:
 
     async def transition_success(self, mid: str, rec: dict[str, Any], pending_key: str) -> None:
         recorded_at = clocks.now_ms()
-        attempt_count = int(rec["attemptCount"])
+        probe = await self._scanner.find_existing(mid, recorded_at)
+        if probe is not None:
+            outcome, terminal_key, body = probe
+            if outcome == "success":
+                await self.reconcile_from_terminal(
+                    mid,
+                    pending_key,
+                    body=body,
+                    outcome="success",
+                    terminal_key=terminal_key,
+                )
+                return
+            logger.warning(
+                "success transition but failed terminal exists message_id=%s — dropping pending",
+                mid,
+            )
+            await self._delete_pending_best_effort(pending_key)
+            async with self._lock:
+                self._drop_locked(mid)
+            return
 
         shard_id = shard_id_for_message(mid, self._total_shards)
         terminal_key = terminal_success_key(mid, recorded_at)
@@ -147,7 +178,7 @@ class LifecycleTransitions:
             outcome="success",
             recorded_at=recorded_at,
             shard_id=shard_id,
-            attempt_count=attempt_count,
+            attempt_count=int(rec["attemptCount"]),
             brief_reason=None,
             terminal_storage_key=terminal_key,
         )

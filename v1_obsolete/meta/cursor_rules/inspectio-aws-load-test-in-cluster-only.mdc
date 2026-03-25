@@ -1,0 +1,14 @@
+---
+description: Full-flow load tests against AWS/EKS + real S3 must run entirely in-cluster, not from a local laptop script.
+alwaysApply: true
+---
+
+# Inspectio: AWS load tests — in-cluster only
+
+For **AWS / EKS** deployments with **real S3** (`INSPECTIO_PERSISTENCE_BACKEND=aws`):
+
+- Treat **`scripts/full_flow_load_test.py` as fully run inside AWS**: use the Kubernetes Job in `deploy/kubernetes/load-test-in-cluster-job.yaml` (container runs the script with service DNS bases, `--kubernetes`, no host `LOCAL_S3_ROOT`).
+- **Do not** recommend or use a **local** `python scripts/full_flow_load_test.py` + **kubectl port-forward** to exercise a **remote** cluster and S3 for performance baselines, acceptance, or “full AWS” validation. Port-forward injects laptop networking and is fragile; it is not an AWS-native measurement.
+- **Local compose / laptop** runs are only for **developer/CI** feedback on **local** persistence backends, not for replacing in-cluster AWS/S3 test plans.
+
+When the user asks to deploy, run, or tune load tests on AWS, default to **apply the in-cluster Job** and **`kubectl logs -f job/...`**, not local script execution against forwarded ports.

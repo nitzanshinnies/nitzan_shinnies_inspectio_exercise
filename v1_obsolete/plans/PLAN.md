@@ -2,6 +2,12 @@
 
 This document mirrors the architect’s “High-Throughput SMS Retry Scheduler” specification and defines the required system behaviors for the interview exercise.
 
+## Canonical direction
+
+`plans/NEW_SYSTEM_IMPLEMENTATION_BLUEPRINT.md` is the canonical implementation direction for the pivoted architecture (throughput-first ingest plane, decoupled scheduler/execution plane, and batched S3 durability plane).
+
+Legacy v1 optimization/findings artifacts were moved to `v1_obsolete/plans/` and are kept for historical context only.
+
 ## 1) System overview
 
 - Build a distributed system that can handle tens-of-thousands of SMS messages per second.
@@ -231,4 +237,5 @@ All normative detail lives in these files; keep them **consistent** with this se
 | Health monitor (mock audit vs S3) | [`HEALTH_MONITOR.md`](HEALTH_MONITOR.md) |
 | Testing strategy | [`TESTS.md`](TESTS.md) |
 | Enumerated test cases | [`TEST_LIST.md`](TEST_LIST.md) |
+| New implementation blueprint (canonical) | [`NEW_SYSTEM_IMPLEMENTATION_BLUEPRINT.md`](NEW_SYSTEM_IMPLEMENTATION_BLUEPRINT.md) |
 

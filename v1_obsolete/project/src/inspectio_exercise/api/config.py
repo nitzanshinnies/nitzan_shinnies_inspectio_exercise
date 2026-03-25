@@ -59,8 +59,3 @@ def pending_ingest_via_redis_stream_enabled() -> bool:
 
 def pending_stream_redis_url() -> str | None:
     return os.environ.get("INSPECTIO_PENDING_STREAM_REDIS_URL") or os.environ.get("REDIS_URL")
-
-
-def retry_only_persistence_enabled() -> bool:
-    """When true, only retry state is persisted; initial pending stays in Redis staging."""
-    return _env_flag("INSPECTIO_RETRY_ONLY_PERSISTENCE")
