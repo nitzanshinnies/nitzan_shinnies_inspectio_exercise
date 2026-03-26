@@ -55,9 +55,10 @@ class SqsFifoIngestProducer:
 
         session = aioboto3.Session()
         try:
-            async with session.client(
-                "sqs", region_name=self._settings.aws_region
-            ) as client:
+            client_kw: dict[str, Any] = {"region_name": self._settings.aws_region}
+            if self._settings.aws_endpoint_url:
+                client_kw["endpoint_url"] = self._settings.aws_endpoint_url
+            async with session.client("sqs", **client_kw) as client:
 
                 async def run_group(
                     indexed: list[tuple[int, IngestPutInput]],

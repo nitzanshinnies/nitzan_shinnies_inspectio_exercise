@@ -1,39 +1,30 @@
+"""FastAPI factory for inspectio-api (§15 + SQS FIFO producer)."""
+
+from __future__ import annotations
+
+from contextlib import asynccontextmanager
+
+import httpx
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
 
-app = FastAPI(title="inspectio-api", version="0.0.0")
-
-
-@app.get("/healthz")
-async def healthz() -> dict[str, str]:
-    return {"status": "ok", "service": "api"}
+from inspectio.api.routes_public import router
+from inspectio.ingest.sqs_fifo_producer import SqsFifoIngestProducer
+from inspectio.settings import Settings
 
 
-def _not_implemented() -> JSONResponse:
-    return JSONResponse(
-        status_code=501,
-        content={
-            "detail": "not_implemented",
-            "ref": "plans/IMPLEMENTATION_PHASES.md",
-        },
-    )
+@asynccontextmanager
+async def _lifespan(app: FastAPI):
+    settings = Settings()
+    app.state.settings = settings
+    app.state.ingest_producer = SqsFifoIngestProducer(settings)
+    async with httpx.AsyncClient() as client:
+        app.state.http_client = client
+        yield
 
 
-@app.post("/messages")
-async def post_messages() -> JSONResponse:
-    return _not_implemented()
-
-
-@app.post("/messages/repeat")
-async def post_messages_repeat() -> JSONResponse:
-    return _not_implemented()
-
-
-@app.get("/messages/success")
-async def get_messages_success() -> JSONResponse:
-    return _not_implemented()
-
-
-@app.get("/messages/failed")
-async def get_messages_failed() -> JSONResponse:
-    return _not_implemented()
+app = FastAPI(
+    title="inspectio-api",
+    version="0.0.0",
+    lifespan=_lifespan,
+)
+app.include_router(router)
