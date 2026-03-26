@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import datetime as dt
 import gzip
+import json
 from typing import Any, Awaitable, Callable, Protocol
 
 from inspectio.journal.records import (
@@ -39,6 +40,7 @@ class JournalWriter:
         retry_backoff_sec: float = DEFAULT_RETRY_BACKOFF_SEC,
         sleep_func: Callable[[float], Awaitable[None]] | None = None,
         on_s3_error: Callable[[Exception], None] | None = None,
+        snapshot_interval_sec: int = 60,
     ) -> None:
         self._s3_client = s3_client
         self._bucket = bucket
@@ -48,6 +50,7 @@ class JournalWriter:
         self._retry_backoff_sec = retry_backoff_sec
         self._sleep = sleep_func or asyncio.sleep
         self._on_s3_error = on_s3_error
+        self._snapshot_interval_sec = snapshot_interval_sec
 
         self._pending_lines: list[str] = []
         self._pending_segment_start_ms: int | None = None
@@ -55,6 +58,7 @@ class JournalWriter:
         self._shard_id: int | None = None
         self._last_record_index: int | None = None
         self._last_flush_ms: int | None = None
+        self._last_snapshot_ms: int | None = None
         self._s3_errors_total = 0
 
     @property
@@ -152,6 +156,68 @@ class JournalWriter:
         if self._shard_id is None:
             raise RuntimeError("missing shard id")
         return self._shard_id
+
+    async def write_snapshot(
+        self,
+        *,
+        shard_id: int,
+        last_record_index: int,
+        active: dict[str, dict[str, Any]],
+        captured_at_ms: int,
+    ) -> None:
+        """Write snapshot/latest and snapshot/<epoch>.json objects (§18.4)."""
+        snapshot = {
+            "v": 1,
+            "shardId": shard_id,
+            "capturedAtMs": captured_at_ms,
+            "lastRecordIndex": last_record_index,
+            "active": active,
+            "terminalsIncluded": False,
+        }
+        body = json.dumps(snapshot, separators=(",", ":"), sort_keys=True).encode(
+            "utf-8"
+        )
+        epoch_key = f"state/snapshot/{shard_id}/{captured_at_ms}.json"
+        latest_key = f"state/snapshot/{shard_id}/latest.json"
+        await self._s3_client.put_object(
+            Bucket=self._bucket,
+            Key=epoch_key,
+            Body=body,
+            ContentType="application/json",
+        )
+        await self._s3_client.put_object(
+            Bucket=self._bucket,
+            Key=latest_key,
+            Body=body,
+            ContentType="application/json",
+        )
+        self._last_snapshot_ms = captured_at_ms
+
+    async def write_snapshot_if_due(
+        self,
+        *,
+        shard_id: int,
+        last_record_index: int,
+        active: dict[str, dict[str, Any]],
+        now_ms: int,
+    ) -> None:
+        if self._last_snapshot_ms is None:
+            await self.write_snapshot(
+                shard_id=shard_id,
+                last_record_index=last_record_index,
+                active=active,
+                captured_at_ms=now_ms,
+            )
+            return
+        elapsed = now_ms - self._last_snapshot_ms
+        if elapsed < self._snapshot_interval_sec * 1000:
+            return
+        await self.write_snapshot(
+            shard_id=shard_id,
+            last_record_index=last_record_index,
+            active=active,
+            captured_at_ms=now_ms,
+        )
 
 
 def _is_retryable_s3_throttling(exc: Exception) -> bool:
