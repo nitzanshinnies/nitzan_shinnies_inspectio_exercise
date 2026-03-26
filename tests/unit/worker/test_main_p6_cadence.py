@@ -6,7 +6,9 @@ import asyncio
 
 import pytest
 
-from inspectio.worker.main import run_consumer_loop
+from inspectio.journal.replay import ReplayState
+from inspectio.worker.main import _restore_runtime_from_s3_snapshots, run_consumer_loop
+from inspectio.worker.runtime import InMemorySchedulerRuntime
 
 
 @pytest.mark.unit
@@ -43,3 +45,41 @@ async def test_run_consumer_loop_sleeps_for_remaining_cadence() -> None:
     assert wakeup_calls >= 1
     assert sleeps
     assert all(s >= 0 for s in sleeps)
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_restore_runtime_from_snapshot_and_tail_replay() -> None:
+    class _FakeReplayStore:
+        async def load_latest(self, *, shard_id: int) -> ReplayState | None:
+            _ = shard_id
+            return ReplayState(
+                shard_id=0,
+                last_record_index=1,
+                active={
+                    "m-1": {
+                        "messageId": "m-1",
+                        "attemptCount": 1,
+                        "nextDueAtMs": 1000,
+                        "status": "pending",
+                        "lastError": None,
+                        "payload": {"to": "+1", "body": "x"},
+                    }
+                },
+            )
+
+        async def load_tail_segments(self, *, shard_id: int) -> list[bytes]:
+            _ = shard_id
+            return []
+
+    class _NeverSend:
+        async def send(self, _message, _attempt_index):
+            return False
+
+    runtime = InMemorySchedulerRuntime(now_ms=lambda: 1000, sms_sender=_NeverSend())
+    await _restore_runtime_from_s3_snapshots(
+        runtime=runtime,
+        replay_store=_FakeReplayStore(),
+        shard_ids=[0],
+    )
+    assert runtime.active_snapshot_view_by_shard()[0]["m-1"]["attemptCount"] == 1

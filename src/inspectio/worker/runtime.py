@@ -213,6 +213,63 @@ class InMemorySchedulerRuntime:
     def journal_since(self, index: int) -> list[JournalRecordV1]:
         return self.journal[index:]
 
+    def active_snapshot_view_by_shard(self) -> dict[int, dict[str, dict[str, Any]]]:
+        """Return §18.4-compatible `active` payload grouped by shard."""
+        out: dict[int, dict[str, dict[str, Any]]] = {}
+        for message_id, state in self._state.items():
+            if state.status != "pending":
+                continue
+            context = self._context_by_message_id.get(message_id)
+            if context is None:
+                continue
+            shard_map = out.setdefault(context.shard_id, {})
+            shard_map[message_id] = {
+                "messageId": message_id,
+                "arrivalMs": self._arrival_ms.get(message_id, state.next_due_at_ms),
+                "attemptCount": state.attempt_count,
+                "nextDueAtMs": state.next_due_at_ms,
+                "status": state.status,
+                "lastError": state.last_error,
+                "payload": state.payload,
+            }
+        return out
+
+    def last_record_index_for_shard(self, shard_id: int) -> int:
+        max_idx = 0
+        for line in self.journal:
+            if line.shard_id == shard_id:
+                max_idx = max(max_idx, line.record_index)
+        return max_idx
+
+    def restore_pending_for_shard(
+        self,
+        *,
+        shard_id: int,
+        active: dict[str, dict[str, Any]],
+    ) -> None:
+        """Hydrate pending retry state from replay output (§18.4 startup path)."""
+        for message_id, row in active.items():
+            payload = dict(row.get("payload", {}))
+            self._context_by_message_id[message_id] = MessageContext(
+                message=Message(
+                    message_id=message_id,
+                    to=str(payload.get("to", "")),
+                    body=str(payload.get("body", "")),
+                ),
+                shard_id=shard_id,
+            )
+            arrival_ms_raw = row.get("arrivalMs", row["nextDueAtMs"])
+            self._arrival_ms.setdefault(message_id, int(arrival_ms_raw))
+            self._state[message_id] = RetryStateV1(
+                message_id=message_id,
+                attempt_count=int(row["attemptCount"]),
+                next_due_at_ms=int(row["nextDueAtMs"]),
+                status="pending",
+                last_error=row.get("lastError"),
+                payload=payload,
+                updated_at_ms=self._now_ms(),
+            )
+
     def _append_record(
         self,
         *,
