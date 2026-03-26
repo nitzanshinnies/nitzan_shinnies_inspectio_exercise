@@ -886,7 +886,7 @@ Fakes **must** enforce the same JSON shapes as **§17.2** and **§18.2** so test
 ### 28.5 E2E (*optional*)
 
 - Docker Compose: API → stream adapter → worker → mock SMS → S3 → notification → GET outcomes.
-- Reuse patterns from `v1_obsolete/project/tests/e2e/` **only** as reference; behaviours must match **this** spec.
+- Reuse patterns from `v1_obsolete/project/obsolete_tests/e2e/` **only** as reference; behaviours must match **this** spec.
 
 ### 28.6 Performance / load tests
 

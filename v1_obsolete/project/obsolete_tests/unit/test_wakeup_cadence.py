@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from inspectio_exercise.domain import wakeup as wakeup_mod
-from tests import reference_spec as spec
+from obsolete_tests import reference_spec as spec
 
 
 @pytest.mark.unit
