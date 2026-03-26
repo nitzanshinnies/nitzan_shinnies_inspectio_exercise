@@ -6,8 +6,10 @@ import asyncio
 import logging
 import time
 from collections.abc import Awaitable, Callable
+from typing import Protocol
 
 import aioboto3
+import httpx
 import redis.asyncio as redis
 
 from inspectio.ingest.kinesis_consumer import (
@@ -19,6 +21,7 @@ from inspectio.domain.sharding import (
     owned_shard_range,
     validate_total_shards_vs_workers,
 )
+from inspectio.journal.records import JournalRecordV1
 from inspectio.journal.replay import ReplayS3Store, apply_tail_records
 from inspectio.journal.writer import JournalWriter
 from inspectio.settings import get_settings
@@ -84,6 +87,23 @@ class ShardedJournalFacade:
         writer = self._writer_factory(shard_id)
         self._writers[shard_id] = writer
         return writer
+
+
+class NotificationTerminalClient:
+    """HTTP client for writing terminal outcomes to notification service."""
+
+    def __init__(self, *, base_url: str) -> None:
+        self._base_url = base_url.rstrip("/")
+
+    async def post_terminal(self, payload: dict[str, object]) -> None:
+        url = f"{self._base_url}/internal/v1/outcomes/terminal"
+        async with httpx.AsyncClient(timeout=5) as client:
+            response = await client.post(url, json=payload)
+            response.raise_for_status()
+
+
+class TerminalOutcomePublisher(Protocol):
+    async def post_terminal(self, payload: dict[str, object]) -> None: ...
 
 
 async def run_consumer_loop(
@@ -191,12 +211,21 @@ async def _run() -> None:
                     shard_ids=owned_shards,
                 )
                 runtime_cursor = runtime.journal_length()
+                notification_client = NotificationTerminalClient(
+                    base_url=settings.inspectio_notification_base_url
+                )
 
                 async def _consume_once() -> int:
                     nonlocal runtime_cursor
                     processed = await consumer.consume_once(
                         fetch_records=fetcher.fetch_records
                     )
+                    new_runtime_lines = runtime.journal_since(runtime_cursor)
+                    if new_runtime_lines:
+                        await _publish_terminal_outcomes(
+                            lines=new_runtime_lines,
+                            notification_client=notification_client,
+                        )
                     # Ingest path journal lines are already persisted by consumer; keep cursor aligned.
                     runtime_cursor = runtime.journal_length()
                     return processed
@@ -210,6 +239,10 @@ async def _run() -> None:
                     for line in new_lines:
                         await journal_writer.append(line)
                     await journal_writer.flush()
+                    await _publish_terminal_outcomes(
+                        lines=new_lines,
+                        notification_client=notification_client,
+                    )
                     runtime_cursor = runtime.journal_length()
                     return len(new_lines)
 
@@ -264,6 +297,33 @@ def _owned_shard_ids(
 ) -> list[int]:
     start, end_excl = owned_shard_range(worker_index, total_shards, worker_replicas)
     return list(range(start, end_excl))
+
+
+def _terminal_payload_from_record(
+    record: JournalRecordV1,
+) -> dict[str, object] | None:
+    if record.type != "TERMINAL":
+        return None
+    payload = {
+        "messageId": record.message_id,
+        "terminalStatus": record.payload["status"],
+        "attemptCount": record.payload["attemptCount"],
+        "finalTimestampMs": record.ts_ms,
+        "reason": record.payload.get("reason"),
+    }
+    return payload
+
+
+async def _publish_terminal_outcomes(
+    *,
+    lines: list[JournalRecordV1],
+    notification_client: TerminalOutcomePublisher,
+) -> None:
+    for line in lines:
+        payload = _terminal_payload_from_record(line)
+        if payload is None:
+            continue
+        await notification_client.post_terminal(payload)
 
 
 if __name__ == "__main__":
