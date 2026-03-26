@@ -1,6 +1,6 @@
 # SQS FIFO: throughput, admission, and NFR alignment
 
-This document is the **normative design plan** for improving and correctly measuring **SQS FIFO ingest** on the API admission path, after the **Kinesis → SQS FIFO** migration driven by account/SCP constraints. It exists so future work does not assume **Kinesis `PutRecords`** batch sizes or semantics.
+This document is the **normative design plan** for **SQS FIFO ingest** on the API admission path. It documents batch limits, **`MessageGroupId`** semantics, safe parallelism, backpressure, and how to validate aggregate throughput in-cluster.
 
 **Related:** `plans/NEW_SYSTEM_IMPLEMENTATION_BLUEPRINT.md` (§1, §9 Phase 1, §10.3, §12, §15–§17, N1), `plans/IMPLEMENTATION_PHASES.md` (**P3** admission, **P5** consumer).
 
@@ -8,23 +8,23 @@ This document is the **normative design plan** for improving and correctly measu
 
 ## 1. Problem statement
 
-### 1.1 What changed vs Kinesis
+### 1.1 FIFO batch limits (AWS)
 
-| Aspect | Kinesis `PutRecords` (prior mental model) | SQS FIFO `SendMessageBatch` (current) |
-|--------|-------------------------------------------|----------------------------------------|
-| Batch size | Up to **500** records per call | Up to **10** messages per call (hard limit) |
-| Ordering | Per-shard stream sequence | Per **`MessageGroupId`** FIFO ordering |
-| Throughput story | Fewer round-trips per volume | **More round-trips** for the same message count **unless** sends are parallelized **across** distinct groups |
+| Aspect | SQS FIFO `SendMessageBatch` |
+|--------|------------------------------|
+| Batch size | Up to **10** messages per call (hard limit) |
+| Ordering | Per **`MessageGroupId`** FIFO ordering |
+| Throughput | **Parallelize** `SendMessageBatch` **across** distinct **`MessageGroupId`** values; **serialize** per group when strict ordering is required |
 
 The implementation uses `MAX_SQS_FIFO_SEND_BATCH = 10` in `src/inspectio/ingest/sqs_fifo_producer.py` and chunks accordingly.
 
 ### 1.2 Observed admission bottleneck
 
-`SqsFifoIngestProducer.put_messages` sends chunks **sequentially** in a `for` loop: each chunk awaits `_send_fifo_batch` → `send_message_batch`. That is **correct async I/O** (non-blocking) but **not parallel**: wall-clock time scales with **number of sequential batches × latency per batch**.
+`SqsFifoIngestProducer.put_messages` may send chunks **sequentially** in a `for` loop: each chunk awaits `_send_fifo_batch` → `send_message_batch`. That is **correct async I/O** (non-blocking) but **not parallel**: wall-clock time scales with **number of sequential batches × latency per batch**.
 
 **Critical distinction (repeat vs single-shard):**
 
-- **`POST /messages/repeat`** creates **N independent `messageId`s** (blueprint **§15.2**). **`shardId`** is **`SHA256(messageId) % TOTAL_SHARDS`** (**§16.2**). For default **`TOTAL_SHARDS = 1024`**, a large repeat spreads admits across **many** distinct shards, hence **many** distinct **`MessageGroupId`** values (one per shard partition string). So a **single** repeat request is **not** inherently a “one FIFO group” workload; it is **multi-group** unless implementation collapses groups (it should not).
+- **`POST /messages/repeat`** creates **N independent `messageId`s** (blueprint **§15.2**). **`shardId`** is **`SHA256(messageId) % TOTAL_SHARDS`** (**§16.2**). For default **`TOTAL_SHARDS = 1024`**, a large repeat spreads admits across **many** distinct shards, hence **many** distinct **`MessageGroupId`** values. So a **single** repeat request is **multi-group** unless implementation collapses groups (it should not).
 - **`POST /messages`** with one message, or synthetic tests that force one shard, behave as **single-group** admits.
 
 So the main production gap is: **serial batch loop over a list that is already multi-group** — that **artificially serializes** work that FIFO semantics allow to run **concurrently across groups**. Fixing that (§4.2, **SQS-P1**) is the primary lever for **§9 Phase 1** acceptance (“no 60s submit timeout at **10k** batch profile”) and for **aggregate** N1.
@@ -46,7 +46,7 @@ These bound any admission strategy. **Authoritative detail:** [Amazon SQS quotas
 
 ## 3. Blueprint and NFR reconciliation
 
-This section **locks** how **`plans/NEW_SYSTEM_IMPLEMENTATION_BLUEPRINT.md`** requirements map to **SQS FIFO** so agents do not argue from Kinesis-only text alone.
+This section **locks** how **`plans/NEW_SYSTEM_IMPLEMENTATION_BLUEPRINT.md`** requirements map to **SQS FIFO**.
 
 | Blueprint reference | Requirement | SQS FIFO interpretation |
 |---------------------|-------------|-------------------------|
@@ -55,9 +55,9 @@ This section **locks** how **`plans/NEW_SYSTEM_IMPLEMENTATION_BLUEPRINT.md`** re
 | **§9 Phase 1 — Acceptance** | **No 60s submit timeout** at **10k batch profile**; **p95** submit latency materially reduced vs baseline | **Engineering gate:** in-cluster **10k repeat** completes without client **disconnect** at configured timeout; **SQS-P1** (or equivalent) is **in scope** for this acceptance line, not optional polish. |
 | **§12 DoD** | Submit path handles **large repeat batches** without **request-time disconnect** pattern | Same as above: **admission parallelism across groups** + **client/LB timeout** ≥ documented budget + **throttle backoff** that does not stall forever. |
 | **§10.3** | Measure **submit throughput** (separately from scheduler, etc.); in-cluster for AWS | **Pass/fail** metrics belong in a **runbook** (§8); see **§7**. |
-| **§15.2** | Batched ingest (blueprint still mentions Kinesis **PutRecords** **500**) | **FIFO** remains **10** per call; compensate with **parallel batches across groups** + **worker drain** scaling. |
+| **§15.2** | Large repeat with batched **`SendMessageBatch`** | **FIFO** remains **10** per call; compensate with **parallel batches across groups** + **worker drain** scaling. |
 
-**Explicit non-contradiction:** The blueprint’s **Kinesis** batching note (**§15.2** *informative*) is **not** achievable on FIFO with a **single** serial loop over all batches; **SQS-P1** is the **functional equivalent** (wider pipeline across groups).
+**Explicit:** A **single** serial loop over **all** batches for a **multi-shard** repeat is **not** sufficient for **§9 Phase 1** acceptance at **10k** scale; **SQS-P1** (or equivalent) is the **functional** fix (wider pipeline across groups).
 
 ---
 
@@ -229,3 +229,4 @@ Record commands, env, and results in **§26** runbook / perf appendix — not on
 |------|--------|
 | 2025-03-26 | Initial plan: FIFO limits, sequential vs cross-group parallelism, NFR validation, phased rollout |
 | 2026-03-26 | Architect pass: **§16.2** repeat **multi-group** correction; **§3** blueprint reconciliation; **§4** capacity model; **§8** pass/fail gates; **§9** SQS-P1 as **Phase 1** requirement |
+| 2026-03-26 | **SQS-only** doc: removed legacy stream comparisons; **§17** is normative |

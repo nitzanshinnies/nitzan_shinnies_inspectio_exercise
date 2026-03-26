@@ -19,7 +19,7 @@ Bring it up (rebuild when `Dockerfile` / deps change):
 docker compose up -d --build
 ```
 
-Services: **redis**, **localstack** (S3 + Kinesis), **mock-sms** (image **`deploy/mock-sms/Dockerfile`**), **inspectio-api**, **inspectio-worker**, **inspectio-notification** (shared **`deploy/docker/Dockerfile`**).
+Services: **redis**, **localstack** (S3 + **SQS FIFO**), **mock-sms** (image **`deploy/mock-sms/Dockerfile`**), **inspectio-api**, **inspectio-worker**, **inspectio-notification** (shared **`deploy/docker/Dockerfile`**).
 
 | Service        | Host URL / port |
 |----------------|-----------------|
