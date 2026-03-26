@@ -1,11 +1,10 @@
-# Version 1 deprecation
+# Inspectio exercise
 
-The previous Inspectio exercise implementation is archived under `v1_obsolete/`:
+- **`plans/NEW_SYSTEM_IMPLEMENTATION_BLUEPRINT.md`** — normative architecture and **§29** agent contract.
+- **`plans/IMPLEMENTATION_PHASES.md`** — phased implementation plan for the greenfield code (separate PR).
+- **`plans/openapi.yaml`** — canonical HTTP JSON shapes (**§15** + **§29.6** + mock **`/send`**).
+- **`docker-compose.yml`** — **Redis**, **LocalStack** (S3 + Kinesis), **mock-sms** (from `v1_obsolete/project`) only; app containers are added with the implementation PR.
 
-- `v1_obsolete/project/` — application source, tests, deploy manifests, and tooling from the last runnable tree
-- `v1_obsolete/plans/` — superseded planning and findings documents
-- `v1_obsolete/meta/` — scratch and non-product artifacts
+The previous runnable tree is archived under **`v1_obsolete/`**.
 
-The repository root no longer contains a runnable service; this branch records the intentional removal of that solution from the active tree.
-
-See `v1_obsolete/README.md` for layout details.
+Local assignment PDF (gitignored): **`plans/ASSIGNMENT.pdf`**.
