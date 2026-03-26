@@ -13,7 +13,7 @@
 | `spy_persistence.py` | Test helper: `SpyPersistenceClient` for persistence call recording. |
 
 ```bash
-pytest tests/integration -m integration
+pytest obsolete_tests/integration -m integration
 ```
 
-Do **not** change **`src/`** on a tests-only branch unless the team explicitly allows test harness helpers under **`tests/`**.
+Do **not** change **`src/`** on a tests-only branch unless the team explicitly allows test harness helpers under **`obsolete_tests/`**.

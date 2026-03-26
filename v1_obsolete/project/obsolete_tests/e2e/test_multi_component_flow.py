@@ -10,12 +10,12 @@ import pytest
 pytest.importorskip("asgi_lifespan")
 
 from inspectio_exercise.domain.retry import delay_ms_before_next_attempt_after_failure
-from tests.e2e.constants import (
+from obsolete_tests.e2e.constants import (
     E2E_BASE_TIME_SEC,
     E2E_POLL_INTERVAL_SEC,
     E2E_POLL_TIMEOUT_SEC,
 )
-from tests.e2e.stack import PatchedTime, e2e_stack, wait_for_message_in_outcomes
+from obsolete_tests.e2e.stack import PatchedTime, e2e_stack, wait_for_message_in_outcomes
 
 pytestmark = pytest.mark.e2e
 

@@ -30,7 +30,7 @@ Services: **redis**, **localstack** (S3 + Kinesis), **mock-sms** (build context 
 
 ### AWS S3 and credentials (aligned with v1)
 
-- **Bucket name:** default **`inspectio-test-bucket`**, matching v1’s `tests/unit/test_aws_s3_provider.py`. Override with **`INSPECTIO_S3_BUCKET`** or v1’s alternate **`S3_BUCKET`** (see `v1_obsolete/project/src/inspectio_exercise/persistence/config.py`).
+- **Bucket name:** default **`inspectio-test-bucket`**, matching v1’s `obsolete_tests/unit/test_aws_s3_provider.py`. Override with **`INSPECTIO_S3_BUCKET`** or v1’s alternate **`S3_BUCKET`** (see `v1_obsolete/project/src/inspectio_exercise/persistence/config.py`).
 - **Object key layout** for lifecycle data is still the v1 tree under **`state/`** (`state/pending/…`, `state/success/…`, etc.); that is not the bucket *name* — see v1 **`reference_spec.py`** / **`LOCAL_S3.md`**.
 - **Same credentials as the AWS CLI:** Compose injects **`AWS_ACCESS_KEY_ID`**, **`AWS_SECRET_ACCESS_KEY`**, optional **`AWS_SESSION_TOKEN`**, **`AWS_DEFAULT_REGION`**, and **`AWS_ENDPOINT_URL`** into app containers. Defaults **`test` / `test`** and **`http://localstack:4566`** are for LocalStack only.
 - Copy **`.env.example`** → **`.env`** and edit, or export variables in your shell before `docker compose up` (e.g. `eval "$(aws configure export-credentials --format env --profile …)"` when your CLI uses SSO or temporary keys). **`.env`** is gitignored.
