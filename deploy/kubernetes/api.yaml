@@ -13,6 +13,7 @@ spec:
       labels:
         app: inspectio-api
     spec:
+      enableServiceLinks: false
       serviceAccountName: inspectio-app
       containers:
         - name: api
