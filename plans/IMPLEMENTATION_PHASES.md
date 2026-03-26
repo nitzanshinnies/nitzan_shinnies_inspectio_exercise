@@ -4,6 +4,8 @@ This document orders delivery for the **`inspectio`** package described in **`NE
 
 **Normative spec:** the blueprint wins on behavior; this file wins on **order** and **PR boundaries**.
 
+**SQS FIFO admission (throughput vs Kinesis):** `plans/SQS_FIFO_THROUGHPUT_AND_ADMISSION_PLAN.md` documents FIFO batch limits (10 per `SendMessageBatch`), **`MessageGroupId`** ordering, when parallel admission is safe (across groups vs within a group), backpressure, and how to validate aggregate throughput in-cluster. Use it alongside **§17** when working on **`src/inspectio/ingest/sqs_fifo_producer.py`**.
+
 ### `v1_obsolete` boundary (agents — **hard**)
 
 The tree **`v1_obsolete/`** is an **archived implementation**, not a dependency of the greenfield **`inspectio`** package.
