@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from collections.abc import Awaitable, Callable
 
 import aioboto3
@@ -16,7 +17,9 @@ from inspectio.ingest.kinesis_consumer import (
 )
 from inspectio.journal.writer import JournalWriter
 from inspectio.settings import get_settings
+from inspectio.sms.client import SmsClient
 from inspectio.worker.handlers import IngestJournalHandler, RedisIdempotencyStore
+from inspectio.worker.runtime import InMemorySchedulerRuntime
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("inspectio.worker")
@@ -27,11 +30,13 @@ DEFAULT_POLL_INTERVAL_SEC = 1.0
 async def run_consumer_loop(
     *,
     consume_once: Callable[[], Awaitable[int]],
+    wakeup_once: Callable[[], Awaitable[int]],
     poll_interval_sec: float = DEFAULT_POLL_INTERVAL_SEC,
 ) -> None:
     """Continuously poll ingest stream and process available records."""
     while True:
         processed = await consume_once()
+        processed += await wakeup_once()
         if processed == 0:
             await asyncio.sleep(poll_interval_sec)
 
@@ -72,9 +77,17 @@ async def _run() -> None:
                     stream_name=settings.inspectio_kinesis_stream_name,
                     key_prefix=settings.inspectio_kinesis_checkpoint_key_prefix,
                 )
+                runtime = InMemorySchedulerRuntime(
+                    now_ms=lambda: int(time.time() * 1000),
+                    sms_sender=SmsClient(
+                        base_url=settings.inspectio_sms_url,
+                        timeout_sec=settings.inspectio_sms_http_timeout_sec,
+                    ),
+                )
                 handler = IngestJournalHandler(
                     idempotency_store=RedisIdempotencyStore(redis_client=redis_client),
                     idempotency_ttl_sec=settings.inspectio_idempotency_ttl_sec,
+                    runtime=runtime,
                 )
                 consumer = KinesisIngestConsumer(
                     handler=handler,
@@ -85,10 +98,32 @@ async def _run() -> None:
                     kinesis_client=kinesis_client,
                     stream_name=settings.inspectio_kinesis_stream_name,
                 )
-                await run_consumer_loop(
-                    consume_once=lambda: consumer.consume_once(
+                runtime_cursor = runtime.journal_length()
+
+                async def _consume_once() -> int:
+                    nonlocal runtime_cursor
+                    processed = await consumer.consume_once(
                         fetch_records=fetcher.fetch_records
                     )
+                    # Ingest path journal lines are already persisted by consumer; keep cursor aligned.
+                    runtime_cursor = runtime.journal_length()
+                    return processed
+
+                async def _wakeup_once() -> int:
+                    nonlocal runtime_cursor
+                    await runtime.wakeup()
+                    new_lines = runtime.journal_since(runtime_cursor)
+                    if not new_lines:
+                        return 0
+                    for line in new_lines:
+                        await journal_writer.append(line)
+                    await journal_writer.flush()
+                    runtime_cursor = runtime.journal_length()
+                    return len(new_lines)
+
+                await run_consumer_loop(
+                    consume_once=_consume_once,
+                    wakeup_once=_wakeup_once,
                 )
     finally:
         await redis_client.aclose()

@@ -9,6 +9,8 @@ import redis.asyncio as redis
 
 from inspectio.ingest.schema import MessageIngestedV1
 from inspectio.journal.records import JournalRecordV1
+from inspectio.models import Message
+from inspectio.worker.runtime import InMemorySchedulerRuntime
 
 IDEMPOTENCY_KEY_PREFIX = "inspectio:idempotency:"
 DISPATCH_REASON_IMMEDIATE = "immediate"
@@ -33,10 +35,15 @@ class IngestJournalHandler:
     """Apply ingest events to journal lines (template A) with idempotency."""
 
     def __init__(
-        self, *, idempotency_store: IdempotencyStore, idempotency_ttl_sec: int
+        self,
+        *,
+        idempotency_store: IdempotencyStore,
+        idempotency_ttl_sec: int,
+        runtime: InMemorySchedulerRuntime | None = None,
     ) -> None:
         self._idempotency_store = idempotency_store
         self._idempotency_ttl_sec = idempotency_ttl_sec
+        self._runtime = runtime
 
     async def apply_ingest(
         self,
@@ -80,7 +87,19 @@ class IngestJournalHandler:
                 "payload": {"reason": DISPATCH_REASON_IMMEDIATE},
             }
         )
-        return [ingest_applied, dispatch_scheduled]
+        records = [ingest_applied, dispatch_scheduled]
+        if self._runtime is None:
+            return records
+        start = self._runtime.journal_length()
+        await self._runtime.new_message(
+            Message(
+                message_id=message.message_id,
+                to=message.payload.to or "",
+                body=message.payload.body,
+            ),
+            shard_id=message.shard_id,
+        )
+        return records + self._runtime.journal_since(start)
 
 
 class RedisIdempotencyStore:
@@ -114,3 +133,18 @@ def replay_pending_from_journal_lines(
             "status": "pending",
         }
     return by_message
+
+
+async def apply_ingest_to_runtime(
+    *,
+    runtime: InMemorySchedulerRuntime,
+    message: MessageIngestedV1,
+) -> None:
+    """Bridge ingest message to scheduler runtime start (P6 integration step)."""
+    await runtime.new_message(
+        Message(
+            message_id=message.message_id,
+            to=message.payload.to or "",
+            body=message.payload.body,
+        )
+    )

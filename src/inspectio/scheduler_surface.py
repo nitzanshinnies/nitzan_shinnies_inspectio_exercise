@@ -1,27 +1,39 @@
-"""
-Assignment-mandated surface (§25). Implement per IMPLEMENTATION_PHASES.md P6.
-
-PDF mapping (README must duplicate):
-  send          <- boolean send(Message)
-  new_message   <- void newMessage(Message)
-  wakeup        <- void wakeup()
-"""
+"""Assignment scheduler surface (§25): send, new_message, wakeup."""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import asyncio
+import time
 
-if TYPE_CHECKING:
-    from inspectio.models import Message
+from inspectio.models import Message
+from inspectio.settings import get_settings
+from inspectio.sms.client import SmsClient
+from inspectio.worker.runtime import InMemorySchedulerRuntime
+
+
+def _now_ms() -> int:
+    return int(time.time() * 1000)
+
+
+_runtime = InMemorySchedulerRuntime(
+    now_ms=_now_ms,
+    sms_sender=SmsClient(
+        base_url=get_settings().inspectio_sms_url,
+        timeout_sec=get_settings().inspectio_sms_http_timeout_sec,
+    ),
+)
 
 
 def send(message: Message) -> bool:
-    raise NotImplementedError("§25 send — implement per plans/")
+    """PDF `send(Message)` mapping; calls SMS adapter once with attemptIndex=0."""
+    return asyncio.run(_runtime.send_once(message, attempt_index=0))
 
 
 def new_message(message: Message) -> None:
-    raise NotImplementedError("§25 new_message")
+    """PDF `newMessage(Message)` mapping; immediate first-attempt path."""
+    asyncio.run(_runtime.new_message(message))
 
 
 def wakeup() -> None:
-    raise NotImplementedError("§25 wakeup")
+    """PDF `wakeup()` mapping; dispatches all due retries."""
+    asyncio.run(_runtime.wakeup())
