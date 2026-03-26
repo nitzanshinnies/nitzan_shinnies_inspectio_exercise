@@ -29,6 +29,25 @@ Services: **redis**, **localstack** (S3 + Kinesis), **mock-sms** (image **`deplo
 | LocalStack     | `http://127.0.0.1:4566` |
 | Redis          | `127.0.0.1:6379` |
 
+### P9 smoke flow
+
+After `docker compose up -d --build`, run:
+
+```bash
+python scripts/p9_compose_smoke.py
+```
+
+This performs the Phase-9 smoke path:
+- `POST /messages`
+- poll `GET /messages/success|failed`
+- assert the submitted `messageId` appears in terminal projection
+
+Optional pytest wrapper (disabled unless explicitly enabled):
+
+```bash
+RUN_P9_E2E_SMOKE=1 pytest -m e2e -q
+```
+
 ### AWS S3 and credentials
 
 - **Bucket name:** default **`inspectio-test-bucket`**. Override with **`INSPECTIO_S3_BUCKET`** or **`S3_BUCKET`**. Object layout and semantics are defined in **`plans/NEW_SYSTEM_IMPLEMENTATION_BLUEPRINT.md`** — **`v1_obsolete/`** is **not** an implementation source (**see** **`IMPLEMENTATION_PHASES.md`**, *`v1_obsolete` boundary*).

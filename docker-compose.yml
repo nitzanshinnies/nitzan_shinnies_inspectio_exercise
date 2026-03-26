@@ -63,7 +63,11 @@ services:
         "8081",
       ]
     depends_on:
+      localstack:
+        condition: service_healthy
       redis:
+        condition: service_started
+      mock-sms:
         condition: service_started
     environment:
       INSPECTIO_ENV: dev
