@@ -241,10 +241,6 @@ async def _run() -> None:
         await redis_client.aclose()
 
 
-if __name__ == "__main__":
-    main()
-
-
 async def _restore_runtime_from_s3_snapshots(
     *,
     runtime: InMemorySchedulerRuntime,
@@ -268,3 +264,7 @@ def _owned_shard_ids(
 ) -> list[int]:
     start, end_excl = owned_shard_range(worker_index, total_shards, worker_replicas)
     return list(range(start, end_excl))
+
+
+if __name__ == "__main__":
+    main()
