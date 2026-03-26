@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
 from typing import Any, Callable, Protocol
 
 import redis.asyncio as redis
 
 from inspectio.ingest.schema import MessageIngestedV1
+from inspectio.perf_log import perf_line
 from inspectio.journal.records import JournalRecordV1
 from inspectio.models import Message
 from inspectio.worker.runtime import InMemorySchedulerRuntime
@@ -53,14 +55,24 @@ class IngestJournalHandler:
         now_ms: int,
     ) -> list[JournalRecordV1]:
         key = f"{IDEMPOTENCY_KEY_PREFIX}{message.idempotency_key}"
+        r0 = time.monotonic_ns()
         accepted = await self._idempotency_store.set_nx(
             key=key,
             value=message.message_id,
             ttl_sec=self._idempotency_ttl_sec,
         )
+        redis_ms = (time.monotonic_ns() - r0) / 1_000_000
         if not accepted:
+            perf_line(
+                "ingest_handler",
+                message_id=message.message_id,
+                shard_id=message.shard_id,
+                duplicate=1,
+                redis_set_nx_ms=f"{redis_ms:.3f}",
+            )
             return []
 
+        t_build0 = time.monotonic_ns()
         ingest_applied = JournalRecordV1.model_validate(
             {
                 "v": 1,
@@ -88,9 +100,20 @@ class IngestJournalHandler:
             }
         )
         records = [ingest_applied, dispatch_scheduled]
+        template_ms = (time.monotonic_ns() - t_build0) / 1_000_000
         if self._runtime is None:
+            perf_line(
+                "ingest_handler",
+                message_id=message.message_id,
+                shard_id=message.shard_id,
+                duplicate=0,
+                redis_set_nx_ms=f"{redis_ms:.3f}",
+                journal_template_ms=f"{template_ms:.3f}",
+                runtime_new_message_ms="0.000",
+            )
             return records
         start = self._runtime.journal_length()
+        rt0 = time.monotonic_ns()
         await self._runtime.new_message(
             Message(
                 message_id=message.message_id,
@@ -98,6 +121,16 @@ class IngestJournalHandler:
                 body=message.payload.body,
             ),
             shard_id=message.shard_id,
+        )
+        runtime_ms = (time.monotonic_ns() - rt0) / 1_000_000
+        perf_line(
+            "ingest_handler",
+            message_id=message.message_id,
+            shard_id=message.shard_id,
+            duplicate=0,
+            redis_set_nx_ms=f"{redis_ms:.3f}",
+            journal_template_ms=f"{template_ms:.3f}",
+            runtime_new_message_ms=f"{runtime_ms:.3f}",
         )
         runtime_records = self._runtime.journal_since(start)
         reindexed_runtime_records = [

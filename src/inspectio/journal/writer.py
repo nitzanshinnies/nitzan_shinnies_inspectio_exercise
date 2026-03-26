@@ -14,6 +14,7 @@ from inspectio.journal.records import (
     encode_line,
     validate_monotonic_record_index,
 )
+from inspectio.perf_log import perf_line
 
 DEFAULT_RETRY_ATTEMPTS = 3
 DEFAULT_RETRY_BACKOFF_SEC = 0.05
@@ -128,13 +129,14 @@ class JournalWriter:
                     dt.datetime.now(tz=dt.timezone.utc).timestamp() * 1_000
                     - self._segment_start_ms_required()
                 )
-                print(
-                    "[inspectio-perf] component=journal_writer kind=segment "
-                    f"shard_id={self._shard_required()} "
-                    f"bytes={len(body)} "
-                    f"segment_start_ms={self._segment_start_ms_required()} "
-                    f"s3_put_ms={put_ms:.3f} "
-                    f"elapsed_from_segment_start_ms={elapsed_ms:.3f}"
+                perf_line(
+                    "journal_writer",
+                    kind="segment",
+                    shard_id=self._shard_required(),
+                    bytes=len(body),
+                    segment_start_ms=self._segment_start_ms_required(),
+                    s3_put_ms=f"{put_ms:.3f}",
+                    elapsed_from_segment_start_ms=f"{elapsed_ms:.3f}",
                 )
                 return
             except Exception as exc:  # pragma: no cover - defensive branch
@@ -194,17 +196,28 @@ class JournalWriter:
         )
         epoch_key = f"state/snapshot/{shard_id}/{captured_at_ms}.json"
         latest_key = f"state/snapshot/{shard_id}/latest.json"
+        e0 = time.monotonic_ns()
         await self._s3_client.put_object(
             Bucket=self._bucket,
             Key=epoch_key,
             Body=body,
             ContentType="application/json",
         )
+        e1 = time.monotonic_ns()
         await self._s3_client.put_object(
             Bucket=self._bucket,
             Key=latest_key,
             Body=body,
             ContentType="application/json",
+        )
+        e2 = time.monotonic_ns()
+        perf_line(
+            "journal_writer",
+            kind="snapshot",
+            shard_id=shard_id,
+            bytes=len(body),
+            s3_put_epoch_ms=f"{(e1 - e0) / 1_000_000:.3f}",
+            s3_put_latest_ms=f"{(e2 - e1) / 1_000_000:.3f}",
         )
         self._last_snapshot_ms = captured_at_ms
 

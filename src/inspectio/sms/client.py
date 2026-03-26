@@ -8,6 +8,7 @@ import time
 import httpx
 
 from inspectio.models import Message
+from inspectio.perf_log import perf_line
 
 
 @dataclass(frozen=True, slots=True)
@@ -31,17 +32,22 @@ class SmsClient:
                 response = await client.post(url, json=payload)
         except httpx.TimeoutException as exc:
             elapsed_ms = (time.monotonic_ns() - start_ns) / 1_000_000
-            print(
-                "[inspectio-perf] component=sms_client result=timeout "
-                f"attempt_index={attempt_index} elapsed_ms={elapsed_ms:.3f}"
+            perf_line(
+                "sms_http",
+                message_id=message.message_id,
+                result="timeout",
+                attempt_index=attempt_index,
+                http_ms=f"{elapsed_ms:.3f}",
             )
             raise TimeoutError("connect_timeout") from exc
         elapsed_ms = (time.monotonic_ns() - start_ns) / 1_000_000
         ok = 200 <= response.status_code < 300
-        print(
-            "[inspectio-perf] component=sms_client result="
-            f"{'ok' if ok else 'error'} "
-            f"http_status={response.status_code} "
-            f"attempt_index={attempt_index} elapsed_ms={elapsed_ms:.3f}"
+        perf_line(
+            "sms_http",
+            message_id=message.message_id,
+            result="ok" if ok else "error",
+            attempt_index=attempt_index,
+            http_status=response.status_code,
+            http_ms=f"{elapsed_ms:.3f}",
         )
         return ok

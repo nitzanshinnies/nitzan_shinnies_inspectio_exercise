@@ -19,6 +19,7 @@ from inspectio.ingest.ingest_producer import (
     IngestPutResult,
     IngestUnavailableError,
 )
+from inspectio.perf_log import perf_line
 from inspectio.settings import Settings
 
 DEFAULT_SUCCESS_LIST_LIMIT = 100
@@ -29,11 +30,6 @@ HTTP_TOO_MANY_REQUESTS = 429
 HTTP_ACCEPTED = 202
 
 router = APIRouter()
-
-
-def _perf_log(message: str) -> None:
-    """Plaintext performance log to stdout."""
-    print(f"[inspectio-perf] {message}")
 
 
 class PostMessageRequest(BaseModel):
@@ -74,9 +70,19 @@ class NotificationClient:
 
     async def _get_items(self, path: str, *, limit: int) -> dict[str, Any]:
         url = f"{self._base_url}{path}"
+        t0 = time.monotonic_ns()
         async with httpx.AsyncClient(timeout=5) as client:
             resp = await client.get(url, params={"limit": limit})
             resp.raise_for_status()
+            http_ms = (time.monotonic_ns() - t0) / 1_000_000
+            perf_line(
+                "api_notification_http",
+                phase="GET",
+                path=path,
+                limit=limit,
+                http_status=resp.status_code,
+                http_ms=f"{http_ms:.3f}",
+            )
             return dict(resp.json())
 
 
@@ -174,22 +180,33 @@ async def post_messages(
         written = await producer.put_messages([row])
         sqs_end_ns = time.monotonic_ns()
     except (IngestBufferOverflowError, IngestUnavailableError) as exc:
-        _perf_log(
-            f"route=/messages result=error error={type(exc).__name__} "
-            f"total_ms={(time.monotonic_ns() - start_ns) / 1_000_000:.3f}"
+        perf_line(
+            "api_route",
+            route="/messages",
+            result="error",
+            error=type(exc).__name__,
+            total_ms=f"{(time.monotonic_ns() - start_ns) / 1_000_000:.3f}",
         )
         return _map_ingest_exception(exc)
+    response_start_ns = time.monotonic_ns()
     response = PostMessageAccepted(
         messageId=written[0].message_id,
         shardId=written[0].shard_id,
         ingestSequence=written[0].ingest_sequence,
     )
     end_ns = time.monotonic_ns()
-    _perf_log(
-        "route=/messages result=ok "
-        f"shard_id={written[0].shard_id} "
-        f"total_ms={(end_ns - start_ns) / 1_000_000:.3f} "
-        f"sqs_ms={(sqs_end_ns - sqs_start_ns) / 1_000_000:.3f}"
+    prep_ms = (sqs_start_ns - start_ns) / 1_000_000
+    sqs_ms = (sqs_end_ns - sqs_start_ns) / 1_000_000
+    ser_ms = (end_ns - response_start_ns) / 1_000_000
+    perf_line(
+        "api_route",
+        route="/messages",
+        result="ok",
+        shard_id=written[0].shard_id,
+        prep_ms=f"{prep_ms:.3f}",
+        sqs_put_ms=f"{sqs_ms:.3f}",
+        response_json_ms=f"{ser_ms:.3f}",
+        total_ms=f"{(end_ns - start_ns) / 1_000_000:.3f}",
     )
     return response.model_dump(mode="json", by_alias=True)
 
@@ -210,7 +227,9 @@ async def post_messages_repeat(
             status_code=HTTP_BAD_REQUEST,
             detail=f"count must be <= {settings.inspectio_repeat_max_count}",
         )
+    build_start_ns = time.monotonic_ns()
     rows = [_new_message_input(payload, settings) for _ in range(count)]
+    build_end_ns = time.monotonic_ns()
     written: list[IngestPutResult] = []
     total_sqs_ns = 0
     for start in range(0, len(rows), MAX_PUT_RECORDS_BATCH):
@@ -221,23 +240,38 @@ async def post_messages_repeat(
             sqs_end_ns = time.monotonic_ns()
             total_sqs_ns += sqs_end_ns - sqs_start_ns
         except (IngestBufferOverflowError, IngestUnavailableError) as exc:
-            _perf_log(
-                f"route=/messages/repeat result=error error={type(exc).__name__} "
-                f"count={count} total_ms={(time.monotonic_ns() - start_ns) / 1_000_000:.3f}"
+            perf_line(
+                "api_route",
+                route="/messages/repeat",
+                result="error",
+                error=type(exc).__name__,
+                count=count,
+                total_ms=f"{(time.monotonic_ns() - start_ns) / 1_000_000:.3f}",
             )
             return _map_ingest_exception(exc)
         written.extend(chunk_written)
+    response_start_ns = time.monotonic_ns()
     response = PostMessagesRepeatAccepted(
         accepted=len(written),
         messageIds=[item.message_id for item in written],
         shardIds=[item.shard_id for item in written],
     )
     end_ns = time.monotonic_ns()
-    _perf_log(
-        "route=/messages/repeat result=ok "
-        f"count={count} accepted={len(written)} "
-        f"total_ms={(end_ns - start_ns) / 1_000_000:.3f} "
-        f"sqs_ms={total_sqs_ns / 1_000_000:.3f}"
+    prep_ms = (build_start_ns - start_ns) / 1_000_000
+    build_ms = (build_end_ns - build_start_ns) / 1_000_000
+    sqs_ms = total_sqs_ns / 1_000_000
+    ser_ms = (end_ns - response_start_ns) / 1_000_000
+    perf_line(
+        "api_route",
+        route="/messages/repeat",
+        result="ok",
+        count=count,
+        accepted=len(written),
+        prep_and_validate_ms=f"{prep_ms:.3f}",
+        build_rows_ms=f"{build_ms:.3f}",
+        sqs_put_total_ms=f"{sqs_ms:.3f}",
+        response_json_ms=f"{ser_ms:.3f}",
+        total_ms=f"{(end_ns - start_ns) / 1_000_000:.3f}",
     )
     return response.model_dump(mode="json", by_alias=True)
 

@@ -21,6 +21,7 @@ from inspectio.domain.sharding import (
 from inspectio.journal.records import JournalRecordV1
 from inspectio.journal.replay import ReplayS3Store, apply_tail_records
 from inspectio.journal.writer import JournalWriter
+from inspectio.perf_log import perf_line
 from inspectio.settings import get_settings
 from inspectio.sms.client import SmsClient
 from inspectio.worker.handlers import IngestJournalHandler, RedisIdempotencyStore
@@ -94,9 +95,16 @@ class NotificationTerminalClient:
 
     async def post_terminal(self, payload: dict[str, object]) -> None:
         url = f"{self._base_url}/internal/v1/outcomes/terminal"
+        t0 = time.monotonic_ns()
         async with httpx.AsyncClient(timeout=5) as client:
             response = await client.post(url, json=payload)
             response.raise_for_status()
+        perf_line(
+            "notification_terminal_http",
+            message_id=payload.get("messageId", ""),
+            http_status=response.status_code,
+            http_ms=f"{(time.monotonic_ns() - t0) / 1_000_000:.3f}",
+        )
 
 
 class TerminalOutcomePublisher(Protocol):
@@ -114,11 +122,25 @@ async def run_consumer_loop(
     """Continuously poll ingest stream and run wakeup on a target cadence."""
     while True:
         started = time.monotonic()
+        iter_start_ns = time.monotonic_ns()
         processed = await consume_once()
+        c1 = time.monotonic_ns()
         processed += await wakeup_once()
+        w1 = time.monotonic_ns()
+        snap_ms = 0.0
         if snapshot_once is not None:
+            s0 = time.monotonic_ns()
             processed += await snapshot_once()
+            snap_ms = (time.monotonic_ns() - s0) / 1_000_000
         elapsed = time.monotonic() - started
+        perf_line(
+            "worker_loop_iteration",
+            consume_once_ms=f"{(c1 - iter_start_ns) / 1_000_000:.3f}",
+            wakeup_once_ms=f"{(w1 - c1) / 1_000_000:.3f}",
+            snapshot_once_ms=f"{snap_ms:.3f}",
+            iteration_total_ms=f"{(time.monotonic_ns() - iter_start_ns) / 1_000_000:.3f}",
+            processed=processed,
+        )
         remaining = poll_interval_sec - elapsed
         if remaining > 0:
             await sleep_func(remaining)
@@ -225,9 +247,15 @@ async def _run() -> None:
                     )
                     new_runtime_lines = runtime.journal_since(runtime_cursor)
                     if new_runtime_lines:
+                        p0 = time.monotonic_ns()
                         await _publish_terminal_outcomes(
                             lines=new_runtime_lines,
                             notification_client=notification_client,
+                        )
+                        perf_line(
+                            "worker_ingest_publish",
+                            terminal_lines=len(new_runtime_lines),
+                            publish_ms=f"{(time.monotonic_ns() - p0) / 1_000_000:.3f}",
                         )
                     # Ingest path journal lines are already persisted by consumer; keep cursor aligned.
                     runtime_cursor = runtime.journal_length()
@@ -235,16 +263,36 @@ async def _run() -> None:
 
                 async def _wakeup_once() -> int:
                     nonlocal runtime_cursor
+                    w0 = time.monotonic_ns()
                     await runtime.wakeup()
+                    w1 = time.monotonic_ns()
                     new_lines = runtime.journal_since(runtime_cursor)
                     if not new_lines:
+                        perf_line(
+                            "worker_wakeup",
+                            scheduler_wakeup_ms=f"{(w1 - w0) / 1_000_000:.3f}",
+                            new_lines=0,
+                        )
                         return 0
+                    a0 = time.monotonic_ns()
                     for line in new_lines:
                         await journal_writer.append(line)
+                    a1 = time.monotonic_ns()
                     await journal_writer.flush()
+                    f1 = time.monotonic_ns()
+                    p0 = time.monotonic_ns()
                     await _publish_terminal_outcomes(
                         lines=new_lines,
                         notification_client=notification_client,
+                    )
+                    p1 = time.monotonic_ns()
+                    perf_line(
+                        "worker_wakeup",
+                        scheduler_wakeup_ms=f"{(w1 - w0) / 1_000_000:.3f}",
+                        new_lines=len(new_lines),
+                        journal_append_ms=f"{(a1 - a0) / 1_000_000:.3f}",
+                        journal_flush_ms=f"{(f1 - a1) / 1_000_000:.3f}",
+                        notification_publish_ms=f"{(p1 - p0) / 1_000_000:.3f}",
                     )
                     runtime_cursor = runtime.journal_length()
                     return len(new_lines)
@@ -252,6 +300,7 @@ async def _run() -> None:
                 async def _snapshot_once() -> int:
                     wrote = 0
                     now_ms = int(time.time() * 1000)
+                    s0 = time.monotonic_ns()
                     by_shard = runtime.active_snapshot_view_by_shard()
                     for shard_id in sorted(journal_writer.managed_shards):
                         active = by_shard.get(shard_id, {})
@@ -265,6 +314,11 @@ async def _run() -> None:
                             now_ms=now_ms,
                         )
                         wrote += 1
+                    perf_line(
+                        "worker_snapshot_once",
+                        managed_shards=wrote,
+                        total_ms=f"{(time.monotonic_ns() - s0) / 1_000_000:.3f}",
+                    )
                     return wrote
 
                 await run_consumer_loop(

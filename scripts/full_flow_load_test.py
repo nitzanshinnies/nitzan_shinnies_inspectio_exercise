@@ -74,28 +74,45 @@ def main() -> int:
     start = time.monotonic()
 
     with httpx.Client(timeout=10.0) as client:
+        t0 = time.monotonic()
         repeat = client.post(
             f"{base_url}/messages/repeat",
             params={"count": args.count},
             json={"body": body},
         )
         repeat.raise_for_status()
+        t_post = time.monotonic()
         response_json = repeat.json()
+        t_json = time.monotonic()
         first_message_id = _parse_message_id(response_json)
         submitted_ids = _parse_message_ids(response_json)
+        print(
+            "[inspectio-perf] component=load_test_client phase=POST_messages_repeat "
+            f"count={args.count} http_ms={(t_post - t0) * 1000:.3f} "
+            f"parse_json_ms={(t_json - t_post) * 1000:.3f}"
+        )
 
+        poll_iter = 0
+        poll_success_ms = 0.0
+        poll_failed_ms = 0.0
+        poll_sleep_ms = 0.0
         deadline = time.monotonic() + float(args.timeout_sec)
         while time.monotonic() < deadline:
+            s0 = time.monotonic()
             success_resp = client.get(
                 f"{base_url}{args.success_path}",
                 params={"limit": args.limit},
             )
+            s1 = time.monotonic()
             failed_resp = client.get(
                 f"{base_url}{args.failed_path}",
                 params={"limit": args.limit},
             )
+            s2 = time.monotonic()
             success_resp.raise_for_status()
             failed_resp.raise_for_status()
+            poll_success_ms += (s1 - s0) * 1000
+            poll_failed_ms += (s2 - s1) * 1000
             success_items = success_resp.json().get("items", [])
             failed_items = failed_resp.json().get("items", [])
             observed_ids = {
@@ -103,14 +120,24 @@ def main() -> int:
                 for item in (success_items + failed_items)
                 if isinstance(item.get("messageId"), str)
             }
+            poll_iter += 1
             if submitted_ids.intersection(observed_ids):
                 elapsed = time.monotonic() - start
+                print(
+                    "[inspectio-perf] component=load_test_client phase=poll_loop "
+                    f"iterations={poll_iter} "
+                    f"sum_get_success_ms={poll_success_ms:.3f} "
+                    f"sum_get_failed_ms={poll_failed_ms:.3f} "
+                    f"sum_sleep_ms={poll_sleep_ms:.3f}"
+                )
                 print(
                     f"phase10_load_ok count={args.count} elapsed_sec={elapsed:.2f} "
                     f"first_message_id={first_message_id}"
                 )
                 return 0
+            sl0 = time.monotonic()
             time.sleep(POLL_INTERVAL_SEC)
+            poll_sleep_ms += (time.monotonic() - sl0) * 1000
 
     print(
         f"Timed out waiting for terminal messageId={first_message_id}",
