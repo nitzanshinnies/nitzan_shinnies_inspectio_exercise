@@ -75,30 +75,70 @@ class IngestConsumer:
         self._last_record_index_by_shard: dict[int, int] = {}
 
     async def process_record(self, row: IngestRawRecord) -> None:
+        start_ns = time.monotonic_ns()
         wire = json.loads(row.data.decode("utf-8"))
+        decode_ns = time.monotonic_ns()
         message = MessageIngestedV1.from_json_dict(wire)
+        handler_start_ns = time.monotonic_ns()
         journal_lines = await self._handler.apply_ingest(
             message=message,
             next_record_index=lambda: self._next_record_index(message.shard_id),
             now_ms=self._now_ms(),
         )
+        handler_end_ns = time.monotonic_ns()
         for line in journal_lines:
             await self._journal_writer.append(line)
+        journal_flush_ns: int | None = None
         if journal_lines:
             await self._journal_writer.flush()
+            journal_flush_ns = time.monotonic_ns()
         if row.sqs_receipt_handle is not None:
             if self._sqs_delete is None:
                 msg = "sqs_delete is required when sqs_receipt_handle is set"
                 raise ValueError(msg)
+            sqs_delete_start_ns = time.monotonic_ns()
             await self._sqs_delete(row.sqs_receipt_handle)
+            sqs_delete_end_ns = time.monotonic_ns()
+            end_ns = time.monotonic_ns()
+            journal_ms = (
+                (journal_flush_ns - handler_end_ns) / 1_000_000
+                if journal_flush_ns is not None
+                else 0.0
+            )
+            print(
+                "[inspectio-perf] component=ingest_consumer "
+                f"shard_id={message.shard_id} "
+                f"decode_ms={(decode_ns - start_ns) / 1_000_000:.3f} "
+                f"handler_ms={(handler_end_ns - handler_start_ns) / 1_000_000:.3f} "
+                f"journal_ms={journal_ms:.3f} "
+                f"sqs_delete_ms={(sqs_delete_end_ns - sqs_delete_start_ns) / 1_000_000:.3f} "
+                f"total_ms={(end_ns - start_ns) / 1_000_000:.3f}"
+            )
             return
         if self._checkpoint_store is None:
             msg = "checkpoint_store is required when not using SQS receipt handles"
             raise ValueError(msg)
+        ckpt_start_ns = time.monotonic_ns()
         await self._checkpoint_store.save(
             checkpoint_shard_id=row.checkpoint_shard_id,
             sequence_number=row.sequence_number,
             updated_at_ms=self._now_ms(),
+        )
+        ckpt_end_ns = time.monotonic_ns()
+        end_ns = time.monotonic_ns()
+        journal_ms = (
+            (journal_flush_ns - handler_end_ns) / 1_000_000
+            if journal_flush_ns is not None
+            else 0.0
+        )
+        print(
+            "[inspectio-perf] component=ingest_consumer "
+            f"shard_id={message.shard_id} "
+            f"decode_ms={(decode_ns - start_ns) / 1_000_000:.3f} "
+            f"handler_ms={(handler_end_ns - handler_start_ns) / 1_000_000:.3f} "
+            f"journal_ms={journal_ms:.3f} "
+            f"checkpoint_ms={(ckpt_end_ns - ckpt_start_ns) / 1_000_000:.3f} "
+            f"total_ms={(end_ns - start_ns) / 1_000_000:.3f}"
         )
 
     async def consume_once(

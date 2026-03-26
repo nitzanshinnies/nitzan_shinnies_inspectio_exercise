@@ -31,6 +31,11 @@ HTTP_ACCEPTED = 202
 router = APIRouter()
 
 
+def _perf_log(message: str) -> None:
+    """Plaintext performance log to stdout."""
+    print(f"[inspectio-perf] {message}")
+
+
 class PostMessageRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -161,16 +166,30 @@ async def post_messages(
     settings: Annotated[Settings, Depends(_get_settings)],
     producer: Annotated[IngestProducer, Depends(_get_producer)],
 ) -> dict[str, object]:
+    start_ns = time.monotonic_ns()
     payload = _parse_post_message_payload(raw_payload)
     row = _new_message_input(payload, settings)
     try:
+        sqs_start_ns = time.monotonic_ns()
         written = await producer.put_messages([row])
+        sqs_end_ns = time.monotonic_ns()
     except (IngestBufferOverflowError, IngestUnavailableError) as exc:
+        _perf_log(
+            f"route=/messages result=error error={type(exc).__name__} "
+            f"total_ms={(time.monotonic_ns() - start_ns) / 1_000_000:.3f}"
+        )
         return _map_ingest_exception(exc)
     response = PostMessageAccepted(
         messageId=written[0].message_id,
         shardId=written[0].shard_id,
         ingestSequence=written[0].ingest_sequence,
+    )
+    end_ns = time.monotonic_ns()
+    _perf_log(
+        "route=/messages result=ok "
+        f"shard_id={written[0].shard_id} "
+        f"total_ms={(end_ns - start_ns) / 1_000_000:.3f} "
+        f"sqs_ms={(sqs_end_ns - sqs_start_ns) / 1_000_000:.3f}"
     )
     return response.model_dump(mode="json", by_alias=True)
 
@@ -182,6 +201,7 @@ async def post_messages_repeat(
     producer: Annotated[IngestProducer, Depends(_get_producer)],
     count: int,
 ) -> dict[str, object]:
+    start_ns = time.monotonic_ns()
     payload = _parse_post_message_payload(raw_payload)
     if count < 1:
         raise HTTPException(status_code=HTTP_BAD_REQUEST, detail="count must be >= 1")
@@ -192,17 +212,32 @@ async def post_messages_repeat(
         )
     rows = [_new_message_input(payload, settings) for _ in range(count)]
     written: list[IngestPutResult] = []
+    total_sqs_ns = 0
     for start in range(0, len(rows), MAX_PUT_RECORDS_BATCH):
         chunk = rows[start : start + MAX_PUT_RECORDS_BATCH]
         try:
+            sqs_start_ns = time.monotonic_ns()
             chunk_written = await producer.put_messages(chunk)
+            sqs_end_ns = time.monotonic_ns()
+            total_sqs_ns += sqs_end_ns - sqs_start_ns
         except (IngestBufferOverflowError, IngestUnavailableError) as exc:
+            _perf_log(
+                f"route=/messages/repeat result=error error={type(exc).__name__} "
+                f"count={count} total_ms={(time.monotonic_ns() - start_ns) / 1_000_000:.3f}"
+            )
             return _map_ingest_exception(exc)
         written.extend(chunk_written)
     response = PostMessagesRepeatAccepted(
         accepted=len(written),
         messageIds=[item.message_id for item in written],
         shardIds=[item.shard_id for item in written],
+    )
+    end_ns = time.monotonic_ns()
+    _perf_log(
+        "route=/messages/repeat result=ok "
+        f"count={count} accepted={len(written)} "
+        f"total_ms={(end_ns - start_ns) / 1_000_000:.3f} "
+        f"sqs_ms={total_sqs_ns / 1_000_000:.3f}"
     )
     return response.model_dump(mode="json", by_alias=True)
 

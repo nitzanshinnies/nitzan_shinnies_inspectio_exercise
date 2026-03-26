@@ -6,6 +6,7 @@ import asyncio
 import datetime as dt
 import gzip
 import json
+import time
 from typing import Any, Awaitable, Callable, Protocol
 
 from inspectio.journal.records import (
@@ -113,6 +114,7 @@ class JournalWriter:
         attempt = 0
         while True:
             try:
+                put_start_ns = time.monotonic_ns()
                 await self._s3_client.put_object(
                     Bucket=self._bucket,
                     Key=key,
@@ -120,7 +122,20 @@ class JournalWriter:
                     ContentType="application/x-ndjson",
                     ContentEncoding="gzip",
                 )
+                put_ms = (time.monotonic_ns() - put_start_ns) / 1_000_000
                 self._last_flush_ms = self._segment_start_ms_required()
+                elapsed_ms = (
+                    dt.datetime.now(tz=dt.timezone.utc).timestamp() * 1_000
+                    - self._segment_start_ms_required()
+                )
+                print(
+                    "[inspectio-perf] component=journal_writer kind=segment "
+                    f"shard_id={self._shard_required()} "
+                    f"bytes={len(body)} "
+                    f"segment_start_ms={self._segment_start_ms_required()} "
+                    f"s3_put_ms={put_ms:.3f} "
+                    f"elapsed_from_segment_start_ms={elapsed_ms:.3f}"
+                )
                 return
             except Exception as exc:  # pragma: no cover - defensive branch
                 self._s3_errors_total += 1
