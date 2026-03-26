@@ -57,7 +57,7 @@ Phase 10 validation is **in-cluster only** for AWS claims. Do not use laptop
 
 - Edit placeholders in:
   - `deploy/kubernetes/serviceaccount.yaml` (`eks.amazonaws.com/role-arn`)
-  - `deploy/kubernetes/api.yaml`, `worker.yaml`, `notification.yaml` (`image`)
+  - `deploy/kubernetes/api.yaml`, `worker.yaml`, `notification.yaml`, `load-test-in-cluster-job.yaml` (`image`)
 - Create runtime secret from `deploy/kubernetes/secrets.example.yaml`:
   - set `INSPECTIO_S3_BUCKET`
   - set `INSPECTIO_REDIS_URL`
@@ -66,8 +66,8 @@ Phase 10 validation is **in-cluster only** for AWS claims. Do not use laptop
 ### 2) Deploy app services
 
 ```bash
-kubectl apply -k deploy/kubernetes
 kubectl apply -f deploy/kubernetes/secrets.example.yaml
+kubectl apply -k deploy/kubernetes
 ```
 
 ### 3) Restart workloads before load tests
