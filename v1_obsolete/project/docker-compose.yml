@@ -1,3 +1,5 @@
+# Obsolete v1 stack — conflicts with repo-root v2 compose (ports 6379, 8000, …). Reference only.
+# Prefer: docker compose up -d --build from repository root (see README.md).
 services:
   web:
     build: ./frontend
