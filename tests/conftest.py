@@ -4,6 +4,5 @@
 # ahead of implementation and would break collection. Remove these ignores when
 # `src/inspectio/ingest/` and `src/inspectio/journal/` land.
 collect_ignore = [
-    "unit/ingest",
     "unit/journal",
 ]
