@@ -64,7 +64,6 @@ All application code under **`src/inspectio/`**:
 | `src/inspectio/ingest/ingest_consumer.py` | Worker ingest journal + **SQS delete** or S3 checkpoint (**§18.3**) |
 | `src/inspectio/ingest/sqs_fifo_consumer.py` | **`SqsFifoBatchFetcher`** (**§29.6**) |
 | `src/inspectio/ingest/kinesis_producer.py` | Re-exports (compat); prefer **`ingest_producer`** / **`sqs_fifo_producer`** |
-| `src/inspectio/ingest/kinesis_consumer.py` | Re-exports (compat); prefer **`ingest_consumer`** |
 | `src/inspectio/journal/records.py` | `JournalRecordV1` types + validation (**§18.2**) |
 | `src/inspectio/journal/writer.py` | batch flush **§29.8** |
 | `src/inspectio/journal/replay.py` | snapshot + tail replay (**§18.4**) |

@@ -1109,7 +1109,6 @@ All application code under **`src/inspectio/`**:
 | `src/inspectio/ingest/kinesis_producer.py` | Re-exports producer types + **`SqsFifoIngestProducer`** (compat module name) |
 | `src/inspectio/ingest/sqs_fifo_producer.py` | API **`send_message_batch`** / per-entry retry (**FIFO**) |
 | `src/inspectio/ingest/ingest_consumer.py` | Worker ingest: journal then **S3 checkpoint** *or* **SQS delete** (**§18.3**) |
-| `src/inspectio/ingest/kinesis_consumer.py` | Deprecated re-export of **`ingest_consumer`** |
 | `src/inspectio/ingest/sqs_fifo_consumer.py` | **`SqsFifoBatchFetcher`**: long-poll + logical shard filter (**§29.6**) |
 | `src/inspectio/journal/records.py` | `JournalRecordV1` types + validation (**§18.2**) |
 | `src/inspectio/journal/writer.py` | batch flush **§29.8** |

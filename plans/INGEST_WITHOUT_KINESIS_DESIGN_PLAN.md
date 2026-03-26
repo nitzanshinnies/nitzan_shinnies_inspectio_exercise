@@ -32,7 +32,7 @@ This document was the **migration plan** for replacing Kinesis with **SQS FIFO**
 | API | `PutRecords` (batch up to **500**) | `kinesis_producer.py` |
 | Durability | Stream retains records until worker consumes + checkpoints | |
 | Ordering | **Per partition key** (`shard_id` as zero-padded decimal) | TC-STR-003 |
-| Worker | Poll `GetRecords`, process, **journal + flush**, then **checkpoint** | `kinesis_consumer.py`, §18.3 |
+| Worker | Long-poll SQS, process, **journal + flush**, then **DeleteMessage** | `ingest_consumer.py`, §18.3 |
 | Checkpoint | S3 object per **Kinesis shard id** + sequence number | `INSPECTIO_KINESIS_CHECKPOINT_KEY_PREFIX` |
 | Failure | Retry reads; unprocessed records remain in stream | |
 
@@ -165,7 +165,7 @@ The locked agent contract in **§29** currently mandates **Kinesis-only** ingest
 ## 8. Files likely to change (implementation later)
 
 - `src/inspectio/ingest/kinesis_producer.py` → add `sqs_fifo_producer.py` (or rename module namespace to `ingest/`)  
-- `src/inspectio/ingest/kinesis_consumer.py` → generalize + `sqs_fifo_consumer.py`  
+- `src/inspectio/ingest/ingest_consumer.py` + `sqs_fifo_consumer.py`  
 - `src/inspectio/settings.py` — env vars  
 - `src/inspectio/worker/main.py` (or equivalent) — poll loop  
 - `deploy/localstack/init/**`  
@@ -177,7 +177,7 @@ The locked agent contract in **§29** currently mandates **Kinesis-only** ingest
 
 ## 9. References
 
-- In-repo: **`src/inspectio/ingest/kinesis_producer.py`**, **`kinesis_consumer.py`**, **`inspectio/settings.py`**, worker entrypoint.  
+- In-repo: **`src/inspectio/ingest/ingest_producer.py`**, **`sqs_fifo_producer.py`**, **`ingest_consumer.py`**, **`inspectio/settings.py`**, worker entrypoint.  
 - Blueprint: **§17**, **§18.3**, **§29**, env table (Kinesis checkpoint prefix).  
 - AWS: [SQS FIFO queues](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/FIFO-queues.html) (ordering, batch limits, deduplication).
 
