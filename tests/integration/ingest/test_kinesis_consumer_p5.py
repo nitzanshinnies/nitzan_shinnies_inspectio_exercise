@@ -267,3 +267,74 @@ async def test_fetcher_polls_kinesis_and_maps_rows() -> None:
     assert len(rows) == 1
     assert rows[0].kinesis_shard_id == "shardId-000000000001"
     assert rows[0].sequence_number == "9"
+
+
+class _FakeKinesisClientSharded:
+    def __init__(self) -> None:
+        self.requested_shard_ids: list[str] = []
+
+    async def list_shards(self, **kwargs: Any) -> dict[str, Any]:
+        _ = kwargs
+        return {
+            "Shards": [
+                {"ShardId": "shardId-000000000000"},
+                {"ShardId": "shardId-000000000001"},
+                {"ShardId": "shardId-000000000002"},
+                {"ShardId": "shardId-000000000003"},
+            ]
+        }
+
+    async def get_shard_iterator(self, **kwargs: Any) -> dict[str, Any]:
+        shard_id = str(kwargs["ShardId"])
+        self.requested_shard_ids.append(shard_id)
+        return {"ShardIterator": f"it-{shard_id}"}
+
+    async def get_records(self, **kwargs: Any) -> dict[str, Any]:
+        shard_iterator = str(kwargs["ShardIterator"])
+        shard_id = shard_iterator.removeprefix("it-")
+        message = MessageIngestedV1(
+            message_id="123e4567-e89b-12d3-a456-4266141740aa",
+            payload=MessageIngestPayload(body="x", to="+15550000003"),
+            received_at_ms=1_700_000_000_111,
+            shard_id=7,
+            idempotency_key="idem-owned",
+        )
+        return {
+            "NextShardIterator": f"next-{shard_iterator}",
+            "Records": [
+                {
+                    "SequenceNumber": "1",
+                    "Data": KinesisRawRecord(
+                        kinesis_shard_id=shard_id,
+                        sequence_number="1",
+                        data=json.dumps(
+                            message.to_json_dict(),
+                            separators=(",", ":"),
+                            sort_keys=True,
+                        ).encode("utf-8"),
+                    ).data,
+                }
+            ],
+        }
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_fetcher_filters_kinesis_shards_by_worker_ownership() -> None:
+    fake = _FakeKinesisClientSharded()
+    fetcher = KinesisBatchFetcher(
+        kinesis_client=fake,
+        stream_name="inspectio-ingest",
+        worker_index=1,
+        worker_replicas=2,
+    )
+    rows = await fetcher.fetch_records()
+
+    assert sorted(fake.requested_shard_ids) == [
+        "shardId-000000000001",
+        "shardId-000000000003",
+    ]
+    assert sorted(row.kinesis_shard_id for row in rows) == [
+        "shardId-000000000001",
+        "shardId-000000000003",
+    ]

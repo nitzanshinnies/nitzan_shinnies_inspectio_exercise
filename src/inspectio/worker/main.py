@@ -178,6 +178,8 @@ async def _run() -> None:
                 fetcher = KinesisBatchFetcher(
                     kinesis_client=kinesis_client,
                     stream_name=settings.inspectio_kinesis_stream_name,
+                    worker_index=settings.inspectio_worker_index,
+                    worker_replicas=settings.inspectio_worker_replicas,
                 )
                 replay_store = ReplayS3Store(
                     s3_client=s3_client,
