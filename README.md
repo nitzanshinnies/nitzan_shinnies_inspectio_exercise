@@ -6,27 +6,18 @@
 
 ## Local stack (v2)
 
-The **repository root** `docker-compose.yml` is the **only** supported local stack for greenfield work. Compose project name is **`inspectio`** (`name:` in the file). Stop it with:
+The **repository root** `docker-compose.yml` brings up **dependencies** for greenfield work (plans **P0**). Compose project name is **`inspectio`** (`name:` in the file). **Inspectio** application containers (**`inspectio-api`**, **`inspectio-worker`**, **`inspectio-notification`**) land in **P9** (shared **`deploy/docker/Dockerfile`**).
 
 ```bash
 docker compose down
-```
-
-Bring it up (rebuild when `Dockerfile` / deps change):
-
-```bash
 docker compose up -d --build
 ```
 
-Services: **redis**, **localstack** (S3 + Kinesis), **mock-sms** (build context **`v1_obsolete/project`** — code only, not the obsolete compose stack), **inspectio-api**, **inspectio-worker**, **inspectio-notification** (shared **`deploy/docker/Dockerfile`**).
-
-| Service        | Host URL / port |
-|----------------|-----------------|
-| API            | `http://127.0.0.1:8000` — `GET /healthz` |
-| Notification   | `http://127.0.0.1:8081` |
-| Mock SMS       | `http://127.0.0.1:8090` |
-| LocalStack     | `http://127.0.0.1:4566` |
-| Redis          | `127.0.0.1:6379` |
+| Service    | Host URL / port |
+|------------|-----------------|
+| Mock SMS   | `http://127.0.0.1:8090` |
+| LocalStack | `http://127.0.0.1:4566` |
+| Redis      | `127.0.0.1:6379` |
 
 ### AWS S3 and credentials (aligned with v1)
 

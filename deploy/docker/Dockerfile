@@ -11,4 +11,5 @@ COPY src ./src
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir .
 
-CMD ["python", "-m", "inspectio.worker.main"]
+# Overridden per process in compose / k8s (plans/IMPLEMENTATION_PHASES P9, §29.3).
+CMD ["python", "-c", "import inspectio"]
