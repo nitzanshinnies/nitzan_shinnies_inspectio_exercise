@@ -124,7 +124,7 @@ async def test_tc_dom_008_wakeup_at_due_may_send() -> None:
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_tc_flt_003_timeout_treated_as_failure_and_schedules_next_due() -> None:
+async def test_tc_sur_005_timeout_treated_as_failure_and_schedules_next_due() -> None:
     sender = _TimeoutOnFirstSmsSender()
     clock = {"now": 1_700_000_000_000}
     rt = InMemorySchedulerRuntime(now_ms=lambda: clock["now"], sms_sender=sender)
