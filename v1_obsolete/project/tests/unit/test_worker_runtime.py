@@ -14,7 +14,7 @@ from inspectio_exercise.domain.sharding import pending_prefix_for_shard, shard_i
 from inspectio_exercise.domain.utc_paths import terminal_success_key
 from inspectio_exercise.worker.config import WorkerSettings
 from inspectio_exercise.worker.runtime import WorkerRuntime, message_id_from_pending_key
-from obsolete_tests.fakes import RecordingPersistence
+from tests.fakes import RecordingPersistence
 
 pytestmark = pytest.mark.unit
 

@@ -9,7 +9,7 @@ from fakeredis import aioredis as faker_aioredis
 
 from inspectio_exercise.api.pending_stream_ingest import stage_key_for_pending
 from inspectio_exercise.worker.staging_persistence import StagingPersistence
-from obsolete_tests.fakes import RecordingPersistence
+from tests.fakes import RecordingPersistence
 
 pytestmark = pytest.mark.unit
 

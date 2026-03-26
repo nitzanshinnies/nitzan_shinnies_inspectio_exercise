@@ -25,13 +25,9 @@ from inspectio_exercise.domain.retry import delay_ms_before_next_attempt_after_f
 from inspectio_exercise.domain.sharding import pending_prefix_for_shard, shard_id_for_message
 from inspectio_exercise.notification.persistence_client import PersistenceHttpClient
 from inspectio_exercise.persistence.app import create_app as create_persistence
-from obsolete_tests.e2e.constants import (
-    E2E_POLL_INTERVAL_SEC,
-    E2E_POLL_TIMEOUT_SEC,
-    E2E_SHARD_COUNT,
-)
-from obsolete_tests.e2e.stack import e2e_stack, wait_for_message_in_outcomes
-from obsolete_tests.integration.spy_persistence import SpyPersistenceClient
+from tests.e2e.constants import E2E_POLL_INTERVAL_SEC, E2E_POLL_TIMEOUT_SEC, E2E_SHARD_COUNT
+from tests.e2e.stack import e2e_stack, wait_for_message_in_outcomes
+from tests.integration.spy_persistence import SpyPersistenceClient
 
 pytestmark = pytest.mark.integration
 

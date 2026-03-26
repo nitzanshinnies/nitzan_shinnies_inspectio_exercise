@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from inspectio_exercise.domain.idempotency import ActivationLedger
-from obsolete_tests.reference_spec import ActivationLedgerRef
+from tests.reference_spec import ActivationLedgerRef
 
 
 @pytest.mark.unit

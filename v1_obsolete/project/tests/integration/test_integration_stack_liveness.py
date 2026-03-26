@@ -11,7 +11,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from obsolete_tests.integration.conftest import SERVICE_FACTORIES
+from tests.integration.conftest import SERVICE_FACTORIES
 
 pytestmark = pytest.mark.integration
 

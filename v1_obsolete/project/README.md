@@ -127,15 +127,15 @@ A Kustomize bundle mirrors the compose stack (namespace `inspectio`, PVC for loc
 
 ## Tests
 
-Layout follows **`plans/TESTS.md`**: `obsolete_tests/unit/`, `obsolete_tests/integration/`, `obsolete_tests/e2e/`. The **integration** and **e2e** suites exercise persistence, notification, worker/bootstrap, health monitor, and multi-component flows; see `obsolete_tests/integration/README.md` for module roles.
+Layout follows **`plans/TESTS.md`**: `tests/unit/`, `tests/integration/`, `tests/e2e/`. The **integration** and **e2e** suites exercise persistence, notification, worker/bootstrap, health monitor, and multi-component flows; see `tests/integration/README.md` for module roles.
 
-**TDD:** Canonical behavior is documented in **`obsolete_tests/reference_spec.py`** (with notes tying to **`plans/`**). **`inspectio_exercise.domain`** should match that spec; stubs raise **`NotImplementedError`** until implemented — **`pytest obsolete_tests/unit`** stays **red** until domain, REST contract, and related gates pass.
+**TDD:** Canonical behavior is documented in **`tests/reference_spec.py`** (with notes tying to **`plans/`**). **`inspectio_exercise.domain`** should match that spec; stubs raise **`NotImplementedError`** until implemented — **`pytest tests/unit`** stays **red** until domain, REST contract, and related gates pass.
 
 Smoke / wiring: **`GET /healthz`** (liveness) passes with the skeleton; REST contract tests and domain tests fail until implementation lands (see **`plans/TESTS.md` §1.1–§1.2**).
 
 ```bash
 pytest
-pytest obsolete_tests/unit
+pytest tests/unit
 pytest -m unit
 pytest -m integration
 pytest -m e2e
@@ -155,8 +155,8 @@ pre-commit install
 Manual checks (same rules as the hook):
 
 ```bash
-ruff check src obsolete_tests
-ruff format src obsolete_tests   # apply formatting
+ruff check src tests
+ruff format src tests   # apply formatting
 ```
 
 Configuration lives in **`pyproject.toml`** (`[tool.ruff]`).
@@ -164,4 +164,4 @@ Configuration lives in **`pyproject.toml`** (`[tool.ruff]`).
 ## Status
 
 - **Implemented (core exercise path):** public API message submission + outcomes proxy, **persistence** service (local + AWS backends), **notification** + Redis, **mock SMS** (`POST /send` + audit), **worker** (shard discovery, retries, terminal writes, outcome publish). **`GET /healthz`** on each service.
-- **Implemented:** **`inspectio-health-monitor`** runs **`plans/HEALTH_MONITOR.md`** reconciliation: **`POST /internal/v1/integrity-check`** (optional **`graceMs`**), **`GET /internal/v1/integrity-status`**, **`GET /healthz`**. **Domain** matches **`obsolete_tests/reference_spec.py`** where covered by **`pytest`** (unit, integration, and e2e per **`plans/TESTS.md`**).
+- **Implemented:** **`inspectio-health-monitor`** runs **`plans/HEALTH_MONITOR.md`** reconciliation: **`POST /internal/v1/integrity-check`** (optional **`graceMs`**), **`GET /internal/v1/integrity-status`**, **`GET /healthz`**. **Domain** matches **`tests/reference_spec.py`** where covered by **`pytest`** (unit, integration, and e2e per **`plans/TESTS.md`**).

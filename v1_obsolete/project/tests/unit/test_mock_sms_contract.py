@@ -6,7 +6,7 @@ import pytest
 
 from inspectio_exercise.domain import sms_outcome
 from inspectio_exercise.mock_sms import config as mock_config
-from obsolete_tests import reference_spec as spec
+from tests import reference_spec as spec
 
 
 @pytest.mark.unit

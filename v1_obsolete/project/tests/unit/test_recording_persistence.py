@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from obsolete_tests.fakes import RecordingPersistence
+from tests.fakes import RecordingPersistence
 
 
 @pytest.mark.unit

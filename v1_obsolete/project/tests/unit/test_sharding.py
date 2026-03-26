@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from inspectio_exercise.domain import sharding as sharding_mod
-from obsolete_tests import reference_spec as spec
+from tests import reference_spec as spec
 
 
 @pytest.mark.unit

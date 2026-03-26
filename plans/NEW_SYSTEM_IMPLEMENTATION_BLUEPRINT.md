@@ -126,7 +126,7 @@ The PDF’s `state/pending/...` key layout is **illustrative**; the journal layo
 
 4. **Read plane** (outcomes service + Redis):
    - terminal outcomes indexed in Redis bounded lists;
-   - optional durable **notification log** in S3 (same role as `v1_obsolete` `state/notifications/...`) plus **hydration** into Redis on cold start—**not** required on every `GET` (**§15.3**).
+   - optional durable **notification log** in S3 under a **`state/notifications/...`**-style prefix (**§5.1**, **§15.3**) plus **hydration** into Redis on cold start—**not** required on every `GET` (**§15.3**).
 
 ### 3.2 Why this fixes observed failures
 
