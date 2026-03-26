@@ -4,6 +4,8 @@ This document orders delivery for the **`inspectio`** package described in **`NE
 
 **Normative spec:** the blueprint wins on behavior; this file wins on **order** and **PR boundaries**.
 
+**SQS FIFO admission (throughput):** `plans/SQS_FIFO_THROUGHPUT_AND_ADMISSION_PLAN.md` documents FIFO batch limits (10 per `SendMessageBatch`), **`MessageGroupId`** ordering, when parallel admission is safe (across groups vs within a group), backpressure, and how to validate aggregate throughput in-cluster. Use it alongside **§17** when working on **`src/inspectio/ingest/sqs_fifo_producer.py`**.
+
 ### `v1_obsolete` boundary (agents — **hard**)
 
 The tree **`v1_obsolete/`** is an **archived implementation**, not a dependency of the greenfield **`inspectio`** package.
@@ -59,8 +61,10 @@ All application code under **`src/inspectio/`**:
 | `src/inspectio/domain/schedule.py` | `RETRY_OFFSET_MS`, `next_due_ms(arrival_ms, completed_send_count)` |
 | `src/inspectio/domain/sharding.py` | `shard_for_message(message_id, total_shards)` per **§16.2** |
 | `src/inspectio/ingest/schema.py` | `MessageIngestedV1` encode/decode (**§17.2**) |
-| `src/inspectio/ingest/kinesis_producer.py` | API-side **PutRecords** |
-| `src/inspectio/ingest/kinesis_consumer.py` | Worker-side poll + checkpoint (**§29.6**) |
+| `src/inspectio/ingest/ingest_producer.py` | Shared ingest types + **`partition_key_for_shard`** |
+| `src/inspectio/ingest/sqs_fifo_producer.py` | API-side **`SendMessageBatch`** (**§17**) |
+| `src/inspectio/ingest/sqs_fifo_consumer.py` | **`SqsFifoBatchFetcher`** (**§29.6**) |
+| `src/inspectio/ingest/ingest_consumer.py` | Worker ingest journal + **SQS delete** after **§18.3** |
 | `src/inspectio/journal/records.py` | `JournalRecordV1` types + validation (**§18.2**) |
 | `src/inspectio/journal/writer.py` | batch flush **§29.8** |
 | `src/inspectio/journal/replay.py` | snapshot + tail replay (**§18.4**) |
@@ -81,7 +85,7 @@ All application code under **`src/inspectio/`**:
 
 | Process | Module entry | Purpose |
 |---------|--------------|---------|
-| **`inspectio-api`** | `inspectio.api.app:app` | **§15** + Kinesis producer |
+| **`inspectio-api`** | `inspectio.api.app:app` | **§15** + **SQS FIFO** producer |
 | **`inspectio-worker`** | `inspectio.worker.main:main` (create `main.py`) | consumer + scheduler |
 | **`inspectio-notification`** | `inspectio.notification.app:app` | **§29.6** + Redis |
 
@@ -163,7 +167,7 @@ All application code under **`src/inspectio/`**:
 - **`JournalRecordV1`** discriminated by **`type`**; validate required **`payload`** keys (**§18.2** table).
 - Parse gzip NDJSON bytes → list of records (**§18.1**) — **keep helpers inside `journal/records.py`** (or private submodules under `journal/` **only** if you split files; **do not** add a new top-level path not listed in **§29.2** without updating the blueprint).
 
-**Do not** call Kinesis or S3 in unit tests (fixtures only).
+**Do not** call SQS or S3 in unit tests (fixtures only).
 
 **Exit criteria**
 
@@ -171,7 +175,7 @@ All application code under **`src/inspectio/`**:
 
 ---
 
-## P3 — API admission (Kinesis only, no `send`)
+## P3 — API admission (SQS FIFO, no `send`)
 
 **Prerequisites:** **P0**, **P1** (for **`shardId`**), **P2** (for ingest record encoding).
 
@@ -184,13 +188,14 @@ All application code under **`src/inspectio/`**:
 | `src/inspectio/settings.py` | **Pydantic `Settings`** loading **§29.4** |
 | `src/inspectio/api/app.py` | FastAPI factory |
 | `src/inspectio/api/routes_public.py` | **§15** routes only |
-| `src/inspectio/ingest/kinesis_producer.py` | API-side **PutRecords** |
+| `src/inspectio/ingest/ingest_producer.py` | Shared ingest types + **`partition_key_for_shard`** |
+| `src/inspectio/ingest/sqs_fifo_producer.py` | API-side **`SendMessageBatch`** (**§17**) |
 
 **Implement**
 
 - **`POST /messages`**, **`POST /messages/repeat`**, **`GET /healthz`** per **OpenAPI** + **§15**; **202** bodies match schema.
 - **`GET /messages/success|failed`**: return **`501`** with stable JSON **or** omit routes until **P7** — if omitted, document in README; **prefer** registering routes that return **501** so OpenAPI paths exist (**agents:** pick one approach and keep **OpenAPI** as source of truth).
-- **`PutRecords`** with partition key **`f"{shardId:05d}"`**; batch ≤ **500** per AWS limit.
+- **`SendMessageBatch`** with **`MessageGroupId`** = **`partition_key_for_shard(shard_id)`**; chunks ≤ **10** per FIFO limit; route may batch up to **500** logical rows per **§15** (producer loops chunks). See **`plans/SQS_FIFO_THROUGHPUT_AND_ADMISSION_PLAN.md`** for parallel cross-group admission.
 - Route handlers **must not** `await` **`send()`** or worker activation (**TC-API-008**).
 
 **Do not** implement **`Idempotency-Key`** / **409** (**§29.10**).
@@ -220,7 +225,7 @@ All application code under **`src/inspectio/`**:
 - S3 keys per **§5.1**; **`recordIndex`** monotonic per **`shardId`**.
 - Retry on throttling with backoff (**TC-FLT-002**).
 
-**Do not** advance Kinesis checkpoints ( **P5** ).
+**Do not** implement **SQS** receive/delete ( **P5** ).
 
 **Exit criteria**
 
@@ -228,7 +233,7 @@ All application code under **`src/inspectio/`**:
 
 ---
 
-## P5 — Kinesis consumer + checkpoint + ingest durability
+## P5 — SQS FIFO consumer + ingest durability (**§18.3**)
 
 **Prerequisites:** **P2**, **P3**, **P4** (consumer must persist **§18.3** lines via writer).
 
@@ -238,22 +243,23 @@ All application code under **`src/inspectio/`**:
 
 | Path | Responsibility |
 |------|------------------|
-| `src/inspectio/ingest/kinesis_consumer.py` | Worker-side poll + checkpoint (**§29.6**) |
+| `src/inspectio/ingest/sqs_fifo_consumer.py` | **`SqsFifoBatchFetcher`** (**§29.6**) |
+| `src/inspectio/ingest/ingest_consumer.py` | Worker ingest + **SQS delete** after journal (**§18.3**) |
 | `src/inspectio/worker/main.py` | CLI / `asyncio.run` entry (**`inspectio-worker`**) |
 | `src/inspectio/worker/handlers.py` | apply ingest, run state machine, call **`send`** |
 
-*(In P5, implement **ingest + journal + checkpoint** only inside **`handlers.py`**; leave full state machine / **`send`** to **P6**.)*
+*(In P5, implement **ingest + journal + SQS delete** only inside **`handlers.py`**; leave full state machine / **`send`** to **P6**.)*
 
 **Implement**
 
-- Poll Kinesis; deserialize **`MessageIngestedV1`**; Redis **`SET NX`** dedupe **§17.4**; append **§29.7** sequence **A** (`INGEST_APPLIED` → `DISPATCH_SCHEDULED`) via journal writer; **then** persist checkpoint **§29.4** key layout.
-- **Single-worker default** (**§29.6**): one process may own all stream shards locally.
+- Long-poll **SQS FIFO**; deserialize **`MessageIngestedV1`**; Redis **`SET NX`** dedupe **§17.4**; append **§29.7** sequence **A** (`INGEST_APPLIED` → `DISPATCH_SCHEDULED`) via journal writer; **then** **`DeleteMessage`** (receipt handle).
+- **Single-worker default** (**§29.6**): one process may **`ReceiveMessage`** for the deployment queue.
 
-**Do not** run full **`send`** / retry state machine unless **P6** merged (stub handler may enqueue to in-memory dict for P5-only demo — **prefer** no fake scheduler: stop after journal + checkpoint).
+**Do not** run full **`send`** / retry state machine unless **P6** merged (stub handler may enqueue to in-memory dict for P5-only demo — **prefer** no fake scheduler: stop after journal + **SQS delete**).
 
 **Exit criteria**
 
-- **TC-STR-001–003**, integration test for **§28.4** item **2** (journal visible before checkpoint advance).
+- **TC-STR-001–003**, integration test for **§28.4** item **2** (journal visible before **SQS delete**).
 - **TC-REC-001** with synthetic journal lines acceptable if consumer not yet feeding full replay.
 
 ---
@@ -353,7 +359,7 @@ All application code under **`src/inspectio/`**:
 
 | Process | Module entry | Purpose |
 |---------|--------------|---------|
-| **`inspectio-api`** | `inspectio.api.app:app` | **§15** + Kinesis producer |
+| **`inspectio-api`** | `inspectio.api.app:app` | **§15** + **SQS FIFO** producer |
 | **`inspectio-worker`** | `inspectio.worker.main:main` (create `main.py`) | consumer + scheduler |
 | **`inspectio-notification`** | `inspectio.notification.app:app` | **§29.6** + Redis |
 

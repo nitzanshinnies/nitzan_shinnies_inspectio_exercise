@@ -19,7 +19,7 @@ Bring it up (rebuild when `Dockerfile` / deps change):
 docker compose up -d --build
 ```
 
-Services: **redis**, **localstack** (S3 + Kinesis), **mock-sms** (image **`deploy/mock-sms/Dockerfile`**), **inspectio-api**, **inspectio-worker**, **inspectio-notification** (shared **`deploy/docker/Dockerfile`**).
+Services: **redis**, **localstack** (S3 + **SQS FIFO**), **mock-sms** (image **`deploy/mock-sms/Dockerfile`**), **inspectio-api**, **inspectio-worker**, **inspectio-notification** (shared **`deploy/docker/Dockerfile`**).
 
 | Service        | Host URL / port |
 |----------------|-----------------|
@@ -38,6 +38,16 @@ Services: **redis**, **localstack** (S3 + Kinesis), **mock-sms** (image **`deplo
 LocalStack’s init script (**`deploy/localstack/init/ready.d/10-inspectio-aws.sh`**) runs **inside** the LocalStack container and always uses **`aws --endpoint-url=http://localhost:4566`** there; it does not read your laptop’s `~/.aws` unless you extend the image or mount it (not required for normal dev).
 
 Python package: **`pip install -e ".[dev]"`** from repo root (`src/inspectio/` scaffold per **§29.2**).
+
+### Compose smoke (P9)
+
+After a full stack recycle (`docker compose up -d --build --force-recreate`), verify admission → worker → SMS → outcomes:
+
+```bash
+python3 scripts/compose_smoke.py
+```
+
+Uses **`INSPECTIO_SMOKE_API`** (default `http://127.0.0.1:8000`). Exits **0** when the message appears in **`GET /messages/success`**.
 
 ### Port conflicts
 
