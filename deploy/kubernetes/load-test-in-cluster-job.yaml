@@ -1,0 +1,33 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: inspectio-full-flow-load-test
+  namespace: inspectio
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      serviceAccountName: inspectio-app
+      containers:
+        - name: load-test
+          image: REPLACE_WITH_APP_IMAGE
+          imagePullPolicy: IfNotPresent
+          command: ["python", "scripts/full_flow_load_test.py"]
+          args:
+            - "--kubernetes"
+            - "--api-base-url"
+            - "http://inspectio-api.inspectio.svc.cluster.local:8000"
+            - "--success-path"
+            - "/messages/success"
+            - "--failed-path"
+            - "/messages/failed"
+            - "--count"
+            - "2000"
+            - "--timeout-sec"
+            - "180"
+          envFrom:
+            - configMapRef:
+                name: inspectio-config
+            - secretRef:
+                name: inspectio-secrets
