@@ -40,7 +40,7 @@ inspectio-worker = "inspectio_exercise.cli:run_worker"
 packages = ["src/inspectio_exercise"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["obsolete_tests"]
 pythonpath = ["src", "."]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
@@ -53,7 +53,7 @@ markers = [
 [tool.ruff]
 target-version = "py311"
 line-length = 100
-src = ["src", "tests"]
+src = ["src", "obsolete_tests"]
 
 [tool.ruff.lint]
 select = [
