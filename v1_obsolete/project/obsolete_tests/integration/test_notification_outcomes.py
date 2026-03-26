@@ -19,9 +19,9 @@ from inspectio_exercise.notification.keys import notification_object_key
 from inspectio_exercise.notification.persistence_client import PersistenceHttpClient
 from inspectio_exercise.notification.store.memory_store import MemoryOutcomesHotStore
 from inspectio_exercise.persistence.app import create_app as create_persistence
-from tests.e2e.constants import E2E_POLL_INTERVAL_SEC, E2E_POLL_TIMEOUT_SEC
-from tests.e2e.stack import e2e_stack, wait_for_message_in_outcomes
-from tests.integration.spy_persistence import SpyPersistenceClient
+from obsolete_tests.e2e.constants import E2E_POLL_INTERVAL_SEC, E2E_POLL_TIMEOUT_SEC
+from obsolete_tests.e2e.stack import e2e_stack, wait_for_message_in_outcomes
+from obsolete_tests.integration.spy_persistence import SpyPersistenceClient
 
 pytestmark = pytest.mark.integration
 

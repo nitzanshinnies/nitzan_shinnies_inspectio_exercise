@@ -26,7 +26,7 @@ from inspectio_exercise.notification.persistence_client import PersistenceHttpCl
 from inspectio_exercise.notification.store.memory_store import MemoryOutcomesHotStore
 from inspectio_exercise.persistence.app import create_app as create_persistence_app
 from inspectio_exercise.worker.app import create_app as create_worker_app
-from tests.e2e.constants import (
+from obsolete_tests.e2e.constants import (
     E2E_BASE_TIME_SEC,
     E2E_SHARD_COUNT,
     E2E_SHARDS_PER_POD,
