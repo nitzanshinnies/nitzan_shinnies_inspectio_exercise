@@ -9,8 +9,10 @@ endpoint="${LOCALSTACK_EDGE_URL:-http://localhost:4566}"
 aws() { command aws --endpoint-url="${endpoint}" "$@"; }
 # Default bucket name matches root compose / INSPECTIO_S3_BUCKET (inspectio-test-bucket).
 bucket="${INSPECTIO_S3_BUCKET:-${S3_BUCKET:-inspectio-test-bucket}}"
-stream="${INSPECTIO_KINESIS_STREAM_NAME:-inspectio-ingest}"
-shards="${INSPECTIO_KINESIS_LOCAL_SHARDS:-1}"
+fifo_queue="${INSPECTIO_INGEST_FIFO_QUEUE_NAME:-inspectio-ingest.fifo}"
 aws s3 mb "s3://${bucket}" 2>/dev/null || true
-aws kinesis create-stream --stream-name "${stream}" --shard-count "${shards}" 2>/dev/null || true
-echo "inspectio localstack init: bucket=${bucket} stream=${stream} shards=${shards}"
+aws sqs create-queue \
+  --queue-name "${fifo_queue}" \
+  --attributes FifoQueue=true,ContentBasedDeduplication=false \
+  2>/dev/null || true
+echo "inspectio localstack init: bucket=${bucket} fifo_queue=${fifo_queue}"

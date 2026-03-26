@@ -19,7 +19,7 @@ Bring it up (rebuild when `Dockerfile` / deps change):
 docker compose up -d --build
 ```
 
-Services: **redis**, **localstack** (S3 + Kinesis), **mock-sms** (image **`deploy/mock-sms/Dockerfile`**), **inspectio-api**, **inspectio-worker**, **inspectio-notification** (shared **`deploy/docker/Dockerfile`**).
+Services: **redis**, **localstack** (S3 + SQS FIFO ingest), **mock-sms** (image **`deploy/mock-sms/Dockerfile`**), **inspectio-api**, **inspectio-worker**, **inspectio-notification** (shared **`deploy/docker/Dockerfile`**).
 
 | Service        | Host URL / port |
 |----------------|-----------------|
@@ -28,6 +28,82 @@ Services: **redis**, **localstack** (S3 + Kinesis), **mock-sms** (image **`deplo
 | Mock SMS       | `http://127.0.0.1:8090` |
 | LocalStack     | `http://127.0.0.1:4566` |
 | Redis          | `127.0.0.1:6379` |
+
+### P9 smoke flow
+
+After `docker compose up -d --build`, run:
+
+```bash
+python scripts/p9_compose_smoke.py
+```
+
+This performs the Phase-9 smoke path:
+- `POST /messages`
+- poll `GET /messages/success|failed`
+- assert the submitted `messageId` appears in terminal projection
+
+Optional pytest wrapper (disabled unless explicitly enabled):
+
+```bash
+RUN_P9_E2E_SMOKE=1 pytest -m e2e -q
+```
+
+## Phase-10 AWS/EKS runbook
+
+Phase 10 validation is **in-cluster only** for AWS claims. Do not use laptop
+`port-forward` as a baseline.
+
+### 1) Prepare manifests
+
+- Edit placeholders in:
+  - `deploy/kubernetes/serviceaccount.yaml` (`eks.amazonaws.com/role-arn`)
+  - `deploy/kubernetes/api.yaml`, `worker.yaml`, `notification.yaml`, `load-test-in-cluster-job.yaml` (`image`)
+- Create runtime secret from `deploy/kubernetes/secrets.example.yaml`:
+  - set `INSPECTIO_S3_BUCKET`
+  - set `INSPECTIO_REDIS_URL`
+  - set in-cluster `INSPECTIO_NOTIFICATION_BASE_URL` and `INSPECTIO_SMS_URL`
+
+### 2) Deploy app services
+
+```bash
+kubectl apply -f deploy/kubernetes/secrets.example.yaml
+kubectl apply -k deploy/kubernetes
+```
+
+### 3) Restart workloads before load tests
+
+Default policy for integration/load runs is a full recycle of participating
+workloads in the `inspectio` namespace.
+
+```bash
+kubectl -n inspectio rollout restart deployment --all
+kubectl -n inspectio rollout restart statefulset --all
+kubectl -n inspectio rollout status deployment/inspectio-api
+kubectl -n inspectio rollout status deployment/inspectio-worker
+kubectl -n inspectio rollout status deployment/inspectio-notification
+```
+
+### 4) Run load test inside the cluster
+
+```bash
+kubectl -n inspectio delete job inspectio-full-flow-load-test --ignore-not-found
+kubectl -n inspectio apply -f deploy/kubernetes/load-test-in-cluster-job.yaml
+kubectl -n inspectio logs -f job/inspectio-full-flow-load-test
+```
+
+The job runs:
+
+```bash
+python scripts/full_flow_load_test.py --kubernetes --api-base-url http://inspectio-api.inspectio.svc.cluster.local:8000
+```
+
+For larger loads, raise query depth so the reader can observe recent terminal rows:
+
+```bash
+python scripts/full_flow_load_test.py --kubernetes --api-base-url http://inspectio-api.inspectio.svc.cluster.local:8000 --count 2000 --limit 1000
+```
+
+Exit code `0` means the flow reached terminal outcomes in-cluster.
 
 ### AWS S3 and credentials
 
