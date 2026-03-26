@@ -1,6 +1,8 @@
 # NEW_SYSTEM_IMPLEMENTATION_BLUEPRINT.md
 
-**Autonomous agents:** implement **§29** as the locked baseline (layout, Kinesis, env, internal HTTP, journal sequences). **§29** overrides ambiguous text elsewhere. **Do not** implement by importing or copying **`v1_obsolete`** / **`inspectio_exercise`** Python code — see **§29.11**.
+**Autonomous agents:** implement **§29** as the locked baseline (layout, **SQS FIFO** durable ingest, env, internal HTTP, journal sequences). **§29** overrides ambiguous text elsewhere. **Do not** implement by importing or copying **`v1_obsolete`** / **`inspectio_exercise`** Python code — see **§29.11**.
+
+**Ingest transport:** this repository uses **Amazon SQS FIFO** (`INSPECTIO_INGEST_QUEUE_URL`) for durable admission. **§18.3** (journal flush before releasing the message — **DeleteMessage** for SQS).
 
 **Implementation sequencing:** **`plans/IMPLEMENTATION_PHASES.md`** — phased PR plan (greenfield code is **not** required to live in the same change set as this blueprint).
 
@@ -92,7 +94,7 @@ Each row quotes the PDF intent (not necessarily verbatim). Status **Pass** = cov
 
 ### 2.2 S3 vs ingest stream (*reconciles PDF with this design*)
 
-The PDF requires **persisting retry state to S3** so the system survives restarts, and allows extra caches. This spec adds a **durable ingest stream** (**Amazon Kinesis Data Streams** in this repository — **§17**, **§29**) for admission throughput.
+The PDF requires **persisting retry state to S3** so the system survives restarts, and allows extra caches. This spec adds a **durable ingest boundary** (**Amazon SQS FIFO** in this repository — **§17**, **§29**) for admission throughput. If the assignment PDF names a different stream technology, treat it as the same intent: durable handoff before worker processing.
 
 **Normative split:**
 
@@ -244,7 +246,7 @@ Rules:
 - **EKS**: API, worker, notification; **health-monitor** *optional* (on-demand integrity vs mock audit). Implement against **§7** / this spec only — **do not** embed **`v1_obsolete`** code paths.
 - **S3**: durability (journal + snapshot + optional terminal logs);
 - **ElastiCache Redis**: outcomes hot index and idempotency cache;
-- **Amazon Kinesis Data Streams**: durable ingest (**§17**, **§29**);
+- **Amazon SQS FIFO**: durable ingest (**§17**, **§29**);
 - **ALB/Ingress**: API/UI endpoints.
 
 ### 7.2 IAM
@@ -387,7 +389,7 @@ Acceptance:
 
 The following sections are **normative** for implementers unless explicitly marked *informative*. If a prior section conflicts with this tier-3 text, **this tier-3 text wins**.
 
-**Autonomous agents:** **§29** is a **single locked implementation path** (repository layout, Kinesis-only ingest, env vars, internal HTTP, journal templates, forbidden shortcuts). Where **§29** is stricter or more specific than earlier sections, **§29 wins**. Humans may waive **§29** subsections in writing; agents **must not** silently substitute alternatives (e.g. Kafka, different URLs, or “simplified” persistence).
+**Autonomous agents:** **§29** is a **single locked implementation path** (repository layout, **SQS FIFO** ingest, env vars, internal HTTP, journal templates, forbidden shortcuts). Where **§29** is stricter or more specific than earlier sections, **§29 wins**. Humans may waive **§29** subsections in writing; agents **must not** silently substitute alternatives (e.g. Kafka, different URLs, or “simplified” persistence).
 
 ## 13) Implementation baseline
 
@@ -396,7 +398,7 @@ The following sections are **normative** for implementers unless explicitly mark
 | Language | **Python 3.11+** only (this repository implementation) |
 | Public API framework | **FastAPI** served by **uvicorn** |
 | Async HTTP client | **httpx** (async) for `send` and internal calls |
-| AWS SDK | **aioboto3** / aiobotocore for S3; **`aiobotocore`** Kinesis client (or **`boto3`** sync wrapper isolated in ingest I/O boundary) for **PutRecord** / **GetRecords** / checkpointing — **§29** |
+| AWS SDK | **aioboto3** / aiobotocore for S3; **SQS** client for **`send_message`**, **`send_message_batch`**, **`receive_message`**, **`delete_message`**, **`change_message_visibility`** — **§29** |
 | Assignment hooks | The three functions **must exist as callable entrypoints** per **§25** (Python idiomatic names + README mapping). The **HTTP API** (§15) is separate operational surface; it **feeds** the same scheduler via the ingest stream. |
 | Configuration | All limits, shard counts, URLs, and timeouts are **environment variables** or a single `Settings` object with **named constants** (no magic numbers in logic). |
 
@@ -453,7 +455,7 @@ Base path: `/` on the **API gateway** service (behind ALB/Ingress). All JSON use
 | `429` | Admission control / stream throttle (§20); include `Retry-After` when possible |
 | `503` | Ingest stream unavailable; body `{"error":"ingest_unavailable","detail":"..."}` |
 
-**Normative timing:** Handler **must not** `await` worker dispatch or `send()`. **§29 (agents):** the API **does not** `await` Redis on `POST /messages` in Phase 1; duplicate protection is **§17.4** on the worker after Kinesis delivery.
+**Normative timing:** Handler **must not** `await` worker dispatch or `send()`. **§29 (agents):** the API **does not** `await` Redis on `POST /messages` in Phase 1; duplicate protection is **§17.4** on the worker after **SQS** delivery.
 
 ### 15.2 `POST /messages/repeat?count=N`
 
@@ -480,7 +482,7 @@ Base path: `/` on the **API gateway** service (behind ALB/Ingress). All JSON use
 
 *Informative for humans:* a summary-style body can still satisfy the PDF if you fork the spec; agents following this blueprint **must not**.
 
-**Implementation note (*informative*):** Use **batched** `PutRecords` (Kinesis, max **500** records per call per AWS limit) to avoid O(N) round-trips; still return **one** HTTP response.
+**Implementation note (*informative*):** Use **batched** `send_message_batch` (SQS FIFO, max **10** entries per call); the route may still accept large **`repeat`** counts and loop; return **one** HTTP response.
 
 **Errors:** Same family as §15.1; `400` if `count` out of range.
 
@@ -543,13 +545,13 @@ end_excl = min((pod_index + 1) * SHARDS_PER_POD, TOTAL_SHARDS)
 
 ### 16.4 Stream partition key
 
-- **Kinesis partition key:** string `f"{shardId:05d}"` (fixed-width decimal).
+- **SQS FIFO `MessageGroupId`:** string `f"{shardId:05d}"` (fixed-width decimal; same as legacy “partition key”).
 
 ## 17) Ingest stream (normative)
 
 ### 17.1 Technology
 
-**This repository (agents):** **Amazon Kinesis Data Streams** only — stream name **`INSPECTIO_KINESIS_STREAM_NAME`** (default **`inspectio-ingest`**, **§29.4**). Implement **PutRecords** (batch) from API and **GetRecords** + checkpointing in worker per AWS SDK patterns.
+**This repository (agents):** **Amazon SQS FIFO** — queue URL **`INSPECTIO_INGEST_QUEUE_URL`** (**§29.4**). Implement **`send_message_batch`** from API and **`receive_message`** + **`delete_message`** after **§18.3** in worker.
 
 *Informative:* MSK/Kafka is an architecturally valid alternative for other teams; **do not implement it here** unless **§29** is explicitly revised.
 
@@ -584,9 +586,9 @@ Before creating **new** in-memory work for `(idempotencyKey)`:
 
 ### 17.5 Consumer topology
 
-- **One Kinesis stream** per deployment; consumer application name constant **`inspectio-ingest-consumer`**.
-- **Checkpoint commit:** consumer **must not** advance a **Kinesis sequence number** / iterator **past** a record until **§18.3** is satisfied for that record (durably journaled state for that ingest). “Enqueue to worker memory” **alone** is insufficient if a crash could lose work before journal lines exist.
-- **Multi-replica workers:** without extra routing, **each** pod **must not** assume exclusive Kinesis consumption—**§29.6** locks a **default single-worker** deployment for Phase 1–2 and defines how to scale safely.
+- **One SQS FIFO queue** per deployment (optional **FIFO DLQ** + redrive policy in AWS).
+- **Commit:** consumer **must not** **`DeleteMessage`** until **§18.3** is satisfied for that ingest (durably journaled state). “Enqueue to worker memory” **alone** is insufficient if a crash could lose work before journal lines exist.
+- **Multi-replica workers:** use **logical shard ownership** + **`ChangeMessageVisibility(0)`** for foreign messages; **§29.6** locks **default single-worker** until validated — see **`deploy/kubernetes/README.md`**.
 
 ## 18) S3 journal and snapshots (normative)
 
@@ -728,8 +730,8 @@ The assignment allows **`newMessage` and `wakeup` concurrently** (multi-threaded
 
 | Producer | Consumer | Purpose |
 |----------|----------|---------|
-| API | Kinesis | ingest **PutRecords** |
-| Worker | Kinesis | **poll** assigned shards (**§29.6**) |
+| API | SQS FIFO | ingest **`send_message_batch`** |
+| Worker | SQS FIFO | **long-poll** + **delete** after journal (**§29.6**) |
 | Worker | S3 | journal + checkpoints (**§29.4**) |
 | Worker | Notification HTTP | terminal publish **§29.6** |
 | Notification | Redis | last-100 lists (**§5.2**) |
@@ -784,7 +786,7 @@ sequenceDiagram
 **Primary order:** **`plans/IMPLEMENTATION_PHASES.md`** (**P0–P10**). The list below is a **compressed** mirror of **§29** acceptance.
 
 1. [ ] **P0–P2** — Package skeleton, pure domain, ingest + journal codecs (**§29.2**, **§6**, **§16–18**).
-2. [ ] **P3–P5** — API Kinesis admission, S3 journal flush, consumer + **§18.3** checkpoint (**§15**, **§17**).
+2. [ ] **P3–P5** — API **SQS FIFO** admission, S3 journal flush, consumer + **§18.3** commit (**§15**, **§17**).
 3. [ ] **P6** — Scheduler + **`scheduler_surface`** + SMS client (**§19–20**, **§25**, **§29.7–29.9**).
 4. [ ] **P7** — Notification + Redis + GET proxy (**§29.6**, **§5.2**).
 5. [ ] **P8–P10** — Snapshots/replay, full **docker compose**, AWS + in-cluster load (**§14**, **§26**, **§28.6**).
@@ -829,7 +831,7 @@ The submitted **README** must answer:
 | 1.14 | **`IMPLEMENTATION_PHASES.md`**: agent-readiness table, per-phase template (Prerequisites / Read first / Touch list / Implement / Do not / Verify), fixed **§9** crosswalk, dependency graph |
 | 1.13 | **`plans/IMPLEMENTATION_PHASES.md`**; remove in-repo Python scaffold; **§29.13–29.14** compose = infra-only until implementation PR; blueprint pointer |
 | 1.12 | **§29.13–29.14** `docker-compose.yml`, **`deploy/docker/Dockerfile`**, LocalStack init, **`plans/openapi.yaml`**; root **`pyproject.toml`**, **`src/inspectio`** scaffold, **`.dockerignore`** |
-| 1.11 | **§29** agent execution contract (locked Kinesis, **src/inspectio** tree, full env table, internal HTTP, journal templates, forbidden list); **§17.1/17.5**, **§22**, **§24**, **§25** import path, **§15.2** repeat response; tier-3 **§29** precedence |
+| 1.11 | **§29** agent execution contract (locked **SQS FIFO** ingest, **src/inspectio** tree, full env table, internal HTTP, journal templates, forbidden list); **§17.1/17.5**, **§22**, **§24**, **§25** import path, **§15.2** repeat response; tier-3 **§29** precedence |
 | 1.10 | **ASSIGNMENT.pdf** clause-by-clause **§2.0** sweep (G1–AC6, P1–P8, N1–N5, D1–D3, O1–O2, X1); **§2.1** condensed index; **`GET /healthz`** marked **Ext**; **§15.3** `finalTimestamp` ↔ PDF “attempt time”; **§28.11** |
 | 1.9 | Drop normative **`shouldFail`** from public/ingest contract (**§15.1**, **§4.1**, **§2.1**, **TC-API-009**, **§28.11**); tests via fakes / **§25** only; *informative* note under **§15.1** |
 | 1.8 | Deep audit: **§2.3** vs `v1_obsolete` PLAN retry wording; **`shouldFail`** **§2.1/§4.1/§15.1**; **§18.3** ingest-first journal before checkpoint; **§15.3** `limit` cap note; read-plane S3 notifications **§3.1**; **TC-API-009**; **§28.11** rows |
@@ -853,7 +855,7 @@ The submitted **README** must answer:
 | **httpx** | `ASGITransport` against FastAPI app for §15 contract tests **without** TCP |
 | **hypothesis** | *Recommended* for `nextDueAtMs`, shard id, and journal replay invariants |
 | **fakeredis** / **redis** in Docker | Idempotency + outcomes lists (**§17.4**, **§5.2**) |
-| **moto** / **LocalStack** / **in-memory fakes** | S3 journal read/write; **Kinesis** where CI budget allows (**§29**) |
+| **moto** / **LocalStack** / **in-memory fakes** | S3 journal read/write; **SQS FIFO** where CI budget allows (**§29**) |
 
 Fakes **must** enforce the same JSON shapes as **§17.2** and **§18.2** so tests are contract-valid.
 
@@ -1072,7 +1074,7 @@ Full-document cross-check: **ASSIGNMENT.pdf** (consolidated spec) via **§2.0** 
 | Durable outcomes / notification S3 | **Informative** | **§3.1** read plane; cold-start hydration without Redis loss per **this** spec — **do not** copy **`v1_obsolete`** implementation. |
 | **§18.3** ingest-first checkpoint | **Pass** (post-fix) | **`INGEST_APPLIED`** durable before ack; not only post-`SEND_RESULT` text. |
 | **§2.0** PDF sweep | **Pass** | Every numbered PDF clause (G1–O2 + extensions) mapped; **healthz** = **Ext** only |
-| **§29** agent contract | **Pass** | Kinesis-only, **src/inspectio** layout, env table, internal HTTP, journal templates |
+| **§29** agent contract | **Pass** | **SQS FIFO** ingest, **src/inspectio** layout, env table, internal HTTP, journal templates |
 | **§29.13** artifacts | **Pass** | Infra **`docker-compose.yml`**, **`plans/openapi.yaml`**, LocalStack init; app Dockerfile/compose services per **`IMPLEMENTATION_PHASES.md`** |
 
 Implementers: when **ASSIGNMENT.pdf** changes, re-run **§2.0** + this table and bump **§27** version.
@@ -1088,7 +1090,7 @@ This section exists so **autonomous coding agents** do not fork the architecture
 1. **§29** > other tier-3 sections > tier-1–2 narrative > *informative* diagrams.
 2. **Do not** add **MSK/Kafka**, **RabbitMQ**, or **per-message synchronous S3 PUT** on the API hot path.
 3. **Do not** `await` **`send()`** inside **FastAPI** route handlers (**§15**).
-4. **Do not** advance **Kinesis** checkpoints before **§18.3** durability for that record.
+4. **Do not** **`DeleteMessage`** (or advance any checkpoint cursor) before **§18.3** durability for that record.
 
 ### 29.2 Repository layout (exact)
 
@@ -1103,8 +1105,10 @@ All application code under **`src/inspectio/`**:
 | `src/inspectio/domain/schedule.py` | `RETRY_OFFSET_MS`, `next_due_ms(arrival_ms, completed_send_count)` |
 | `src/inspectio/domain/sharding.py` | `shard_for_message(message_id, total_shards)` per **§16.2** |
 | `src/inspectio/ingest/schema.py` | `MessageIngestedV1` encode/decode (**§17.2**) |
-| `src/inspectio/ingest/kinesis_producer.py` | API-side **PutRecords** |
-| `src/inspectio/ingest/kinesis_consumer.py` | Worker-side poll + checkpoint (**§29.6**) |
+| `src/inspectio/ingest/ingest_producer.py` | Shared ingest types + **`partition_key_for_shard`** |
+| `src/inspectio/ingest/sqs_fifo_producer.py` | API **`send_message_batch`** / per-entry retry (**FIFO**) |
+| `src/inspectio/ingest/ingest_consumer.py` | Worker ingest: journal then **S3 checkpoint** *or* **SQS delete** (**§18.3**) |
+| `src/inspectio/ingest/sqs_fifo_consumer.py` | **`SqsFifoBatchFetcher`**: long-poll + logical shard filter (**§29.6**) |
 | `src/inspectio/journal/records.py` | `JournalRecordV1` types + validation (**§18.2**) |
 | `src/inspectio/journal/writer.py` | batch flush **§29.8** |
 | `src/inspectio/journal/replay.py` | snapshot + tail replay (**§18.4**) |
@@ -1123,7 +1127,7 @@ All application code under **`src/inspectio/`**:
 
 | Process | Module entry | Purpose |
 |---------|--------------|---------|
-| **`inspectio-api`** | `inspectio.api.app:app` | **§15** + Kinesis producer |
+| **`inspectio-api`** | `inspectio.api.app:app` | **§15** + **SQS FIFO** ingest producer |
 | **`inspectio-worker`** | `inspectio.worker.main:main` (create `main.py`) | consumer + scheduler |
 | **`inspectio-notification`** | `inspectio.notification.app:app` | **§29.6** + Redis |
 | **`mock-sms`** | *standalone SMS stub* built from **`deploy/mock-sms/Dockerfile`** per **root `docker-compose.yml`** (**§19**); **`src/inspectio`** **must not** depend on archived Python packages at runtime |
@@ -1139,7 +1143,7 @@ Agents **must** define every name below in `Settings` (defaults as shown; empty 
 | `INSPECTIO_ENV` | `dev` | all | `dev` \| `prod` |
 | `INSPECTIO_AWS_REGION` | `us-east-1` | all | AWS region |
 | `INSPECTIO_S3_BUCKET` | *(empty)* | all | Journal + snapshots + checkpoints |
-| `INSPECTIO_KINESIS_STREAM_NAME` | `inspectio-ingest` | all | Ingest stream |
+| `INSPECTIO_INGEST_QUEUE_URL` | *(empty)* | all | **FIFO** SQS queue URL for ingest |
 | `INSPECTIO_TOTAL_SHARDS` | `1024` | all | **§16** |
 | `INSPECTIO_WORKER_REPLICAS` | `1` | 1–2 | **Locked default `1`** until multi-consumer design is validated; **§29.6** |
 | `INSPECTIO_WORKER_INDEX` | `0` | all | `0 .. INSPECTIO_WORKER_REPLICAS-1` (**StatefulSet ordinal**) |
@@ -1159,11 +1163,7 @@ Agents **must** define every name below in `Settings` (defaults as shown; empty 
 | `INSPECTIO_SNAPSHOT_INTERVAL_SEC` | `60` | 3+ | **§18.4** |
 | `INSPECTIO_API_PORT` | `8000` | all | Uvicorn bind |
 | `INSPECTIO_NOTIFICATION_PORT` | `8081` | all | Notification service |
-| `INSPECTIO_KINESIS_CHECKPOINT_KEY_PREFIX` | `state/checkpoints/kinesis/` | all | S3 prefix for **sequence number** state per stream shard |
-
-**Kinesis checkpoint file:** one S3 object per **Kinesis shard** (not app shard):  
-`{INSPECTIO_KINESIS_CHECKPOINT_KEY_PREFIX}{streamName}/shard-{shardId}.json`  
-JSON: `{"sequenceNumber": "...", "updatedAtMs": ...}`. **Update only after §18.3 satisfied** for all records covered by that advance.
+**Ingest commit (production):** after **§18.3** journal durability, the worker **`DeleteMessage`** on the SQS receipt handle. **`S3CheckpointStore`** in **`ingest_consumer.py`** exists for **tests** and any future non-SQS checkpoint layout; the default worker uses **`checkpoint_store=None`** with **`sqs_delete`** only.
 
 ### 29.5 `INGEST_APPLIED` payload (agents)
 
@@ -1182,11 +1182,11 @@ Field **`bodyHash`** (**§18.2**) is **required** for agents: **lowercase hex SH
 
 **Public API** implementation: **`GET /messages/success`** and **`failed`** forward to these internal routes (compose URL + pass `limit`), then return the JSON unchanged.
 
-**Multi-worker note:** with **`INSPECTIO_WORKER_REPLICAS=1`** (default), a **single** Kinesis consumer process **may** iterate **all** stream shards sequentially in one pod (simple loop). Increasing replicas **without** redesign **is forbidden**; file an issue / human change to **§29** first.
+**Multi-worker note:** with **`INSPECTIO_WORKER_REPLICAS=1`** (default), a **single** worker **may** long-poll the FIFO queue for **owned** logical shards. Multi-replica scaling requires idempotent handlers and routing documented in **`deploy/kubernetes/README.md`**.
 
 ### 29.7 Journal line templates (minimum sequences)
 
-**A — Ingest applied (before Kinesis checkpoint):**  
+**A — Ingest applied (before SQS delete / checkpoint):**  
 `INGEST_APPLIED` (with `receivedAtMs`, `idempotencyKey`, **`bodyHash`**) → `DISPATCH_SCHEDULED` (`reason: "immediate"`).
 
 **B — First `send` succeeds:**  
@@ -1221,9 +1221,9 @@ Use **`asyncio.Lock`** keyed by **`messageId`** (string) for all mutations to in
 
 - **Importing, vendoring, or subprocess-calling** the archived **`inspectio_exercise`** package or any **`v1_obsolete/project/src`** module from greenfield **`src/inspectio/`** (or adding it as a **runtime** dependency of API/worker/notification). **Docker:** **`mock-sms`** is built from **`deploy/mock-sms/Dockerfile`** per **§29.13** — **not** from **`v1_obsolete/`**. The mock image is separate from **`pyproject.toml`**; **`src/inspectio`** **must not** depend on **`inspectio_exercise`**.
 - **Treating** **`v1_obsolete/**`** unit/integration tests as the contract to implement against; greenfield tests are **§28** + repo-root **`tests/`** per **`IMPLEMENTATION_PHASES.md`**.
-- Replacing Kinesis with SQS/Redis/RabbitMQ **as the durable ingest boundary**.
+- Replacing **SQS FIFO** with ad-hoc Redis/RabbitMQ **as the durable ingest boundary** without a **written waiver**.
 - **Awaiting** outbound SMS **inside** API request handlers.
-- **Checkpointing** Kinesis **before** **`INGEST_APPLIED`** is durable (**§18.3**).
+- **`DeleteMessage`** / checkpointing **before** **`INGEST_APPLIED`** is durable (**§18.3**).
 - **Skipping** `scheduler_surface` module (**§25**) or renaming public hook functions.
 - **Listing** broad **`state/success/`** S3 prefixes to serve **`GET /messages/success`**.
 - Returning **`POST /messages/repeat`** **without** the full **`messageIds`** list (**§15.2** + **§29**).
@@ -1231,7 +1231,7 @@ Use **`asyncio.Lock`** keyed by **`messageId`** (string) for all mutations to in
 ### 29.12 Identifiers and time
 
 - **`messageId`:** UUID version **4**, **lowercase** hex with hyphens.
-- **`receivedAtMs` / `arrivalMs`:** **`int(time.time() * 1000)`** at API when generating the ingest record (before Kinesis put).
+- **`receivedAtMs` / `arrivalMs`:** **`int(time.time() * 1000)`** at API when generating the ingest record (before **SQS** enqueue).
 - **`idempotencyKey`:** **`messageId`** unless a future client header is specified (*out of scope for Phase 1*).
 
 ### 29.13 Canonical artifacts (compose + OpenAPI)
@@ -1241,11 +1241,11 @@ Agents **must** keep the following files aligned with **§15**, **§29.3–29.6*
 | Artifact | Path | Purpose |
 |----------|------|---------|
 | **Docker Compose (infra)** | **`docker-compose.yml`** (repository root) | **Now:** **`redis`**, **`localstack`**, **`mock-sms`** (build **`deploy/mock-sms/Dockerfile`** — greenfield; **do not** use **`v1_obsolete/`** for compose images per **§29.11** / **`IMPLEMENTATION_PHASES.md`**, *`v1_obsolete` boundary*); ports **6379**, **4566**, **8090→mock**. **Implementation PR:** add **`inspectio-api`**, **`inspectio-worker`**, **`inspectio-notification`** per **`plans/IMPLEMENTATION_PHASES.md`**. |
-| **LocalStack init** | **`deploy/localstack/init/ready.d/10-inspectio-aws.sh`** | Creates S3 bucket (default **`inspectio-test-bucket`**; override **`INSPECTIO_S3_BUCKET`** / **`S3_BUCKET`**) and Kinesis stream **`inspectio-ingest`** (`INSPECTIO_KINESIS_LOCAL_SHARDS`, default **1**) |
+| **LocalStack init** | **`deploy/localstack/init/ready.d/10-inspectio-aws.sh`** | Creates S3 bucket (default **`inspectio-test-bucket`**) and **SQS FIFO** **`inspectio-ingest.fifo`** |
 | **App image** | **`deploy/docker/Dockerfile`** | **Added in implementation PR** — single image, compose overrides **`command`** (**§29.2**) |
 | **HTTP contracts** | **`plans/openapi.yaml`** | Request/response shapes: **public**, **internal notification**, **mock `/send`** |
 
-**Target compose env (when app services exist):** `AWS_ENDPOINT_URL=http://localstack:4566` (omit for real AWS), **`INSPECTIO_S3_BUCKET=inspectio-test-bucket`** (LocalStack default; override as needed), **`INSPECTIO_KINESIS_STREAM_NAME=inspectio-ingest`**, **`INSPECTIO_SMS_URL=http://mock-sms:8080`**, **`INSPECTIO_NOTIFICATION_BASE_URL=http://inspectio-notification:8081`**, **`INSPECTIO_REDIS_URL=redis://redis:6379/0`**, plus **`AWS_*`** credentials (same as AWS CLI / `.env`; see root **`.env.example`**).
+**Target compose env (when app services exist):** `AWS_ENDPOINT_URL=http://localstack:4566` (omit for real AWS), **`INSPECTIO_S3_BUCKET=inspectio-test-bucket`**, **`INSPECTIO_INGEST_QUEUE_URL`** (default in **`docker-compose.yml`** matches LocalStack FIFO URL), **`INSPECTIO_SMS_URL=http://mock-sms:8080`**, **`INSPECTIO_NOTIFICATION_BASE_URL=http://inspectio-notification:8081`**, **`INSPECTIO_REDIS_URL=redis://redis:6379/0`**, plus **`AWS_*`** credentials (same as AWS CLI / `.env`; see root **`.env.example`**).
 
 **Drift rule:** any change to routes or JSON fields **updates `plans/openapi.yaml` first**, then code.
 

@@ -22,14 +22,13 @@ services:
     ports:
       - "4566:4566"
     environment:
-      SERVICES: s3,kinesis
+      SERVICES: s3,sqs
       DEBUG: "0"
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-test}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-test}
       AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
       INSPECTIO_S3_BUCKET: ${INSPECTIO_S3_BUCKET:-${S3_BUCKET:-inspectio-test-bucket}}
-      INSPECTIO_KINESIS_STREAM_NAME: ${INSPECTIO_KINESIS_STREAM_NAME:-inspectio-ingest}
-      INSPECTIO_KINESIS_LOCAL_SHARDS: ${INSPECTIO_KINESIS_LOCAL_SHARDS:-1}
+      INSPECTIO_INGEST_FIFO_QUEUE_NAME: ${INSPECTIO_INGEST_FIFO_QUEUE_NAME:-inspectio-ingest.fifo}
     volumes:
       - ./deploy/localstack/init/ready.d:/etc/localstack/init/ready.d:ro
     healthcheck:
@@ -63,7 +62,11 @@ services:
         "8081",
       ]
     depends_on:
+      localstack:
+        condition: service_healthy
       redis:
+        condition: service_started
+      mock-sms:
         condition: service_started
     environment:
       INSPECTIO_ENV: dev
@@ -100,7 +103,7 @@ services:
       INSPECTIO_API_PORT: "8000"
       INSPECTIO_AWS_REGION: ${INSPECTIO_AWS_REGION:-${AWS_DEFAULT_REGION:-us-east-1}}
       <<: *aws_apps
-      INSPECTIO_KINESIS_STREAM_NAME: ${INSPECTIO_KINESIS_STREAM_NAME:-inspectio-ingest}
+      INSPECTIO_INGEST_QUEUE_URL: ${INSPECTIO_INGEST_QUEUE_URL:-http://localstack:4566/000000000000/inspectio-ingest.fifo}
       INSPECTIO_REDIS_URL: redis://redis:6379/0
       INSPECTIO_NOTIFICATION_BASE_URL: http://inspectio-notification:8081
       INSPECTIO_SMS_URL: http://mock-sms:8080
@@ -125,7 +128,7 @@ services:
       INSPECTIO_ENV: dev
       INSPECTIO_AWS_REGION: ${INSPECTIO_AWS_REGION:-${AWS_DEFAULT_REGION:-us-east-1}}
       <<: *aws_apps
-      INSPECTIO_KINESIS_STREAM_NAME: ${INSPECTIO_KINESIS_STREAM_NAME:-inspectio-ingest}
+      INSPECTIO_INGEST_QUEUE_URL: ${INSPECTIO_INGEST_QUEUE_URL:-http://localstack:4566/000000000000/inspectio-ingest.fifo}
       INSPECTIO_REDIS_URL: redis://redis:6379/0
       INSPECTIO_NOTIFICATION_BASE_URL: http://inspectio-notification:8081
       INSPECTIO_SMS_URL: http://mock-sms:8080

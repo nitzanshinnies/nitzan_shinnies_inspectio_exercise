@@ -1,0 +1,17 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: inspectio-api
+  namespace: inspectio
+spec:
+  rules:
+    - host: inspectio-api.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: inspectio-api
+                port:
+                  number: 8000

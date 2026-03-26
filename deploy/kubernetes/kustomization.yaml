@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: inspectio
+resources:
+  - namespace.yaml
+  - serviceaccount.yaml
+  - configmap.yaml
+  - api.yaml
+  - worker.yaml
+  - notification.yaml
+  - ingress.yaml
+images:
+  - name: REPLACE_WITH_APP_IMAGE
+    newName: 194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-exercise
+    newTag: sqs-ingest-20260326-amd64-v3
