@@ -1,20 +1,97 @@
-"""Process entry for `inspectio-worker`. Replace per plans/IMPLEMENTATION_PHASES.md."""
+"""Process entry for `inspectio-worker` (P5 ingest + journal + checkpoint loop)."""
+
+from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Awaitable, Callable
+
+import aioboto3
+import redis.asyncio as redis
+
+from inspectio.ingest.kinesis_consumer import (
+    KinesisBatchFetcher,
+    KinesisIngestConsumer,
+    S3CheckpointStore,
+)
+from inspectio.journal.writer import JournalWriter
+from inspectio.settings import get_settings
+from inspectio.worker.handlers import IngestJournalHandler, RedisIdempotencyStore
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("inspectio.worker")
 
+DEFAULT_POLL_INTERVAL_SEC = 1.0
 
-async def _run() -> None:
-    log.info("inspectio-worker placeholder — implement consumer + scheduler per plans/")
+
+async def run_consumer_loop(
+    *,
+    consume_once: Callable[[], Awaitable[int]],
+    poll_interval_sec: float = DEFAULT_POLL_INTERVAL_SEC,
+) -> None:
+    """Continuously poll ingest stream and process available records."""
     while True:
-        await asyncio.sleep(3600.0)
+        processed = await consume_once()
+        if processed == 0:
+            await asyncio.sleep(poll_interval_sec)
 
 
 def main() -> None:
+    """Run single-worker ingest consumer loop for P5 path."""
     asyncio.run(_run())
+
+
+async def _run() -> None:
+    settings = get_settings()
+    if settings.inspectio_worker_replicas != 1:
+        msg = "P5 supports INSPECTIO_WORKER_REPLICAS=1 only (§29.6)"
+        raise ValueError(msg)
+    if not settings.inspectio_s3_bucket:
+        msg = "INSPECTIO_S3_BUCKET must be configured for P5 worker"
+        raise ValueError(msg)
+
+    session = aioboto3.Session()
+    redis_client = redis.from_url(settings.inspectio_redis_url, decode_responses=True)
+    try:
+        async with session.client(
+            "s3", region_name=settings.inspectio_aws_region
+        ) as s3_client:
+            async with session.client(
+                "kinesis",
+                region_name=settings.inspectio_aws_region,
+            ) as kinesis_client:
+                journal_writer = JournalWriter(
+                    s3_client=s3_client,
+                    bucket=settings.inspectio_s3_bucket,
+                    flush_interval_ms=settings.inspectio_journal_flush_interval_ms,
+                    flush_max_lines=settings.inspectio_journal_flush_max_lines,
+                )
+                checkpoint_store = S3CheckpointStore(
+                    s3_client=s3_client,
+                    bucket=settings.inspectio_s3_bucket,
+                    stream_name=settings.inspectio_kinesis_stream_name,
+                    key_prefix=settings.inspectio_kinesis_checkpoint_key_prefix,
+                )
+                handler = IngestJournalHandler(
+                    idempotency_store=RedisIdempotencyStore(redis_client=redis_client),
+                    idempotency_ttl_sec=settings.inspectio_idempotency_ttl_sec,
+                )
+                consumer = KinesisIngestConsumer(
+                    handler=handler,
+                    journal_writer=journal_writer,
+                    checkpoint_store=checkpoint_store,
+                )
+                fetcher = KinesisBatchFetcher(
+                    kinesis_client=kinesis_client,
+                    stream_name=settings.inspectio_kinesis_stream_name,
+                )
+                await run_consumer_loop(
+                    consume_once=lambda: consumer.consume_once(
+                        fetch_records=fetcher.fetch_records
+                    )
+                )
+    finally:
+        await redis_client.aclose()
 
 
 if __name__ == "__main__":
