@@ -8,10 +8,10 @@ from typing import Any
 
 import pytest
 
-from inspectio.ingest.kinesis_consumer import (
+from inspectio.ingest.ingest_consumer import (
     CheckpointStore,
-    KinesisIngestConsumer,
-    KinesisRawRecord,
+    IngestConsumer,
+    IngestRawRecord,
     S3CheckpointStore,
     partition_key_for_shard,
 )
@@ -23,7 +23,7 @@ from inspectio.worker.handlers import IngestJournalHandler
 
 @dataclass(frozen=True, slots=True)
 class _CheckpointCall:
-    kinesis_shard_id: str
+    checkpoint_shard_id: str
     sequence_number: str
     updated_at_ms: int
 
@@ -36,7 +36,7 @@ class _FakeCheckpointStore(CheckpointStore):
     async def save(
         self,
         *,
-        kinesis_shard_id: str,
+        checkpoint_shard_id: str,
         sequence_number: str,
         updated_at_ms: int,
     ) -> None:
@@ -44,7 +44,7 @@ class _FakeCheckpointStore(CheckpointStore):
         assert self._journal.flushed
         self.calls.append(
             _CheckpointCall(
-                kinesis_shard_id=kinesis_shard_id,
+                checkpoint_shard_id=checkpoint_shard_id,
                 sequence_number=sequence_number,
                 updated_at_ms=updated_at_ms,
             )
@@ -86,12 +86,12 @@ class _CaptureS3Client:
         return {"ETag": "x"}
 
 
-def _raw_record(message: MessageIngestedV1, *, sequence: str) -> KinesisRawRecord:
+def _raw_record(message: MessageIngestedV1, *, sequence: str) -> IngestRawRecord:
     wire = json.dumps(
         message.to_json_dict(), separators=(",", ":"), sort_keys=True
     ).encode("utf-8")
-    return KinesisRawRecord(
-        kinesis_shard_id="shardId-000000000000",
+    return IngestRawRecord(
+        checkpoint_shard_id="shardId-000000000000",
         sequence_number=sequence,
         data=wire,
     )
@@ -108,7 +108,7 @@ async def test_tc_str_001_duplicate_ingest_is_deduped() -> None:
         idempotency_key="idem-1",
     )
     journal = _FakeJournalWriter()
-    consumer = KinesisIngestConsumer(
+    consumer = IngestConsumer(
         handler=IngestJournalHandler(
             idempotency_store=_FakeIdempotencyStore(),
             idempotency_ttl_sec=86_400,
@@ -143,7 +143,7 @@ async def test_tc_str_002_ordered_records_checkpoint_after_each() -> None:
     )
     journal = _FakeJournalWriter()
     checkpoint = _FakeCheckpointStore(journal)
-    consumer = KinesisIngestConsumer(
+    consumer = IngestConsumer(
         handler=IngestJournalHandler(
             idempotency_store=_FakeIdempotencyStore(),
             idempotency_ttl_sec=86_400,
@@ -178,7 +178,7 @@ async def test_consume_once_polls_batch_and_processes_all_rows() -> None:
     )
     journal = _FakeJournalWriter()
     checkpoint = _FakeCheckpointStore(journal)
-    consumer = KinesisIngestConsumer(
+    consumer = IngestConsumer(
         handler=IngestJournalHandler(
             idempotency_store=_FakeIdempotencyStore(),
             idempotency_ttl_sec=86_400,
@@ -188,7 +188,7 @@ async def test_consume_once_polls_batch_and_processes_all_rows() -> None:
         now_ms=lambda: 1_700_000_000_999,
     )
 
-    async def _fetch_records() -> list[KinesisRawRecord]:
+    async def _fetch_records() -> list[IngestRawRecord]:
         return [_raw_record(m1, sequence="12"), _raw_record(m2, sequence="13")]
 
     count = await consumer.consume_once(fetch_records=_fetch_records)
@@ -215,7 +215,7 @@ async def test_checkpoint_store_uses_section_29_4_s3_key_layout() -> None:
         key_prefix="state/checkpoints/kinesis/",
     )
     await store.save(
-        kinesis_shard_id="shardId-000000000000",
+        checkpoint_shard_id="shardId-000000000000",
         sequence_number="200",
         updated_at_ms=1_700_000_000_444,
     )
@@ -346,24 +346,22 @@ async def test_process_record_sqs_deletes_after_journal() -> None:
         deleted.append(rh)
 
     journal = _FakeJournalWriter()
-    checkpoint = _FakeCheckpointStore(journal)
-    consumer = KinesisIngestConsumer(
+    consumer = IngestConsumer(
         handler=IngestJournalHandler(
             idempotency_store=_FakeIdempotencyStore(),
             idempotency_ttl_sec=86_400,
         ),
         journal_writer=journal,
-        checkpoint_store=checkpoint,
+        checkpoint_store=None,
         sqs_delete=_delete,
         now_ms=lambda: 1_700_000_000_555,
     )
     await consumer.process_record(
-        KinesisRawRecord(
-            kinesis_shard_id="mid-1",
+        IngestRawRecord(
+            checkpoint_shard_id="mid-1",
             sequence_number="mid-1",
             data=wire,
             sqs_receipt_handle="rh-abc",
         )
     )
     assert deleted == ["rh-abc"]
-    assert checkpoint.calls == []

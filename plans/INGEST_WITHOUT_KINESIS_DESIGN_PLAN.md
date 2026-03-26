@@ -1,10 +1,10 @@
 # Ingest without Kinesis: design change plan
 
-**Status:** draft (branch `plan/ingest-without-kinesis`)  
+**Status:** implemented (see **`src/inspectio/ingest/sqs_fifo_*.py`**, **`ingest_consumer.py`**)  
 **Created:** 2026-03-26  
-**Trigger:** interviewer-provided AWS account is blocked from **Amazon Kinesis Data Streams** by **Organizations SCP** (e.g. `CreateStream`, `ListStreams` denied). The current **§17 / §29** baseline assumes Kinesis as the **durable ingest boundary**; that baseline **cannot** be exercised in that account without an exception.
+**Trigger:** interviewer-provided AWS account is blocked from **Amazon Kinesis Data Streams** by **Organizations SCP** (e.g. `CreateStream`, `ListStreams` denied).
 
-This document is the **authoritative migration plan** for replacing Kinesis with an AWS-managed alternative that **SCP-typical** accounts allow (S3, SQS, SNS, DynamoDB, etc.). It does **not** implement code; it defines scope, options, and a phased rollout so implementation can follow **tests-first** and stay aligned with **§18.3** (journal before “commit”).
+This document was the **migration plan** for replacing Kinesis with **SQS FIFO**. Normative behavior is reflected in **`plans/NEW_SYSTEM_IMPLEMENTATION_BLUEPRINT.md`** and code; keep **§18.3** (journal before **`DeleteMessage`**).
 
 ---
 

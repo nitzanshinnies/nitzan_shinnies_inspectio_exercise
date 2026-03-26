@@ -12,10 +12,7 @@ import aioboto3
 import httpx
 import redis.asyncio as redis
 
-from inspectio.ingest.kinesis_consumer import (
-    KinesisIngestConsumer,
-    NoopCheckpointStore,
-)
+from inspectio.ingest.ingest_consumer import IngestConsumer
 from inspectio.ingest.sqs_fifo_consumer import SqsFifoBatchFetcher
 from inspectio.domain.sharding import (
     owned_shard_range,
@@ -175,7 +172,6 @@ async def _run() -> None:
                     writer_factory=_writer_factory,
                     managed_shards=managed_shards,
                 )
-                checkpoint_store = NoopCheckpointStore()
                 runtime = InMemorySchedulerRuntime(
                     now_ms=lambda: int(time.time() * 1000),
                     sms_sender=SmsClient(
@@ -195,10 +191,10 @@ async def _run() -> None:
                         ReceiptHandle=receipt_handle,
                     )
 
-                consumer = KinesisIngestConsumer(
+                consumer = IngestConsumer(
                     handler=handler,
                     journal_writer=journal_writer,
-                    checkpoint_store=checkpoint_store,
+                    checkpoint_store=None,
                     sqs_delete=_delete_sqs,
                 )
                 fetcher = SqsFifoBatchFetcher(

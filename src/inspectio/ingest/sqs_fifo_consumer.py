@@ -6,7 +6,7 @@ import json
 from typing import Any
 
 from inspectio.domain.sharding import owned_shard_range
-from inspectio.ingest.kinesis_consumer import IngestRawRecord
+from inspectio.ingest.ingest_consumer import IngestRawRecord
 from inspectio.ingest.schema import MessageIngestedV1
 
 
@@ -59,7 +59,7 @@ class SqsFifoBatchFetcher:
                 continue
             rows.append(
                 IngestRawRecord(
-                    kinesis_shard_id=message_id,
+                    checkpoint_shard_id=message_id,
                     sequence_number=message_id,
                     data=data,
                     sqs_receipt_handle=receipt,

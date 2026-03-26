@@ -47,34 +47,70 @@ class SqsFifoIngestProducer:
             ) as client:
                 for start in range(0, len(messages), MAX_SQS_FIFO_SEND_BATCH):
                     chunk = messages[start : start + MAX_SQS_FIFO_SEND_BATCH]
-                    batch = _build_batch_entries(chunk)
-                    response = await client.send_message_batch(
-                        QueueUrl=queue_url,
-                        Entries=batch,
-                    )
-                    _raise_if_batch_failures(response)
-                    successful = response.get("Successful", [])
-                    by_id = {str(x["Id"]): x for x in successful}
-                    for idx, item in enumerate(chunk):
-                        row = by_id.get(str(idx))
-                        mid = (
-                            str(row["MessageId"])
-                            if row and row.get("MessageId")
-                            else None
-                        )
-                        out.append(
-                            IngestPutResult(
-                                message_id=item.message_id,
-                                shard_id=item.shard_id,
-                                ingest_sequence=mid,
-                            )
-                        )
+                    chunk_out = await _send_fifo_batch(client, queue_url, chunk)
+                    out.extend(chunk_out)
         except IngestUnavailableError:
             raise
         except Exception as exc:  # pragma: no cover - provider failure mapping
             raise IngestUnavailableError(str(exc)) from exc
 
         return out
+
+
+async def _send_fifo_batch(
+    client: Any,
+    queue_url: str,
+    chunk: list[IngestPutInput],
+) -> list[IngestPutResult]:
+    batch = _build_batch_entries(chunk)
+    response = await client.send_message_batch(
+        QueueUrl=queue_url,
+        Entries=batch,
+    )
+    message_id_by_idx: dict[int, str | None] = {}
+    for row in response.get("Successful", []):
+        message_id_by_idx[int(row["Id"])] = (
+            str(row["MessageId"]) if row.get("MessageId") else None
+        )
+    for fail in response.get("Failed", []):
+        idx = int(fail["Id"])
+        item = chunk[idx]
+        mid = await _send_single_fifo_message(client, queue_url, item)
+        message_id_by_idx[idx] = mid
+    results: list[IngestPutResult] = []
+    for idx, item in enumerate(chunk):
+        mid = message_id_by_idx.get(idx)
+        results.append(
+            IngestPutResult(
+                message_id=item.message_id,
+                shard_id=item.shard_id,
+                ingest_sequence=mid,
+            )
+        )
+    return results
+
+
+async def _send_single_fifo_message(
+    client: Any,
+    queue_url: str,
+    item: IngestPutInput,
+) -> str | None:
+    value = MessageIngestedV1(
+        message_id=item.message_id,
+        payload=MessageIngestPayload(body=item.payload_body, to=item.payload_to),
+        received_at_ms=item.received_at_ms,
+        shard_id=item.shard_id,
+        idempotency_key=item.idempotency_key,
+    ).to_json_dict()
+    body = json.dumps(value, separators=(",", ":"), sort_keys=True)
+    resp = await client.send_message(
+        QueueUrl=queue_url,
+        MessageBody=body,
+        MessageGroupId=partition_key_for_shard(item.shard_id),
+        MessageDeduplicationId=_deduplication_id(item.idempotency_key),
+    )
+    mid = resp.get("MessageId")
+    return str(mid) if mid else None
 
 
 def _build_batch_entries(messages: list[IngestPutInput]) -> list[dict[str, Any]]:
@@ -98,13 +134,3 @@ def _build_batch_entries(messages: list[IngestPutInput]) -> list[dict[str, Any]]
             }
         )
     return entries
-
-
-def _raise_if_batch_failures(response: dict[str, Any]) -> None:
-    failed = response.get("Failed", [])
-    if not failed:
-        return
-    first = failed[0]
-    code = first.get("Code", "unknown")
-    msg = first.get("Message", "")
-    raise IngestUnavailableError(f"{code}: {msg}")
