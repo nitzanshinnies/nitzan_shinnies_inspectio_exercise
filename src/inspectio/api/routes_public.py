@@ -8,6 +8,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
+import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
 from inspectio.domain.sharding import shard_for_message
@@ -56,6 +57,24 @@ class PostMessagesRepeatAccepted(BaseModel):
     shard_ids: list[int] = Field(alias="shardIds")
 
 
+class NotificationClient:
+    def __init__(self, *, base_url: str) -> None:
+        self._base_url = base_url.rstrip("/")
+
+    async def get_success(self, *, limit: int) -> dict[str, Any]:
+        return await self._get_items("/internal/v1/outcomes/success", limit=limit)
+
+    async def get_failed(self, *, limit: int) -> dict[str, Any]:
+        return await self._get_items("/internal/v1/outcomes/failed", limit=limit)
+
+    async def _get_items(self, path: str, *, limit: int) -> dict[str, Any]:
+        url = f"{self._base_url}{path}"
+        async with httpx.AsyncClient(timeout=5) as client:
+            resp = await client.get(url, params={"limit": limit})
+            resp.raise_for_status()
+            return dict(resp.json())
+
+
 def _clean_body(raw: str) -> str:
     body = raw.strip()
     if not body:
@@ -84,6 +103,14 @@ def _get_settings(request: Request) -> Settings:
 
 def _get_producer(request: Request) -> IngestProducer:
     return request.app.state.kinesis_producer
+
+
+def _get_notification_client(request: Request) -> NotificationClient:
+    return request.app.state.notification_client
+
+
+def _clamp_limit(limit: int, settings: Settings) -> int:
+    return min(max(1, limit), settings.inspectio_outcomes_max_limit)
 
 
 def _new_message_input(
@@ -182,15 +209,23 @@ async def post_messages_repeat(
 
 @router.get("/messages/success")
 async def get_messages_success(
+    notification_client: Annotated[
+        NotificationClient, Depends(_get_notification_client)
+    ],
+    settings: Annotated[Settings, Depends(_get_settings)],
     limit: Annotated[int, Query(ge=1)] = DEFAULT_SUCCESS_LIST_LIMIT,
 ) -> JSONResponse:
-    _ = limit
-    return _not_implemented()
+    payload = await notification_client.get_success(limit=_clamp_limit(limit, settings))
+    return JSONResponse(status_code=200, content=payload)
 
 
 @router.get("/messages/failed")
 async def get_messages_failed(
+    notification_client: Annotated[
+        NotificationClient, Depends(_get_notification_client)
+    ],
+    settings: Annotated[Settings, Depends(_get_settings)],
     limit: Annotated[int, Query(ge=1)] = DEFAULT_SUCCESS_LIST_LIMIT,
 ) -> JSONResponse:
-    _ = limit
-    return _not_implemented()
+    payload = await notification_client.get_failed(limit=_clamp_limit(limit, settings))
+    return JSONResponse(status_code=200, content=payload)
