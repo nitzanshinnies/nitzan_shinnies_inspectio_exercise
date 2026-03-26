@@ -11,6 +11,9 @@ build/
 .venv/
 venv/
 
+# Local compose secrets / AWS overrides (see .env.example)
+.env
+
 # IDE
 .idea/
 .vscode/

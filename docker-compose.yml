@@ -1,5 +1,15 @@
 # Local stack: deps + greenfield app containers (see plans/IMPLEMENTATION_PHASES.md P9).
+# AWS/S3: defaults match v1 (`inspectio-test-bucket` in v1_obsolete/.../test_aws_s3_provider.py).
+# Pass the same credentials as your AWS CLI: set vars in `.env` (see `.env.example`) or export before `docker compose up`.
 name: inspectio
+
+x-aws-apps: &aws_apps
+  AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-test}
+  AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-test}
+  AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN:-}
+  AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
+  AWS_ENDPOINT_URL: ${AWS_ENDPOINT_URL:-http://localstack:4566}
+  INSPECTIO_S3_BUCKET: ${INSPECTIO_S3_BUCKET:-${S3_BUCKET:-inspectio-test-bucket}}
 
 services:
   redis:
@@ -14,10 +24,12 @@ services:
     environment:
       SERVICES: s3,kinesis
       DEBUG: "0"
-      AWS_DEFAULT_REGION: us-east-1
-      INSPECTIO_S3_BUCKET: inspectio-dev
-      INSPECTIO_KINESIS_STREAM_NAME: inspectio-ingest
-      INSPECTIO_KINESIS_LOCAL_SHARDS: "1"
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-test}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-test}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
+      INSPECTIO_S3_BUCKET: ${INSPECTIO_S3_BUCKET:-${S3_BUCKET:-inspectio-test-bucket}}
+      INSPECTIO_KINESIS_STREAM_NAME: ${INSPECTIO_KINESIS_STREAM_NAME:-inspectio-ingest}
+      INSPECTIO_KINESIS_LOCAL_SHARDS: ${INSPECTIO_KINESIS_LOCAL_SHARDS:-1}
     volumes:
       - ./deploy/localstack/init/ready.d:/etc/localstack/init/ready.d:ro
     healthcheck:
@@ -58,9 +70,7 @@ services:
       INSPECTIO_ENV: dev
       INSPECTIO_NOTIFICATION_PORT: "8081"
       INSPECTIO_REDIS_URL: redis://redis:6379/0
-      AWS_ACCESS_KEY_ID: test
-      AWS_SECRET_ACCESS_KEY: test
-      AWS_DEFAULT_REGION: us-east-1
+      <<: *aws_apps
     ports:
       - "8081:8081"
 
@@ -89,13 +99,9 @@ services:
     environment:
       INSPECTIO_ENV: dev
       INSPECTIO_API_PORT: "8000"
-      INSPECTIO_AWS_REGION: us-east-1
-      AWS_ACCESS_KEY_ID: test
-      AWS_SECRET_ACCESS_KEY: test
-      AWS_DEFAULT_REGION: us-east-1
-      AWS_ENDPOINT_URL: http://localstack:4566
-      INSPECTIO_S3_BUCKET: inspectio-dev
-      INSPECTIO_KINESIS_STREAM_NAME: inspectio-ingest
+      INSPECTIO_AWS_REGION: ${INSPECTIO_AWS_REGION:-${AWS_DEFAULT_REGION:-us-east-1}}
+      <<: *aws_apps
+      INSPECTIO_KINESIS_STREAM_NAME: ${INSPECTIO_KINESIS_STREAM_NAME:-inspectio-ingest}
       INSPECTIO_REDIS_URL: redis://redis:6379/0
       INSPECTIO_NOTIFICATION_BASE_URL: http://inspectio-notification:8081
       INSPECTIO_SMS_URL: http://mock-sms:8080
@@ -118,13 +124,9 @@ services:
         condition: service_started
     environment:
       INSPECTIO_ENV: dev
-      INSPECTIO_AWS_REGION: us-east-1
-      AWS_ACCESS_KEY_ID: test
-      AWS_SECRET_ACCESS_KEY: test
-      AWS_DEFAULT_REGION: us-east-1
-      AWS_ENDPOINT_URL: http://localstack:4566
-      INSPECTIO_S3_BUCKET: inspectio-dev
-      INSPECTIO_KINESIS_STREAM_NAME: inspectio-ingest
+      INSPECTIO_AWS_REGION: ${INSPECTIO_AWS_REGION:-${AWS_DEFAULT_REGION:-us-east-1}}
+      <<: *aws_apps
+      INSPECTIO_KINESIS_STREAM_NAME: ${INSPECTIO_KINESIS_STREAM_NAME:-inspectio-ingest}
       INSPECTIO_REDIS_URL: redis://redis:6379/0
       INSPECTIO_NOTIFICATION_BASE_URL: http://inspectio-notification:8081
       INSPECTIO_SMS_URL: http://mock-sms:8080
