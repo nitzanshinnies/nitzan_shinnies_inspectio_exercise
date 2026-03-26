@@ -1,39 +1,22 @@
+"""FastAPI application factory for inspectio public API."""
+
+from __future__ import annotations
+
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
 
-app = FastAPI(title="inspectio-api", version="0.0.0")
-
-
-@app.get("/healthz")
-async def healthz() -> dict[str, str]:
-    return {"status": "ok", "service": "api"}
+from inspectio.api.routes_public import router as public_router
+from inspectio.ingest.kinesis_producer import KinesisIngestProducer
+from inspectio.settings import get_settings
 
 
-def _not_implemented() -> JSONResponse:
-    return JSONResponse(
-        status_code=501,
-        content={
-            "detail": "not_implemented",
-            "ref": "plans/IMPLEMENTATION_PHASES.md",
-        },
-    )
+def create_app() -> FastAPI:
+    """Create and wire API dependencies for runtime and tests."""
+    app = FastAPI(title="inspectio-api", version="0.0.0")
+    settings = get_settings()
+    app.state.settings = settings
+    app.state.kinesis_producer = KinesisIngestProducer(settings)
+    app.include_router(public_router)
+    return app
 
 
-@app.post("/messages")
-async def post_messages() -> JSONResponse:
-    return _not_implemented()
-
-
-@app.post("/messages/repeat")
-async def post_messages_repeat() -> JSONResponse:
-    return _not_implemented()
-
-
-@app.get("/messages/success")
-async def get_messages_success() -> JSONResponse:
-    return _not_implemented()
-
-
-@app.get("/messages/failed")
-async def get_messages_failed() -> JSONResponse:
-    return _not_implemented()
+app = create_app()
