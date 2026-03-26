@@ -32,13 +32,17 @@ async def run_consumer_loop(
     consume_once: Callable[[], Awaitable[int]],
     wakeup_once: Callable[[], Awaitable[int]],
     poll_interval_sec: float = DEFAULT_POLL_INTERVAL_SEC,
+    sleep_func: Callable[[float], Awaitable[None]] = asyncio.sleep,
 ) -> None:
-    """Continuously poll ingest stream and process available records."""
+    """Continuously poll ingest stream and run wakeup on a target cadence."""
     while True:
+        started = time.monotonic()
         processed = await consume_once()
         processed += await wakeup_once()
-        if processed == 0:
-            await asyncio.sleep(poll_interval_sec)
+        elapsed = time.monotonic() - started
+        remaining = poll_interval_sec - elapsed
+        if remaining > 0:
+            await sleep_func(remaining)
 
 
 def main() -> None:
@@ -124,6 +128,7 @@ async def _run() -> None:
                 await run_consumer_loop(
                     consume_once=_consume_once,
                     wakeup_once=_wakeup_once,
+                    poll_interval_sec=settings.inspectio_wakeup_interval_ms / 1000.0,
                 )
     finally:
         await redis_client.aclose()
