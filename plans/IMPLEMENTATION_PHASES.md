@@ -63,7 +63,6 @@ All application code under **`src/inspectio/`**:
 | `src/inspectio/ingest/sqs_fifo_producer.py` | API **SQS FIFO** `send_message_batch` (**§17**) |
 | `src/inspectio/ingest/ingest_consumer.py` | Worker ingest journal + **SQS delete** or S3 checkpoint (**§18.3**) |
 | `src/inspectio/ingest/sqs_fifo_consumer.py` | **`SqsFifoBatchFetcher`** (**§29.6**) |
-| `src/inspectio/ingest/kinesis_producer.py` | Re-exports (compat); prefer **`ingest_producer`** / **`sqs_fifo_producer`** |
 | `src/inspectio/journal/records.py` | `JournalRecordV1` types + validation (**§18.2**) |
 | `src/inspectio/journal/writer.py` | batch flush **§29.8** |
 | `src/inspectio/journal/replay.py` | snapshot + tail replay (**§18.4**) |
@@ -166,7 +165,7 @@ All application code under **`src/inspectio/`**:
 - **`JournalRecordV1`** discriminated by **`type`**; validate required **`payload`** keys (**§18.2** table).
 - Parse gzip NDJSON bytes → list of records (**§18.1**) — **keep helpers inside `journal/records.py`** (or private submodules under `journal/` **only** if you split files; **do not** add a new top-level path not listed in **§29.2** without updating the blueprint).
 
-**Do not** call SQS, Kinesis, or S3 in unit tests (fixtures only).
+**Do not** call SQS or S3 in unit tests (fixtures only).
 
 **Exit criteria**
 

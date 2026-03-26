@@ -17,8 +17,6 @@ __all__ = [
     "IngestConsumer",
     "IngestRawRecord",
     "JournalWriter",
-    "KinesisIngestConsumer",
-    "KinesisRawRecord",
     "S3CheckpointStore",
     "partition_key_for_shard",
 ]
@@ -160,8 +158,3 @@ class S3CheckpointStore:
             Body=body,
             ContentType="application/json",
         )
-
-
-# Backward-compatible aliases (prefer ingest_consumer names in new code).
-KinesisRawRecord = IngestRawRecord
-KinesisIngestConsumer = IngestConsumer

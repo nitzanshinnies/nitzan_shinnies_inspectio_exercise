@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 
 from inspectio.api.routes_public import NotificationClient, router as public_router
-from inspectio.ingest.kinesis_producer import SqsFifoIngestProducer
+from inspectio.ingest.sqs_fifo_producer import SqsFifoIngestProducer
 from inspectio.settings import get_settings
 
 

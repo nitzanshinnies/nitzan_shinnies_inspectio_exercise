@@ -9,7 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from inspectio.api.app import create_app
-from inspectio.ingest.kinesis_producer import (
+from inspectio.ingest.ingest_producer import (
     IngestBufferOverflowError,
     IngestPutInput,
     IngestUnavailableError,

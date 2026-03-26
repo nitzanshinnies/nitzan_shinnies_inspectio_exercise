@@ -212,7 +212,7 @@ async def test_checkpoint_store_uses_section_29_4_s3_key_layout() -> None:
         s3_client=s3,
         bucket="bucket-a",
         stream_name="inspectio-ingest",
-        key_prefix="state/checkpoints/kinesis/",
+        key_prefix="state/checkpoints/ingest/",
     )
     await store.save(
         checkpoint_shard_id="shardId-000000000000",
@@ -224,7 +224,7 @@ async def test_checkpoint_store_uses_section_29_4_s3_key_layout() -> None:
     assert call["Bucket"] == "bucket-a"
     assert (
         call["Key"]
-        == "state/checkpoints/kinesis/inspectio-ingest/shard-shardId-000000000000.json"
+        == "state/checkpoints/ingest/inspectio-ingest/shard-shardId-000000000000.json"
     )
     body = json.loads(bytes(call["Body"]).decode("utf-8"))
     assert body == {"sequenceNumber": "200", "updatedAtMs": 1_700_000_000_444}

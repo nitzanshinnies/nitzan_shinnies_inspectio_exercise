@@ -2,7 +2,7 @@
 
 **Autonomous agents:** implement **§29** as the locked baseline (layout, **SQS FIFO** durable ingest, env, internal HTTP, journal sequences). **§29** overrides ambiguous text elsewhere. **Do not** implement by importing or copying **`v1_obsolete`** / **`inspectio_exercise`** Python code — see **§29.11**.
 
-**Ingest transport:** this repository uses **Amazon SQS FIFO** (`INSPECTIO_INGEST_QUEUE_URL`), not Kinesis, where accounts deny Kinesis (e.g. Organizations SCP). Older PDF/sections that mention **Kinesis** for ingest should be read as the same intent: durable handoff, **§18.3** (journal flush before releasing the message — **DeleteMessage** for SQS).
+**Ingest transport:** this repository uses **Amazon SQS FIFO** (`INSPECTIO_INGEST_QUEUE_URL`) for durable admission. **§18.3** (journal flush before releasing the message — **DeleteMessage** for SQS).
 
 **Implementation sequencing:** **`plans/IMPLEMENTATION_PHASES.md`** — phased PR plan (greenfield code is **not** required to live in the same change set as this blueprint).
 
@@ -94,7 +94,7 @@ Each row quotes the PDF intent (not necessarily verbatim). Status **Pass** = cov
 
 ### 2.2 S3 vs ingest stream (*reconciles PDF with this design*)
 
-The PDF requires **persisting retry state to S3** so the system survives restarts, and allows extra caches. This spec adds a **durable ingest boundary** (**Amazon SQS FIFO** in this repository — **§17**, **§29**) for admission throughput (Kinesis may appear in the PDF; implementation uses SQS where Kinesis is denied).
+The PDF requires **persisting retry state to S3** so the system survives restarts, and allows extra caches. This spec adds a **durable ingest boundary** (**Amazon SQS FIFO** in this repository — **§17**, **§29**) for admission throughput. If the assignment PDF names a different stream technology, treat it as the same intent: durable handoff before worker processing.
 
 **Normative split:**
 
@@ -1106,7 +1106,6 @@ All application code under **`src/inspectio/`**:
 | `src/inspectio/domain/sharding.py` | `shard_for_message(message_id, total_shards)` per **§16.2** |
 | `src/inspectio/ingest/schema.py` | `MessageIngestedV1` encode/decode (**§17.2**) |
 | `src/inspectio/ingest/ingest_producer.py` | Shared ingest types + **`partition_key_for_shard`** |
-| `src/inspectio/ingest/kinesis_producer.py` | Re-exports producer types + **`SqsFifoIngestProducer`** (compat module name) |
 | `src/inspectio/ingest/sqs_fifo_producer.py` | API **`send_message_batch`** / per-entry retry (**FIFO**) |
 | `src/inspectio/ingest/ingest_consumer.py` | Worker ingest: journal then **S3 checkpoint** *or* **SQS delete** (**§18.3**) |
 | `src/inspectio/ingest/sqs_fifo_consumer.py` | **`SqsFifoBatchFetcher`**: long-poll + logical shard filter (**§29.6**) |

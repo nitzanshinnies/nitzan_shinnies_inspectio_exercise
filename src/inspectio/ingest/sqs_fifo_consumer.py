@@ -1,4 +1,4 @@
-"""SQS FIFO long-poll fetcher for worker ingest (replaces Kinesis GetRecords)."""
+"""SQS FIFO long-poll fetcher for worker ingest."""
 
 from __future__ import annotations
 

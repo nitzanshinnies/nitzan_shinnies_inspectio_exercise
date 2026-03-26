@@ -1,4 +1,4 @@
-"""SQS FIFO producer for API admission path (replaces Kinesis PutRecords)."""
+"""SQS FIFO producer for API admission path."""
 
 from __future__ import annotations
 

@@ -12,7 +12,7 @@ import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
 from inspectio.domain.sharding import shard_for_message
-from inspectio.ingest.kinesis_producer import (
+from inspectio.ingest.ingest_producer import (
     IngestBufferOverflowError,
     IngestProducer,
     IngestPutInput,

@@ -1,4 +1,4 @@
-"""Shared types for admission ingest (SQS FIFO replaces Kinesis PutRecords)."""
+"""Shared types for admission ingest (SQS FIFO)."""
 
 from __future__ import annotations
 
