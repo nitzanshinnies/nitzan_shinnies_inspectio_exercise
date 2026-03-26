@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "inspectio"
+version = "0.0.0"
+description = "Inspectio SMS retry scheduler (greenfield; see plans/)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "aioboto3>=12.0.0",
+    "fastapi>=0.109.0",
+    "httpx>=0.26.0",
+    "pydantic>=2.5.0",
+    "pydantic-settings>=2.1.0",
+    "redis>=5.0.0",
+    "uvicorn[standard]>=0.27.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.4.0", "pytest-asyncio>=0.23.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
