@@ -25,7 +25,7 @@ dev = ["pytest>=7.4.0", "pytest-asyncio>=0.23.0"]
 where = ["src"]
 
 [tool.pytest.ini_options]
-# Defaults from pytest’s `norecursedirs` plus `v1_obsolete` (archived tree under `v1_obsolete/project/obsolete_tests`).
+# Defaults from pytest’s `norecursedirs` plus `v1_obsolete` (archived tree; not imported or built by greenfield tooling).
 norecursedirs = [
     "*.egg",
     ".*",
@@ -37,4 +37,11 @@ norecursedirs = [
     "venv",
     "{arch}",
     "v1_obsolete",
+]
+testpaths = ["tests"]
+markers = [
+    "unit: no I/O; pure domain, clocks, hashing, journal line parse/build (§28.2)",
+    "integration: I/O to docker services, moto, or LocalStack (§28.2)",
+    "e2e: multi-container stack; optional CI tier (§28.2)",
+    "performance: load scripts / large N; AWS claims only in-cluster (§28.2)",
 ]

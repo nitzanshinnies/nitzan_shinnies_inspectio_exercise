@@ -7,7 +7,7 @@ export AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-us-east-1}"
 # Inside the LocalStack container, the edge API is on localhost:4566.
 endpoint="${LOCALSTACK_EDGE_URL:-http://localhost:4566}"
 aws() { command aws --endpoint-url="${endpoint}" "$@"; }
-# Default matches v1 unit tests (`inspectio-test-bucket` in test_aws_s3_provider.py).
+# Default bucket name matches root compose / INSPECTIO_S3_BUCKET (inspectio-test-bucket).
 bucket="${INSPECTIO_S3_BUCKET:-${S3_BUCKET:-inspectio-test-bucket}}"
 stream="${INSPECTIO_KINESIS_STREAM_NAME:-inspectio-ingest}"
 shards="${INSPECTIO_KINESIS_LOCAL_SHARDS:-1}"

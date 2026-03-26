@@ -13,4 +13,4 @@ When editing **`src/inspectio/`**, repo-root **`tests/`**, or **`pyproject.toml`
 
 Normative detail: blueprint **§29.11** and **`IMPLEMENTATION_PHASES.md`** section **`v1_obsolete` boundary**.
 
-Docker **mock-sms** follows **root `docker-compose.yml`**; do not route API/worker/notification through v1 **`inspectio_exercise`** at runtime.
+Docker **mock-sms** is **`deploy/mock-sms/Dockerfile`** (see **`docker-compose.yml`**); **do not** build it from **`v1_obsolete/`**. Do not route API/worker/notification through v1 **`inspectio_exercise`** at runtime.

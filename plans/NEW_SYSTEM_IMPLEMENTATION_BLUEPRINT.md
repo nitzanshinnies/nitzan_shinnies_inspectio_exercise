@@ -126,7 +126,7 @@ The PDF’s `state/pending/...` key layout is **illustrative**; the journal layo
 
 4. **Read plane** (outcomes service + Redis):
    - terminal outcomes indexed in Redis bounded lists;
-   - optional durable **notification log** in S3 (same role as `v1_obsolete` `state/notifications/...`) plus **hydration** into Redis on cold start—**not** required on every `GET` (**§15.3**).
+   - optional durable **notification log** in S3 under a **`state/notifications/...`**-style prefix (**§5.1**, **§15.3**) plus **hydration** into Redis on cold start—**not** required on every `GET` (**§15.3**).
 
 ### 3.2 Why this fixes observed failures
 
@@ -430,7 +430,7 @@ Base path: `/` on the **API gateway** service (behind ALB/Ingress). All JSON use
 }
 ```
 
-*Informative:* `v1_obsolete` exposed **`shouldFail`** on `POST /messages` for convenience tests. **Not normative here**—deterministic failures use **injected SMS fakes**, mock **`FAILURE_RATE`**, or **§25** / **§28.3** harnesses instead of widening the public API.
+*Informative (historical only):* an archived stack exposed **`shouldFail`** on `POST /messages` for tests. **Not normative here**—deterministic failures use **injected SMS fakes**, mock **`FAILURE_RATE`**, or **§25** / **§28.3** harnesses. **Do not** add `shouldFail` (or similar) to match archived APIs.
 
 **Success `202 Accepted`:**
 
@@ -822,6 +822,8 @@ The submitted **README** must answer:
 
 | Version | Change |
 |---------|--------|
+| 1.18 | **§3.1** / **§15.1** / **§28.5** / **§29.3** / **§28.11**: spec-only notification prefix; explicit **no** `shouldFail`; E2E **not** sourced from **`v1_obsolete/**`**; **`mock-sms`** = **`deploy/mock-sms/Dockerfile`**; **§7** audit row without v1 wording |
+| 1.17 | **§29.11** / **`IMPLEMENTATION_PHASES.md`**: **`mock-sms`** image **must** be **`deploy/mock-sms/Dockerfile`** — **not** **`v1_obsolete/`** build context |
 | 1.16 | **§29.11** + **`IMPLEMENTATION_PHASES.md`**: forbid using **`v1_obsolete` / `inspectio_exercise`** as implementation source; **§28.11** cross-check no longer treats v1 proxy docs as normative |
 | 1.15 | **`IMPLEMENTATION_PHASES.md`**: verbatim **§29.2** + **§29.3** tables; each phase **§29.2 touch rows** subset copied from blueprint |
 | 1.14 | **`IMPLEMENTATION_PHASES.md`**: agent-readiness table, per-phase template (Prerequisites / Read first / Touch list / Implement / Do not / Verify), fixed **§9** crosswalk, dependency graph |
@@ -886,7 +888,7 @@ Fakes **must** enforce the same JSON shapes as **§17.2** and **§18.2** so test
 ### 28.5 E2E (*optional*)
 
 - Docker Compose: API → stream adapter → worker → mock SMS → S3 → notification → GET outcomes.
-- Reuse patterns from `v1_obsolete/project/obsolete_tests/e2e/` **only** as reference; behaviours must match **this** spec.
+- **Do not** copy **`v1_obsolete/**`** e2e tests or treat them as a contract; derive scenarios from **§28.4** and this spec. External multi-container **workflow** patterns are fine informally—**behaviour** is **this** document + **`plans/openapi.yaml`** only.
 
 ### 28.6 Performance / load tests
 
@@ -1048,7 +1050,7 @@ Each case **must** exist as a `test_*` or `@pytest.mark.parametrize` expansion w
 
 ### 28.11 Spec validation audit (*maintenance*)
 
-Full-document cross-check: **ASSIGNMENT.pdf** (consolidated spec) via **§2.0** sweep + **§29** agent locks + **`plans/openapi.yaml`** + **`IMPLEMENTATION_PHASES.md`** + **internal** consistency (rev **1.16**). *Optional:* skim **`v1_obsolete/plans/*`** only for **rejected** deltas explicitly named in **§2.3** — **not** as a second normative spec.
+Full-document cross-check: **ASSIGNMENT.pdf** (consolidated spec) via **§2.0** sweep + **§29** agent locks + **`plans/openapi.yaml`** + **`IMPLEMENTATION_PHASES.md`** + **internal** consistency (rev **1.18**). *Optional:* skim **`v1_obsolete/plans/*`** only for **rejected** deltas explicitly named in **§2.3** — **not** as a second normative spec.
 
 | Area | Status | Notes |
 |------|--------|--------|
@@ -1061,7 +1063,7 @@ Full-document cross-check: **ASSIGNMENT.pdf** (consolidated spec) via **§2.0** 
 | Ingest stream **checkpoint** | **Pass** (post-fix) | **§17.5** aligned with **§18.3** (no commit before durable journal for that record). |
 | S3 recovery SoT | **Pass** | **§2.2**, **§14**, **§18** replay. |
 | REST **§15** | **Pass** | Routes + **§15.4** `healthz`; **202** accepted for async admit. |
-| **§7** health-monitor | **Documented** | **Optional**; gap only if grader requires v1-style integrity API. |
+| **§7** health-monitor | **Documented** | **Optional** assignment-style integrity HTTP API (**§7**); gap only if grader mandates behaviour outside this spec. |
 | Snapshot **§18.4** vs **NEXT_DUE** `attemptCount` in pending rows | **Pass** | Pending `attemptCount` in snapshot **0..5** only. |
 | **§16** shard coverage | **Pass** | **TC-SHA-003**; **§16.1** `TOTAL_SHARDS >= W`. |
 | **TC-\*** catalog | **Pass** | Maps to §§; **§24** item 9. |
@@ -1124,7 +1126,7 @@ All application code under **`src/inspectio/`**:
 | **`inspectio-api`** | `inspectio.api.app:app` | **§15** + Kinesis producer |
 | **`inspectio-worker`** | `inspectio.worker.main:main` (create `main.py`) | consumer + scheduler |
 | **`inspectio-notification`** | `inspectio.notification.app:app` | **§29.6** + Redis |
-| **`mock-sms`** | *standalone SMS stub* wired in **root `docker-compose.yml`** (**§19**); **no** `import inspectio_exercise` (or other **`v1_obsolete/project/src`**) in **`src/inspectio`** |
+| **`mock-sms`** | *standalone SMS stub* built from **`deploy/mock-sms/Dockerfile`** per **root `docker-compose.yml`** (**§19**); **`src/inspectio`** **must not** depend on archived Python packages at runtime |
 
 **Default listen ports (development):** API **`8000`**, notification **`8081`**, mock SMS **`8090`**. Override only via **`INSPECTIO_*_PORT`** in **§29.4**.
 
@@ -1217,7 +1219,7 @@ Use **`asyncio.Lock`** keyed by **`messageId`** (string) for all mutations to in
 
 ### 29.11 Forbidden actions (agents)
 
-- **Importing, vendoring, or subprocess-calling** the archived **`inspectio_exercise`** package or any **`v1_obsolete/project/src`** module from greenfield **`src/inspectio/`** (or adding it as a **runtime** dependency of API/worker/notification). **Exception:** Docker **only** — the **`mock-sms`** **image** may be built from whatever **`docker-compose.yml`** declares (including archived paths); that **must not** imply **`inspectio_exercise`** is a **`pyproject.toml`** dependency of the greenfield package.
+- **Importing, vendoring, or subprocess-calling** the archived **`inspectio_exercise`** package or any **`v1_obsolete/project/src`** module from greenfield **`src/inspectio/`** (or adding it as a **runtime** dependency of API/worker/notification). **Docker:** **`mock-sms`** is built from **`deploy/mock-sms/Dockerfile`** per **§29.13** — **not** from **`v1_obsolete/`**. The mock image is separate from **`pyproject.toml`**; **`src/inspectio`** **must not** depend on **`inspectio_exercise`**.
 - **Treating** **`v1_obsolete/**`** unit/integration tests as the contract to implement against; greenfield tests are **§28** + repo-root **`tests/`** per **`IMPLEMENTATION_PHASES.md`**.
 - Replacing Kinesis with SQS/Redis/RabbitMQ **as the durable ingest boundary**.
 - **Awaiting** outbound SMS **inside** API request handlers.
@@ -1238,7 +1240,7 @@ Agents **must** keep the following files aligned with **§15**, **§29.3–29.6*
 
 | Artifact | Path | Purpose |
 |----------|------|---------|
-| **Docker Compose (infra)** | **`docker-compose.yml`** (repository root) | **Now:** **`redis`**, **`localstack`**, **`mock-sms`** (build **`v1_obsolete/project`**); ports **6379**, **4566**, **8090→mock**. **Implementation PR:** add **`inspectio-api`**, **`inspectio-worker`**, **`inspectio-notification`** per **`plans/IMPLEMENTATION_PHASES.md`**. |
+| **Docker Compose (infra)** | **`docker-compose.yml`** (repository root) | **Now:** **`redis`**, **`localstack`**, **`mock-sms`** (build **`deploy/mock-sms/Dockerfile`** — greenfield; **do not** use **`v1_obsolete/`** for compose images per **§29.11** / **`IMPLEMENTATION_PHASES.md`**, *`v1_obsolete` boundary*); ports **6379**, **4566**, **8090→mock**. **Implementation PR:** add **`inspectio-api`**, **`inspectio-worker`**, **`inspectio-notification`** per **`plans/IMPLEMENTATION_PHASES.md`**. |
 | **LocalStack init** | **`deploy/localstack/init/ready.d/10-inspectio-aws.sh`** | Creates S3 bucket (default **`inspectio-test-bucket`**; override **`INSPECTIO_S3_BUCKET`** / **`S3_BUCKET`**) and Kinesis stream **`inspectio-ingest`** (`INSPECTIO_KINESIS_LOCAL_SHARDS`, default **1**) |
 | **App image** | **`deploy/docker/Dockerfile`** | **Added in implementation PR** — single image, compose overrides **`command`** (**§29.2**) |
 | **HTTP contracts** | **`plans/openapi.yaml`** | Request/response shapes: **public**, **internal notification**, **mock `/send`** |

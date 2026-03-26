@@ -1,5 +1,6 @@
 .git
 .gitignore
+v1_obsolete
 **/__pycache__
 **/*.pyc
 .pytest_cache

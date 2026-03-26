@@ -1,5 +1,5 @@
 # Local stack: deps + greenfield app containers (see plans/IMPLEMENTATION_PHASES.md P9).
-# AWS/S3: defaults match v1 (`inspectio-test-bucket` in v1_obsolete/.../test_aws_s3_provider.py).
+# Default S3 bucket name is inspectio-test-bucket (LocalStack init + INSPECTIO_S3_BUCKET).
 # Pass the same credentials as your AWS CLI: set vars in `.env` (see `.env.example`) or export before `docker compose up`.
 name: inspectio
 
@@ -41,9 +41,8 @@ services:
 
   mock-sms:
     build:
-      context: ./v1_obsolete/project
-      dockerfile: Dockerfile
-    command: ["inspectio-mock-sms"]
+      context: .
+      dockerfile: deploy/mock-sms/Dockerfile
     environment:
       INSPECTIO_MOCK_SMS_PORT: "8080"
       INSPECTIO_MOCK_FAILURE_RATE: "0"
