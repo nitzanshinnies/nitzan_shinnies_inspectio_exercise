@@ -8,7 +8,7 @@ from inspectio.models import Message, RetryStateV1
 
 
 @pytest.mark.unit
-def test_message_fields_match_contract_tc_dom_005() -> None:
+def test_message_fields_match_contract() -> None:
     message = Message(message_id="m1", to="+15550000000", body="hello")
     assert message.message_id == "m1"
     assert message.to == "+15550000000"
@@ -16,7 +16,7 @@ def test_message_fields_match_contract_tc_dom_005() -> None:
 
 
 @pytest.mark.unit
-def test_retry_state_pending_allows_attempt_count_0_to_5_tc_dom_006() -> None:
+def test_retry_state_pending_allows_attempt_count_0_to_5() -> None:
     state = RetryStateV1(
         message_id="m1",
         attempt_count=5,
@@ -30,7 +30,7 @@ def test_retry_state_pending_allows_attempt_count_0_to_5_tc_dom_006() -> None:
 
 
 @pytest.mark.unit
-def test_retry_state_pending_rejects_attempt_count_6_tc_dom_004() -> None:
+def test_retry_state_pending_rejects_attempt_count_6_tc_dom_004_invariant() -> None:
     with pytest.raises(ValueError):
         RetryStateV1(
             message_id="m1",
@@ -44,7 +44,9 @@ def test_retry_state_pending_rejects_attempt_count_6_tc_dom_004() -> None:
 
 
 @pytest.mark.unit
-def test_retry_state_terminal_failed_requires_attempt_count_6_tc_dom_004() -> None:
+def test_retry_state_terminal_failed_requires_attempt_count_6_tc_dom_004_terminal() -> (
+    None
+):
     state = RetryStateV1(
         message_id="m1",
         attempt_count=6,
