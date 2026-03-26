@@ -1,0 +1,16 @@
+---
+description: Greenfield inspectio — v1_obsolete is not an implementation dependency
+alwaysApply: true
+---
+
+# Inspectio: no v1 code dependency
+
+When editing **`src/inspectio/`**, repo-root **`tests/`**, or **`pyproject.toml`** for the greenfield stack:
+
+- **Do not** `import inspectio_exercise` or import from **`v1_obsolete/project/src`** (or copy those modules in).
+- **Do not** port behavior by mirroring **`v1_obsolete/**`** tests as the source of truth; follow **`plans/NEW_SYSTEM_IMPLEMENTATION_BLUEPRINT.md`**, **`plans/openapi.yaml`**, **`plans/IMPLEMENTATION_PHASES.md`**, and **§28** **TC-** ids.
+- **`v1_obsolete/plans/*`** is for **explicit blueprint traps** (e.g. §2.3) only — not a parallel spec.
+
+Normative detail: blueprint **§29.11** and **`IMPLEMENTATION_PHASES.md`** section **`v1_obsolete` boundary**.
+
+Docker **mock-sms** follows **root `docker-compose.yml`**; do not route API/worker/notification through v1 **`inspectio_exercise`** at runtime.
