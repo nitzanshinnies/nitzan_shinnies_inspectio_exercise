@@ -7,6 +7,11 @@ MIN_COMPLETED_SEND_COUNT = 0
 MAX_COMPLETED_SEND_COUNT = len(RETRY_OFFSET_MS) - 1
 
 
+def is_send_due(now_ms: int, next_due_at_ms: int) -> bool:
+    """True iff a wakeup tick may dispatch a send (§6.2 not-before-due; boundary inclusive)."""
+    return now_ms >= next_due_at_ms
+
+
 def next_due_ms(arrival_ms: int, completed_send_count: int) -> int:
     """Return absolute due timestamp for the next send attempt.
 
