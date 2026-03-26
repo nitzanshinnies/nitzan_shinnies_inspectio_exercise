@@ -21,7 +21,7 @@ def test_pyproject_declares_required_pytest_markers() -> None:
     ini = data["tool"]["pytest"]["ini_options"]
     assert ini.get("testpaths") == ["tests"]
     norecurse = ini.get("norecursedirs") or []
-    assert "v1_obsolete" in norecurse, "repo-root pytest must skip legacy v1 tree"
+    assert "v1_obsolete" in norecurse, "repo-root pytest must skip archived tree"
     marker_lines: list[str] = ini["markers"]
     declared = {line.split(":", 1)[0].strip() for line in marker_lines}
     missing = REQUIRED_MARKERS - declared

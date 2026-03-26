@@ -369,7 +369,7 @@ All application code under **`src/inspectio/`**:
 
 **§29.2 touch rows:** *none* (infra / ops only). **§29.3** container names and module entries **must not** change without a blueprint bump.
 
-**Infra touch list:** `deploy/kubernetes/` (or Helm), **`scripts/`** load driver **or** Job YAML as in **`v1_obsolete`** patterns.
+**Infra touch list:** `deploy/kubernetes/` (or Helm), **`scripts/`** load driver **or** in-cluster Job YAML (see **`deploy/kubernetes/`** when present).
 
 **Implement**
 

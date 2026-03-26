@@ -25,7 +25,7 @@ dev = ["pytest>=7.4.0", "pytest-asyncio>=0.23.0"]
 where = ["src"]
 
 [tool.pytest.ini_options]
-# Defaults from pytest’s `norecursedirs` plus `v1_obsolete` (legacy tree; see v1_obsolete/project/obsolete_tests).
+# Defaults from pytest’s `norecursedirs` plus `v1_obsolete` (archived tree; not imported or built by greenfield tooling).
 norecursedirs = [
     "*.egg",
     ".*",
