@@ -30,7 +30,10 @@ class MessageIngestedV1(BaseModel):
 
     model_config = ConfigDict(frozen=True, populate_by_name=True)
 
-    schema: Literal["MessageIngestedV1"] = "MessageIngestedV1"
+    schema_name: Literal["MessageIngestedV1"] = Field(
+        default="MessageIngestedV1",
+        alias="schema",
+    )
     message_id: str = Field(alias="messageId")
     payload: MessageIngestPayload
     received_at_ms: int = Field(alias="receivedAtMs")
