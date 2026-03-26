@@ -11,7 +11,7 @@ The tree **`v1_obsolete/`** is an **archived implementation**, not a dependency 
 - **Do not** add `import inspectio_exercise`, `from v1_obsolete…`, path hacks into **`v1_obsolete/project/src`**, or copy-paste v1 modules into **`src/inspectio/`**.
 - **Do not** treat **`v1_obsolete/**`** tests (e.g. under **`v1_obsolete/project/tests`** or **`obsolete_tests`**) as the canonical suite to mirror 1:1; greenfield tests live under repo-root **`tests/`** per this file and **§28**.
 - **May read** **`v1_obsolete/plans/*`** only when the blueprint explicitly cites a **trap** or **rejected** equivalence (e.g. **§2.3** “relative” retries vs **§6.2**). Prefer **this blueprint** + **`plans/openapi.yaml`** for behavior.
-- **Mock SMS in Docker:** the **mock-SMS** service is whatever **root `docker-compose.yml`** declares (today that may build from archived paths for the **container image only**). **Do not** add a runtime **`import inspectio_exercise`** (or other **`v1_obsolete/project/src`** imports) in **`src/inspectio`** API/worker/notification code.
+- **Mock SMS in Docker:** **root `docker-compose.yml`** builds the mock from **`deploy/mock-sms/Dockerfile`** (greenfield stub). **Do not** set the mock-SMS **build context** to **`v1_obsolete/`**. **Do not** add a runtime **`import inspectio_exercise`** in **`src/inspectio`** API/worker/notification code.
 
 Same rule appears in blueprint **§29.11** (forbidden list).
 

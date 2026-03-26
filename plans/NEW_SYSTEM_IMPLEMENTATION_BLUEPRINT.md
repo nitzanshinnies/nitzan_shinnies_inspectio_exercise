@@ -822,6 +822,7 @@ The submitted **README** must answer:
 
 | Version | Change |
 |---------|--------|
+| 1.17 | **§29.11** / **`IMPLEMENTATION_PHASES.md`**: **`mock-sms`** image **must** be **`deploy/mock-sms/Dockerfile`** — **not** **`v1_obsolete/`** build context |
 | 1.16 | **§29.11** + **`IMPLEMENTATION_PHASES.md`**: forbid using **`v1_obsolete` / `inspectio_exercise`** as implementation source; **§28.11** cross-check no longer treats v1 proxy docs as normative |
 | 1.15 | **`IMPLEMENTATION_PHASES.md`**: verbatim **§29.2** + **§29.3** tables; each phase **§29.2 touch rows** subset copied from blueprint |
 | 1.14 | **`IMPLEMENTATION_PHASES.md`**: agent-readiness table, per-phase template (Prerequisites / Read first / Touch list / Implement / Do not / Verify), fixed **§9** crosswalk, dependency graph |
@@ -1048,7 +1049,7 @@ Each case **must** exist as a `test_*` or `@pytest.mark.parametrize` expansion w
 
 ### 28.11 Spec validation audit (*maintenance*)
 
-Full-document cross-check: **ASSIGNMENT.pdf** (consolidated spec) via **§2.0** sweep + **§29** agent locks + **`plans/openapi.yaml`** + **`IMPLEMENTATION_PHASES.md`** + **internal** consistency (rev **1.16**). *Optional:* skim **`v1_obsolete/plans/*`** only for **rejected** deltas explicitly named in **§2.3** — **not** as a second normative spec.
+Full-document cross-check: **ASSIGNMENT.pdf** (consolidated spec) via **§2.0** sweep + **§29** agent locks + **`plans/openapi.yaml`** + **`IMPLEMENTATION_PHASES.md`** + **internal** consistency (rev **1.17**). *Optional:* skim **`v1_obsolete/plans/*`** only for **rejected** deltas explicitly named in **§2.3** — **not** as a second normative spec.
 
 | Area | Status | Notes |
 |------|--------|--------|
@@ -1217,7 +1218,7 @@ Use **`asyncio.Lock`** keyed by **`messageId`** (string) for all mutations to in
 
 ### 29.11 Forbidden actions (agents)
 
-- **Importing, vendoring, or subprocess-calling** the archived **`inspectio_exercise`** package or any **`v1_obsolete/project/src`** module from greenfield **`src/inspectio/`** (or adding it as a **runtime** dependency of API/worker/notification). **Exception:** Docker **only** — the **`mock-sms`** **image** may be built from whatever **`docker-compose.yml`** declares (including archived paths); that **must not** imply **`inspectio_exercise`** is a **`pyproject.toml`** dependency of the greenfield package.
+- **Importing, vendoring, or subprocess-calling** the archived **`inspectio_exercise`** package or any **`v1_obsolete/project/src`** module from greenfield **`src/inspectio/`** (or adding it as a **runtime** dependency of API/worker/notification). **Docker:** **`mock-sms`** is built from **`deploy/mock-sms/Dockerfile`** per **§29.13** — **not** from **`v1_obsolete/`**. The mock image is separate from **`pyproject.toml`**; **`src/inspectio`** **must not** depend on **`inspectio_exercise`**.
 - **Treating** **`v1_obsolete/**`** unit/integration tests as the contract to implement against; greenfield tests are **§28** + repo-root **`tests/`** per **`IMPLEMENTATION_PHASES.md`**.
 - Replacing Kinesis with SQS/Redis/RabbitMQ **as the durable ingest boundary**.
 - **Awaiting** outbound SMS **inside** API request handlers.
