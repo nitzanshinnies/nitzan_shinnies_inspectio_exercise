@@ -39,6 +39,16 @@ LocalStack’s init script (**`deploy/localstack/init/ready.d/10-inspectio-aws.s
 
 Python package: **`pip install -e ".[dev]"`** from repo root (`src/inspectio/` scaffold per **§29.2**).
 
+### Compose smoke (P9)
+
+After a full stack recycle (`docker compose up -d --build --force-recreate`), verify admission → worker → SMS → outcomes:
+
+```bash
+python3 scripts/compose_smoke.py
+```
+
+Uses **`INSPECTIO_SMOKE_API`** (default `http://127.0.0.1:8000`). Exits **0** when the message appears in **`GET /messages/success`**.
+
 ### Port conflicts
 
 If another compose stack or local services already bind **6379**, **8000**, **8081**, **8090**, or **4566**, stop them before bringing this stack up.
