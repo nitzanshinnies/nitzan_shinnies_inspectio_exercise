@@ -32,6 +32,19 @@ def _post_message(api_base: str, body: str, to: str) -> str:
     return str(payload["messageId"])
 
 
+def _wait_for_api_ready(api_base: str, timeout_sec: int) -> None:
+    deadline = time.monotonic() + timeout_sec
+    while time.monotonic() < deadline:
+        try:
+            response = httpx.get(f"{api_base}/healthz", timeout=2)
+            if response.status_code == 200:
+                return
+        except httpx.HTTPError:
+            pass
+        time.sleep(POLL_INTERVAL_SEC)
+    raise TimeoutError(f"Timed out waiting for API health at {api_base}/healthz")
+
+
 def _fetch_terminals(api_base: str) -> list[dict]:
     success = httpx.get(
         f"{api_base}/messages/success",
@@ -64,9 +77,10 @@ def _wait_for_terminal(api_base: str, message_id: str, timeout_sec: int) -> dict
 def main() -> int:
     args = _parse_args()
     try:
+        _wait_for_api_ready(args.api_base, args.timeout_sec)
         message_id = _post_message(args.api_base, args.body, args.to)
         terminal = _wait_for_terminal(args.api_base, message_id, args.timeout_sec)
-    except httpx.HTTPError as exc:
+    except (httpx.HTTPError, TimeoutError) as exc:
         print(f"Smoke check failed: {exc}", file=sys.stderr)
         return 1
     if terminal is None:

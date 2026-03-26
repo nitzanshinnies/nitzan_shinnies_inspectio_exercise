@@ -11,7 +11,9 @@ from inspectio.journal.records import JournalRecordV1
 from inspectio.worker.main import (
     ShardedJournalFacade,
     _owned_shard_ids,
+    _publish_terminal_outcomes,
     _restore_runtime_from_s3_snapshots,
+    _terminal_payload_from_record,
 )
 from inspectio.worker.runtime import InMemorySchedulerRuntime
 
@@ -166,3 +168,63 @@ async def test_restore_calls_replay_for_all_owned_shards() -> None:
         runtime=runtime, replay_store=replay, shard_ids=[4, 5, 6, 7]
     )
     assert replay.load_calls == [4, 5, 6, 7]
+
+
+@pytest.mark.unit
+def test_terminal_payload_maps_runtime_terminal_record_shape() -> None:
+    terminal = JournalRecordV1.model_validate(
+        {
+            "v": 1,
+            "type": "TERMINAL",
+            "shardId": 3,
+            "messageId": "m-1",
+            "tsMs": 1_700_000_000_321,
+            "recordIndex": 9,
+            "payload": {"status": "failed", "attemptCount": 6, "reason": "send_failed"},
+        }
+    )
+    payload = _terminal_payload_from_record(terminal)
+    assert payload == {
+        "messageId": "m-1",
+        "terminalStatus": "failed",
+        "attemptCount": 6,
+        "finalTimestampMs": 1_700_000_000_321,
+        "reason": "send_failed",
+    }
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_publish_terminal_outcomes_posts_only_terminal_lines() -> None:
+    class _FakeNotificationClient:
+        def __init__(self) -> None:
+            self.posted: list[dict[str, object]] = []
+
+        async def post_terminal(self, payload: dict[str, object]) -> None:
+            self.posted.append(payload)
+
+    lines = [
+        _record(7, 1),
+        JournalRecordV1.model_validate(
+            {
+                "v": 1,
+                "type": "TERMINAL",
+                "shardId": 7,
+                "messageId": "m-7",
+                "tsMs": 1000,
+                "recordIndex": 2,
+                "payload": {"status": "success", "attemptCount": 1},
+            }
+        ),
+    ]
+    client = _FakeNotificationClient()
+    await _publish_terminal_outcomes(lines=lines, notification_client=client)
+    assert client.posted == [
+        {
+            "messageId": "m-7",
+            "terminalStatus": "success",
+            "attemptCount": 1,
+            "finalTimestampMs": 1000,
+            "reason": None,
+        }
+    ]

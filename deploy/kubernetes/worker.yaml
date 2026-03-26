@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inspectio-worker
+  namespace: inspectio
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: inspectio-worker
+  template:
+    metadata:
+      labels:
+        app: inspectio-worker
+    spec:
+      serviceAccountName: inspectio-app
+      containers:
+        - name: worker
+          image: REPLACE_WITH_APP_IMAGE
+          imagePullPolicy: IfNotPresent
+          command: ["python", "-m", "inspectio.worker.main"]
+          envFrom:
+            - configMapRef:
+                name: inspectio-config
+            - secretRef:
+                name: inspectio-secrets
