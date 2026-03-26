@@ -5,6 +5,8 @@ resources:
   - namespace.yaml
   - serviceaccount.yaml
   - configmap.yaml
+  - redis.yaml
+  - mock-sms.yaml
   - api.yaml
   - worker.yaml
   - notification.yaml

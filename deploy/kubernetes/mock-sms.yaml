@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mock-sms
+  namespace: inspectio
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mock-sms
+  template:
+    metadata:
+      labels:
+        app: mock-sms
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: mock-sms
+          image: ealen/echo-server:latest
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mock-sms
+  namespace: inspectio
+spec:
+  selector:
+    app: mock-sms
+  ports:
+    - port: 8080
+      targetPort: 80
