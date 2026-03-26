@@ -55,3 +55,45 @@ def test_notification_internal_terminal_write_and_read_paths() -> None:
     read = client.get("/internal/v1/outcomes/success?limit=1")
     assert read.status_code == 200
     assert read.json()["items"][0]["messageId"] == "m-1"
+
+
+@pytest.mark.unit
+def test_notification_terminal_rejects_invalid_payload_with_400() -> None:
+    app = create_app()
+    fake = _FakeOutcomesStore()
+    app.state.outcomes_store = fake
+    client = TestClient(app)
+
+    invalid = client.post(
+        "/internal/v1/outcomes/terminal",
+        json={
+            "messageId": "m-bad",
+            "terminalStatus": "weird",
+            "attemptCount": "x",
+            "finalTimestampMs": "bad",
+            "reason": "oops",
+        },
+    )
+    assert invalid.status_code == 400
+    assert fake.saved == []
+
+
+@pytest.mark.unit
+def test_notification_terminal_requires_reason_for_failed() -> None:
+    app = create_app()
+    fake = _FakeOutcomesStore()
+    app.state.outcomes_store = fake
+    client = TestClient(app)
+
+    invalid = client.post(
+        "/internal/v1/outcomes/terminal",
+        json={
+            "messageId": "m-f",
+            "terminalStatus": "failed",
+            "attemptCount": 6,
+            "finalTimestampMs": 1000,
+            "reason": None,
+        },
+    )
+    assert invalid.status_code == 400
+    assert fake.saved == []

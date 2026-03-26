@@ -79,3 +79,9 @@ async def test_tc_out_002_trims_to_max_items_cap() -> None:
     # newest first
     first = json.loads(raw[0])
     assert first["messageId"] == "m-149"
+
+
+@pytest.mark.unit
+def test_terminal_key_for_status_rejects_unknown_status() -> None:
+    with pytest.raises(ValueError):
+        terminal_key_for_status("weird")

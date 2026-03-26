@@ -12,7 +12,10 @@ OUTCOMES_FAILED_KEY = "inspectio:outcomes:failed"
 def terminal_key_for_status(status: str) -> str:
     if status == "success":
         return OUTCOMES_SUCCESS_KEY
-    return OUTCOMES_FAILED_KEY
+    if status == "failed":
+        return OUTCOMES_FAILED_KEY
+    msg = f"unsupported terminalStatus: {status}"
+    raise ValueError(msg)
 
 
 class RedisListClient(Protocol):
