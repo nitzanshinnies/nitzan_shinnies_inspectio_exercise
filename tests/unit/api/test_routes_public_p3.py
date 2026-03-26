@@ -52,7 +52,7 @@ class _StubProducer:
 def test_tc_api_001_post_messages_returns_202_and_ids() -> None:
     app = create_app()
     producer = _StubProducer()
-    app.state.kinesis_producer = producer
+    app.state.ingest_producer = producer
     client = TestClient(app)
 
     resp = client.post("/messages", json={"body": "hello", "to": "+15550000000"})
@@ -70,7 +70,7 @@ def test_tc_api_001_post_messages_returns_202_and_ids() -> None:
 @pytest.mark.parametrize("body", ["", "   "])
 def test_tc_api_002_post_messages_rejects_missing_or_blank_body(body: str) -> None:
     app = create_app()
-    app.state.kinesis_producer = _StubProducer()
+    app.state.ingest_producer = _StubProducer()
     client = TestClient(app)
 
     resp = client.post("/messages", json={"body": body})
@@ -80,7 +80,7 @@ def test_tc_api_002_post_messages_rejects_missing_or_blank_body(body: str) -> No
 @pytest.mark.unit
 def test_tc_api_002_post_messages_rejects_missing_body() -> None:
     app = create_app()
-    app.state.kinesis_producer = _StubProducer()
+    app.state.ingest_producer = _StubProducer()
     client = TestClient(app)
 
     resp = client.post("/messages", json={"to": "+15550000000"})
@@ -91,7 +91,7 @@ def test_tc_api_002_post_messages_rejects_missing_body() -> None:
 def test_tc_api_003_repeat_count_100_returns_accepted_and_unique_ids() -> None:
     app = create_app()
     producer = _StubProducer()
-    app.state.kinesis_producer = producer
+    app.state.ingest_producer = producer
     client = TestClient(app)
 
     resp = client.post("/messages/repeat?count=100", json={"body": "bulk"})
@@ -108,7 +108,7 @@ def test_tc_api_003_repeat_count_100_returns_accepted_and_unique_ids() -> None:
 def test_tc_api_003_repeat_over_500_is_chunked_and_accepted() -> None:
     app = create_app()
     producer = _StubProducer()
-    app.state.kinesis_producer = producer
+    app.state.ingest_producer = producer
     client = TestClient(app)
 
     resp = client.post("/messages/repeat?count=501", json={"body": "bulk"})
@@ -126,7 +126,7 @@ def test_tc_api_003_repeat_over_500_is_chunked_and_accepted() -> None:
 @pytest.mark.unit
 def test_tc_api_004_repeat_rejects_count_out_of_range() -> None:
     app = create_app()
-    app.state.kinesis_producer = _StubProducer()
+    app.state.ingest_producer = _StubProducer()
     client = TestClient(app)
 
     assert (
@@ -147,7 +147,7 @@ def test_tc_api_005_post_messages_maps_ingest_errors(mode: str, status: int) -> 
     app = create_app()
     producer = _StubProducer()
     producer.raise_mode = mode
-    app.state.kinesis_producer = producer
+    app.state.ingest_producer = producer
     client = TestClient(app)
 
     resp = client.post("/messages", json={"body": "hello"})
@@ -158,7 +158,7 @@ def test_tc_api_005_post_messages_maps_ingest_errors(mode: str, status: int) -> 
 @pytest.mark.unit
 def test_tc_api_008_post_messages_does_not_await_scheduler_send_path() -> None:
     app = create_app()
-    app.state.kinesis_producer = _StubProducer()
+    app.state.ingest_producer = _StubProducer()
 
     async def _send_forbidden(*_args: Any, **_kwargs: Any) -> None:
         raise AssertionError("send() should never be awaited from /messages in P3")

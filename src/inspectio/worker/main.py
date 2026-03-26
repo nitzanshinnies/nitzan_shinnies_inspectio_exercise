@@ -13,10 +13,10 @@ import httpx
 import redis.asyncio as redis
 
 from inspectio.ingest.kinesis_consumer import (
-    KinesisBatchFetcher,
     KinesisIngestConsumer,
-    S3CheckpointStore,
+    NoopCheckpointStore,
 )
+from inspectio.ingest.sqs_fifo_consumer import SqsFifoBatchFetcher
 from inspectio.domain.sharding import (
     owned_shard_range,
     validate_total_shards_vs_workers,
@@ -141,6 +141,9 @@ async def _run() -> None:
     if not settings.inspectio_s3_bucket:
         msg = "INSPECTIO_S3_BUCKET must be configured for P5 worker"
         raise ValueError(msg)
+    if not settings.inspectio_ingest_queue_url.strip():
+        msg = "INSPECTIO_INGEST_QUEUE_URL must be configured for P5 worker"
+        raise ValueError(msg)
     owned_shards = _owned_shard_ids(
         worker_index=settings.inspectio_worker_index,
         total_shards=settings.inspectio_total_shards,
@@ -154,9 +157,9 @@ async def _run() -> None:
             "s3", region_name=settings.inspectio_aws_region
         ) as s3_client:
             async with session.client(
-                "kinesis",
+                "sqs",
                 region_name=settings.inspectio_aws_region,
-            ) as kinesis_client:
+            ) as sqs_client:
                 managed_shards = set(owned_shards)
 
                 def _writer_factory(_shard_id: int) -> JournalWriter:
@@ -172,12 +175,7 @@ async def _run() -> None:
                     writer_factory=_writer_factory,
                     managed_shards=managed_shards,
                 )
-                checkpoint_store = S3CheckpointStore(
-                    s3_client=s3_client,
-                    bucket=settings.inspectio_s3_bucket,
-                    stream_name=settings.inspectio_kinesis_stream_name,
-                    key_prefix=settings.inspectio_kinesis_checkpoint_key_prefix,
-                )
+                checkpoint_store = NoopCheckpointStore()
                 runtime = InMemorySchedulerRuntime(
                     now_ms=lambda: int(time.time() * 1000),
                     sms_sender=SmsClient(
@@ -190,16 +188,25 @@ async def _run() -> None:
                     idempotency_ttl_sec=settings.inspectio_idempotency_ttl_sec,
                     runtime=runtime,
                 )
+
+                async def _delete_sqs(receipt_handle: str) -> None:
+                    await sqs_client.delete_message(
+                        QueueUrl=settings.inspectio_ingest_queue_url,
+                        ReceiptHandle=receipt_handle,
+                    )
+
                 consumer = KinesisIngestConsumer(
                     handler=handler,
                     journal_writer=journal_writer,
                     checkpoint_store=checkpoint_store,
+                    sqs_delete=_delete_sqs,
                 )
-                fetcher = KinesisBatchFetcher(
-                    kinesis_client=kinesis_client,
-                    stream_name=settings.inspectio_kinesis_stream_name,
+                fetcher = SqsFifoBatchFetcher(
+                    sqs_client=sqs_client,
+                    queue_url=settings.inspectio_ingest_queue_url,
                     worker_index=settings.inspectio_worker_index,
                     worker_replicas=settings.inspectio_worker_replicas,
+                    total_shards=settings.inspectio_total_shards,
                 )
                 replay_store = ReplayS3Store(
                     s3_client=s3_client,

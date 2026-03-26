@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 
 from inspectio.api.routes_public import NotificationClient, router as public_router
-from inspectio.ingest.kinesis_producer import KinesisIngestProducer
+from inspectio.ingest.kinesis_producer import SqsFifoIngestProducer
 from inspectio.settings import get_settings
 
 
@@ -14,7 +14,7 @@ def create_app() -> FastAPI:
     app = FastAPI(title="inspectio-api", version="0.0.0")
     settings = get_settings()
     app.state.settings = settings
-    app.state.kinesis_producer = KinesisIngestProducer(settings)
+    app.state.ingest_producer = SqsFifoIngestProducer(settings)
     app.state.notification_client = NotificationClient(
         base_url=settings.inspectio_notification_base_url
     )

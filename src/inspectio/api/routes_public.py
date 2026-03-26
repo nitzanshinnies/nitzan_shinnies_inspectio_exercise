@@ -102,7 +102,7 @@ def _get_settings(request: Request) -> Settings:
 
 
 def _get_producer(request: Request) -> IngestProducer:
-    return request.app.state.kinesis_producer
+    return request.app.state.ingest_producer
 
 
 def _get_notification_client(request: Request) -> NotificationClient:

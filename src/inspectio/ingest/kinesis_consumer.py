@@ -1,4 +1,4 @@
-"""Kinesis ingest consumer for P5 (dedupe + journal + checkpoint ordering)."""
+"""Ingest consumer for P5 (dedupe + journal + commit ordering, §18.3)."""
 
 from __future__ import annotations
 
@@ -7,26 +7,34 @@ import time
 from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, Protocol
 
+from inspectio.ingest.ingest_producer import partition_key_for_shard
 from inspectio.ingest.schema import MessageIngestedV1
 from inspectio.journal.records import JournalRecordV1
 from inspectio.worker.handlers import IngestJournalHandler
 
-PARTITION_KEY_WIDTH = 5
-MIN_WORKER_REPLICAS = 1
-
-
-def partition_key_for_shard(shard_id: int) -> str:
-    """Return producer/stream-compatible zero-padded partition key (TC-STR-003)."""
-    return f"{shard_id:0{PARTITION_KEY_WIDTH}d}"
+__all__ = [
+    "CheckpointStore",
+    "IngestRawRecord",
+    "JournalWriter",
+    "KinesisIngestConsumer",
+    "KinesisRawRecord",
+    "NoopCheckpointStore",
+    "S3CheckpointStore",
+    "partition_key_for_shard",
+]
 
 
 @dataclass(frozen=True, slots=True)
-class KinesisRawRecord:
-    """Minimal decoded Kinesis row used by consumer tests/runtime."""
+class IngestRawRecord:
+    """Decoded ingest row (Kinesis or SQS)."""
 
     kinesis_shard_id: str
     sequence_number: str
     data: bytes
+    sqs_receipt_handle: str | None = None
+
+
+KinesisRawRecord = IngestRawRecord
 
 
 class JournalWriter(Protocol):
@@ -40,7 +48,7 @@ class JournalWriter(Protocol):
 
 
 class CheckpointStore(Protocol):
-    """Checkpoint persistence interface (S3 in production)."""
+    """Checkpoint persistence interface (S3; optional when using SQS delete)."""
 
     async def save(
         self,
@@ -52,8 +60,23 @@ class CheckpointStore(Protocol):
         """Persist post-journal checkpoint."""
 
 
+class NoopCheckpointStore:
+    """No-op checkpoint (SQS path commits via DeleteMessage)."""
+
+    async def save(
+        self,
+        *,
+        kinesis_shard_id: str,
+        sequence_number: str,
+        updated_at_ms: int,
+    ) -> None:
+        _ = kinesis_shard_id
+        _ = sequence_number
+        _ = updated_at_ms
+
+
 class KinesisIngestConsumer:
-    """Process Kinesis ingest rows in §18.3 order: journal before checkpoint."""
+    """Process ingest rows in §18.3 order: journal before checkpoint/delete."""
 
     def __init__(
         self,
@@ -61,15 +84,17 @@ class KinesisIngestConsumer:
         handler: IngestJournalHandler,
         journal_writer: JournalWriter,
         checkpoint_store: CheckpointStore,
+        sqs_delete: Callable[[str], Awaitable[None]] | None = None,
         now_ms: Callable[[], int] | None = None,
     ) -> None:
         self._handler = handler
         self._journal_writer = journal_writer
         self._checkpoint_store = checkpoint_store
+        self._sqs_delete = sqs_delete
         self._now_ms = now_ms or _default_now_ms
         self._last_record_index_by_shard: dict[int, int] = {}
 
-    async def process_record(self, row: KinesisRawRecord) -> None:
+    async def process_record(self, row: IngestRawRecord) -> None:
         wire = json.loads(row.data.decode("utf-8"))
         message = MessageIngestedV1.from_json_dict(wire)
         journal_lines = await self._handler.apply_ingest(
@@ -81,6 +106,12 @@ class KinesisIngestConsumer:
             await self._journal_writer.append(line)
         if journal_lines:
             await self._journal_writer.flush()
+        if row.sqs_receipt_handle is not None:
+            if self._sqs_delete is None:
+                msg = "sqs_delete is required when sqs_receipt_handle is set"
+                raise ValueError(msg)
+            await self._sqs_delete(row.sqs_receipt_handle)
+            return
         await self._checkpoint_store.save(
             kinesis_shard_id=row.kinesis_shard_id,
             sequence_number=row.sequence_number,
@@ -90,9 +121,9 @@ class KinesisIngestConsumer:
     async def consume_once(
         self,
         *,
-        fetch_records: Callable[[], Awaitable[list[KinesisRawRecord]]],
+        fetch_records: Callable[[], Awaitable[list[IngestRawRecord]]],
     ) -> int:
-        """Poll and process one batch from Kinesis (single-worker friendly path)."""
+        """Poll and process one batch from the ingest queue."""
         rows = await fetch_records()
         for row in rows:
             await self.process_record(row)
@@ -144,122 +175,3 @@ class S3CheckpointStore:
             Body=body,
             ContentType="application/json",
         )
-
-
-class KinesisClient(Protocol):
-    """Minimal async Kinesis client protocol for polling."""
-
-    async def list_shards(self, **kwargs: Any) -> dict[str, Any]:
-        """List shards for stream."""
-
-    async def get_shard_iterator(self, **kwargs: Any) -> dict[str, Any]:
-        """Get shard iterator for reads."""
-
-    async def get_records(self, **kwargs: Any) -> dict[str, Any]:
-        """Fetch records for shard iterator."""
-
-
-class KinesisBatchFetcher:
-    """Single-worker shard poller for one stream (§29.6)."""
-
-    def __init__(
-        self,
-        *,
-        kinesis_client: KinesisClient,
-        stream_name: str,
-        max_records_per_shard: int = 1000,
-        worker_index: int = 0,
-        worker_replicas: int = 1,
-    ) -> None:
-        self._kinesis_client = kinesis_client
-        self._stream_name = stream_name
-        self._max_records_per_shard = max_records_per_shard
-        self._worker_index = worker_index
-        self._worker_replicas = worker_replicas
-        self._iterators_by_shard_id: dict[str, str] = {}
-        if self._worker_replicas < MIN_WORKER_REPLICAS:
-            msg = f"worker_replicas must be >= {MIN_WORKER_REPLICAS}"
-            raise ValueError(msg)
-        if self._worker_index < 0 or self._worker_index >= self._worker_replicas:
-            msg = f"worker_index must be in [0, {self._worker_replicas})"
-            raise ValueError(msg)
-
-    async def fetch_records(self) -> list[KinesisRawRecord]:
-        """Poll each shard once and return all rows found in this pass."""
-        shard_ids = await self._list_shard_ids()
-        rows: list[KinesisRawRecord] = []
-        for shard_id in shard_ids:
-            iterator = await self._get_or_create_iterator(shard_id)
-            if iterator is None:
-                continue
-            response = await self._kinesis_client.get_records(
-                ShardIterator=iterator,
-                Limit=self._max_records_per_shard,
-            )
-            next_iterator = response.get("NextShardIterator")
-            if next_iterator:
-                self._iterators_by_shard_id[shard_id] = str(next_iterator)
-            records = response.get("Records", [])
-            for item in records:
-                data = bytes(item["Data"])
-                rows.append(
-                    KinesisRawRecord(
-                        kinesis_shard_id=shard_id,
-                        sequence_number=str(item["SequenceNumber"]),
-                        data=data,
-                    )
-                )
-        return rows
-
-    async def _list_shard_ids(self) -> list[str]:
-        response = await self._kinesis_client.list_shards(StreamName=self._stream_name)
-        shards = response.get("Shards", [])
-        out: list[str] = []
-        for item in shards:
-            shard_id = str(item["ShardId"])
-            if _is_owned_kinesis_shard(
-                shard_id=shard_id,
-                worker_index=self._worker_index,
-                worker_replicas=self._worker_replicas,
-            ):
-                out.append(shard_id)
-        return out
-
-    async def _get_or_create_iterator(self, shard_id: str) -> str | None:
-        existing = self._iterators_by_shard_id.get(shard_id)
-        if existing is not None:
-            return existing
-        response = await self._kinesis_client.get_shard_iterator(
-            StreamName=self._stream_name,
-            ShardId=shard_id,
-            ShardIteratorType="TRIM_HORIZON",
-        )
-        iterator = response.get("ShardIterator")
-        if iterator is None:
-            return None
-        iterator_str = str(iterator)
-        self._iterators_by_shard_id[shard_id] = iterator_str
-        return iterator_str
-
-
-def _is_owned_kinesis_shard(
-    *,
-    shard_id: str,
-    worker_index: int,
-    worker_replicas: int,
-) -> bool:
-    shard_ordinal = _parse_kinesis_shard_ordinal(shard_id)
-    if shard_ordinal is None:
-        return True
-    return shard_ordinal % worker_replicas == worker_index
-
-
-def _parse_kinesis_shard_ordinal(shard_id: str) -> int | None:
-    # Typical shard id is "shardId-000000000123".
-    parts = shard_id.rsplit("-", 1)
-    if len(parts) != 2:
-        return None
-    suffix = parts[1]
-    if not suffix.isdigit():
-        return None
-    return int(suffix, 10)

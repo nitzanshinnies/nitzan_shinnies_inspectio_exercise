@@ -10,12 +10,12 @@ import pytest
 
 from inspectio.ingest.kinesis_consumer import (
     CheckpointStore,
-    KinesisBatchFetcher,
     KinesisIngestConsumer,
     KinesisRawRecord,
     S3CheckpointStore,
     partition_key_for_shard,
 )
+from inspectio.ingest.sqs_fifo_consumer import SqsFifoBatchFetcher
 from inspectio.ingest.schema import MessageIngestPayload, MessageIngestedV1
 from inspectio.journal.records import JournalRecordV1
 from inspectio.worker.handlers import IngestJournalHandler
@@ -84,32 +84,6 @@ class _CaptureS3Client:
     async def put_object(self, **kwargs: Any) -> dict[str, Any]:
         self.calls.append(kwargs)
         return {"ETag": "x"}
-
-
-class _FakeKinesisClient:
-    async def list_shards(self, **kwargs: Any) -> dict[str, Any]:
-        _ = kwargs
-        return {"Shards": [{"ShardId": "shardId-000000000001"}]}
-
-    async def get_shard_iterator(self, **kwargs: Any) -> dict[str, Any]:
-        _ = kwargs
-        return {"ShardIterator": "it-1"}
-
-    async def get_records(self, **kwargs: Any) -> dict[str, Any]:
-        _ = kwargs
-        message = MessageIngestedV1(
-            message_id="123e4567-e89b-12d3-a456-426614174005",
-            payload=MessageIngestPayload(body="x", to="+15550000003"),
-            received_at_ms=1_700_000_000_111,
-            shard_id=7,
-            idempotency_key="idem-e",
-        )
-        return {
-            "NextShardIterator": "it-2",
-            "Records": [
-                {"SequenceNumber": "9", "Data": _raw_record(message, sequence="9").data}
-            ],
-        }
 
 
 def _raw_record(message: MessageIngestedV1, *, sequence: str) -> KinesisRawRecord:
@@ -256,85 +230,140 @@ async def test_checkpoint_store_uses_section_29_4_s3_key_layout() -> None:
     assert body == {"sequenceNumber": "200", "updatedAtMs": 1_700_000_000_444}
 
 
+def _sqs_message_dict(
+    message: MessageIngestedV1, *, mid: str, rh: str
+) -> dict[str, Any]:
+    body = json.dumps(message.to_json_dict(), separators=(",", ":"), sort_keys=True)
+    return {"MessageId": mid, "ReceiptHandle": rh, "Body": body}
+
+
+class _FakeSqsClient:
+    def __init__(self, messages: list[dict[str, Any]] | None = None) -> None:
+        self._queue = list(messages or [])
+        self.visibility_calls: list[dict[str, Any]] = []
+
+    async def receive_message(self, **kwargs: Any) -> dict[str, Any]:
+        _ = kwargs
+        if not self._queue:
+            return {}
+        return {"Messages": [self._queue.pop(0)]}
+
+    async def change_message_visibility(self, **kwargs: Any) -> None:
+        self.visibility_calls.append(dict(kwargs))
+
+
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_fetcher_polls_kinesis_and_maps_rows() -> None:
-    fetcher = KinesisBatchFetcher(
-        kinesis_client=_FakeKinesisClient(),
-        stream_name="inspectio-ingest",
+async def test_fetcher_polls_sqs_and_maps_owned_logical_shard() -> None:
+    message = MessageIngestedV1(
+        message_id="123e4567-e89b-12d3-a456-426614174005",
+        payload=MessageIngestPayload(body="x", to="+15550000003"),
+        received_at_ms=1_700_000_000_111,
+        shard_id=7,
+        idempotency_key="idem-e",
+    )
+    fake = _FakeSqsClient(messages=[_sqs_message_dict(message, mid="mid-9", rh="rh-9")])
+    fetcher = SqsFifoBatchFetcher(
+        sqs_client=fake,
+        queue_url="http://example/queue",
+        worker_index=0,
+        worker_replicas=1,
+        total_shards=1024,
+        wait_seconds=0,
     )
     rows = await fetcher.fetch_records()
     assert len(rows) == 1
-    assert rows[0].kinesis_shard_id == "shardId-000000000001"
-    assert rows[0].sequence_number == "9"
-
-
-class _FakeKinesisClientSharded:
-    def __init__(self) -> None:
-        self.requested_shard_ids: list[str] = []
-
-    async def list_shards(self, **kwargs: Any) -> dict[str, Any]:
-        _ = kwargs
-        return {
-            "Shards": [
-                {"ShardId": "shardId-000000000000"},
-                {"ShardId": "shardId-000000000001"},
-                {"ShardId": "shardId-000000000002"},
-                {"ShardId": "shardId-000000000003"},
-            ]
-        }
-
-    async def get_shard_iterator(self, **kwargs: Any) -> dict[str, Any]:
-        shard_id = str(kwargs["ShardId"])
-        self.requested_shard_ids.append(shard_id)
-        return {"ShardIterator": f"it-{shard_id}"}
-
-    async def get_records(self, **kwargs: Any) -> dict[str, Any]:
-        shard_iterator = str(kwargs["ShardIterator"])
-        shard_id = shard_iterator.removeprefix("it-")
-        message = MessageIngestedV1(
-            message_id="123e4567-e89b-12d3-a456-4266141740aa",
-            payload=MessageIngestPayload(body="x", to="+15550000003"),
-            received_at_ms=1_700_000_000_111,
-            shard_id=7,
-            idempotency_key="idem-owned",
-        )
-        return {
-            "NextShardIterator": f"next-{shard_iterator}",
-            "Records": [
-                {
-                    "SequenceNumber": "1",
-                    "Data": KinesisRawRecord(
-                        kinesis_shard_id=shard_id,
-                        sequence_number="1",
-                        data=json.dumps(
-                            message.to_json_dict(),
-                            separators=(",", ":"),
-                            sort_keys=True,
-                        ).encode("utf-8"),
-                    ).data,
-                }
-            ],
-        }
+    assert rows[0].sequence_number == "mid-9"
+    assert rows[0].sqs_receipt_handle == "rh-9"
+    assert not fake.visibility_calls
 
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_fetcher_filters_kinesis_shards_by_worker_ownership() -> None:
-    fake = _FakeKinesisClientSharded()
-    fetcher = KinesisBatchFetcher(
-        kinesis_client=fake,
-        stream_name="inspectio-ingest",
-        worker_index=1,
+async def test_fetcher_rereleases_message_for_unowned_logical_shard() -> None:
+    message = MessageIngestedV1(
+        message_id="123e4567-e89b-12d3-a456-426614174099",
+        payload=MessageIngestPayload(body="x", to="+15550000003"),
+        received_at_ms=1_700_000_000_111,
+        shard_id=999,
+        idempotency_key="idem-x",
+    )
+    fake = _FakeSqsClient(messages=[_sqs_message_dict(message, mid="mid-x", rh="rh-x")])
+    fetcher = SqsFifoBatchFetcher(
+        sqs_client=fake,
+        queue_url="http://example/queue",
+        worker_index=0,
         worker_replicas=2,
+        total_shards=1024,
+        wait_seconds=0,
     )
     rows = await fetcher.fetch_records()
+    assert rows == []
+    assert len(fake.visibility_calls) == 1
+    assert fake.visibility_calls[0]["VisibilityTimeout"] == 0
 
-    assert sorted(fake.requested_shard_ids) == [
-        "shardId-000000000001",
-        "shardId-000000000003",
-    ]
-    assert sorted(row.kinesis_shard_id for row in rows) == [
-        "shardId-000000000001",
-        "shardId-000000000003",
-    ]
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_fetcher_worker_one_owns_high_shard_range() -> None:
+    message = MessageIngestedV1(
+        message_id="123e4567-e89b-12d3-a456-426614174099",
+        payload=MessageIngestPayload(body="x", to="+15550000003"),
+        received_at_ms=1_700_000_000_111,
+        shard_id=999,
+        idempotency_key="idem-x",
+    )
+    fake = _FakeSqsClient(messages=[_sqs_message_dict(message, mid="mid-x", rh="rh-x")])
+    fetcher = SqsFifoBatchFetcher(
+        sqs_client=fake,
+        queue_url="http://example/queue",
+        worker_index=1,
+        worker_replicas=2,
+        total_shards=1024,
+        wait_seconds=0,
+    )
+    rows = await fetcher.fetch_records()
+    assert len(rows) == 1
+    assert rows[0].sqs_receipt_handle == "rh-x"
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_process_record_sqs_deletes_after_journal() -> None:
+    message = MessageIngestedV1(
+        message_id="123e4567-e89b-12d3-a456-426614174005",
+        payload=MessageIngestPayload(body="x", to="+15550000003"),
+        received_at_ms=1_700_000_000_111,
+        shard_id=7,
+        idempotency_key="idem-sqs",
+    )
+    wire = json.dumps(
+        message.to_json_dict(), separators=(",", ":"), sort_keys=True
+    ).encode("utf-8")
+    deleted: list[str] = []
+
+    async def _delete(rh: str) -> None:
+        deleted.append(rh)
+
+    journal = _FakeJournalWriter()
+    checkpoint = _FakeCheckpointStore(journal)
+    consumer = KinesisIngestConsumer(
+        handler=IngestJournalHandler(
+            idempotency_store=_FakeIdempotencyStore(),
+            idempotency_ttl_sec=86_400,
+        ),
+        journal_writer=journal,
+        checkpoint_store=checkpoint,
+        sqs_delete=_delete,
+        now_ms=lambda: 1_700_000_000_555,
+    )
+    await consumer.process_record(
+        KinesisRawRecord(
+            kinesis_shard_id="mid-1",
+            sequence_number="mid-1",
+            data=wire,
+            sqs_receipt_handle="rh-abc",
+        )
+    )
+    assert deleted == ["rh-abc"]
+    assert checkpoint.calls == []

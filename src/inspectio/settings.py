@@ -16,9 +16,9 @@ class Settings(BaseSettings):
     inspectio_env: str = Field(default="dev", alias="INSPECTIO_ENV")
     inspectio_aws_region: str = Field(default="us-east-1", alias="INSPECTIO_AWS_REGION")
     inspectio_s3_bucket: str = Field(default="", alias="INSPECTIO_S3_BUCKET")
-    inspectio_kinesis_stream_name: str = Field(
-        default="inspectio-ingest",
-        alias="INSPECTIO_KINESIS_STREAM_NAME",
+    inspectio_ingest_queue_url: str = Field(
+        default="",
+        alias="INSPECTIO_INGEST_QUEUE_URL",
     )
     inspectio_total_shards: int = Field(default=1024, alias="INSPECTIO_TOTAL_SHARDS")
     inspectio_worker_replicas: int = Field(default=1, alias="INSPECTIO_WORKER_REPLICAS")
@@ -82,10 +82,6 @@ class Settings(BaseSettings):
     inspectio_notification_port: int = Field(
         default=8081,
         alias="INSPECTIO_NOTIFICATION_PORT",
-    )
-    inspectio_kinesis_checkpoint_key_prefix: str = Field(
-        default="state/checkpoints/kinesis/",
-        alias="INSPECTIO_KINESIS_CHECKPOINT_KEY_PREFIX",
     )
 
 
