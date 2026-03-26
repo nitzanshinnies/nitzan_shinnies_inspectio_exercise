@@ -1,0 +1,336 @@
+openapi: 3.0.3
+info:
+  title: Inspectio HTTP contracts (public §15 + internal §29.6)
+  version: "1.0.0"
+  description: |
+    Canonical JSON shapes. Implementations must match these schemas.
+    Source of truth narrative: plans/NEW_SYSTEM_IMPLEMENTATION_BLUEPRINT.md
+
+tags:
+  - name: public-api
+    description: External API (§15) — port INSPECTIO_API_PORT default 8000
+  - name: notification-internal
+    description: Notification service (§29.6) — port INSPECTIO_NOTIFICATION_PORT default 8081
+  - name: mock-sms
+    description: Mock provider (§19) — host port mapped to 8090 in docker-compose.yml
+
+servers:
+  - url: http://127.0.0.1:8000
+    description: inspectio-api
+  - url: http://127.0.0.1:8081
+    description: inspectio-notification
+  - url: http://127.0.0.1:8090
+    description: mock-sms (docker publish 8090→8080)
+
+paths:
+  /messages:
+    post:
+      tags: [public-api]
+      summary: Admit single message (202)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PostMessageRequest"
+      responses:
+        "202":
+          description: Accepted after durable ingest append
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PostMessageAccepted"
+        "400":
+          description: Validation error
+        "429":
+          description: Throttled
+        "503":
+          description: Ingest unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorIngestUnavailable"
+
+  /messages/repeat:
+    post:
+      tags: [public-api]
+      summary: Admit N messages with same body (202)
+      parameters:
+        - name: count
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PostMessageRequest"
+      responses:
+        "202":
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PostMessagesRepeatAccepted"
+        "400":
+          description: Invalid count or body
+
+  /messages/success:
+    get:
+      tags: [public-api]
+      summary: Recent successful terminals
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 100
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OutcomeListResponse"
+
+  /messages/failed:
+    get:
+      tags: [public-api]
+      summary: Recent failed terminals
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 100
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OutcomeListResponse"
+
+  /healthz:
+    get:
+      tags: [public-api, notification-internal]
+      summary: Liveness
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthzResponse"
+
+  /internal/v1/outcomes/terminal:
+    post:
+      tags: [notification-internal]
+      summary: Worker publishes terminal outcome
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MessageTerminalV1"
+      responses:
+        "204":
+          description: Stored (preferred)
+        "200":
+          description: OK (allowed if body returned)
+        "400":
+          description: Invalid body
+
+  /internal/v1/outcomes/success:
+    get:
+      tags: [notification-internal]
+      summary: API proxy source for GET /messages/success
+      parameters:
+        - name: limit
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OutcomeListResponse"
+
+  /internal/v1/outcomes/failed:
+    get:
+      tags: [notification-internal]
+      summary: API proxy source for GET /messages/failed
+      parameters:
+        - name: limit
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OutcomeListResponse"
+
+  /send:
+    post:
+      tags: [mock-sms]
+      summary: Mock SMS dispatch (§19)
+      servers:
+        - url: http://127.0.0.1:8090
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MockSmsSendRequest"
+      responses:
+        "200":
+          description: Simulated success
+        "500":
+          description: Simulated provider failure
+        "400":
+          description: Bad request
+
+components:
+  schemas:
+    PostMessageRequest:
+      type: object
+      required: [body]
+      properties:
+        body:
+          type: string
+          minLength: 1
+          description: Non-empty after trim (enforced by server)
+        to:
+          type: string
+          description: Optional E.164; default INSPECTIO_DEFAULT_TO_E164
+
+    PostMessageAccepted:
+      type: object
+      required: [messageId, shardId]
+      properties:
+        messageId:
+          type: string
+          format: uuid
+          description: UUID v4 lowercase
+        shardId:
+          type: integer
+          minimum: 0
+        ingestSequence:
+          type: string
+          nullable: true
+          description: Opaque stream sequence if available
+
+    PostMessagesRepeatAccepted:
+      type: object
+      required: [accepted, messageIds, shardIds]
+      properties:
+        accepted:
+          type: integer
+        messageIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        shardIds:
+          type: array
+          items:
+            type: integer
+
+    OutcomeItem:
+      type: object
+      required: [messageId, attemptCount, finalTimestamp, reason]
+      properties:
+        messageId:
+          type: string
+          format: uuid
+        attemptCount:
+          type: integer
+          minimum: 1
+          maximum: 6
+        finalTimestamp:
+          type: integer
+          format: int64
+          description: UTC epoch milliseconds (terminal instant)
+        reason:
+          type: string
+          nullable: true
+          description: null for success; non-empty for failed
+
+    OutcomeListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OutcomeItem"
+
+    MessageTerminalV1:
+      type: object
+      required: [messageId, terminalStatus, attemptCount, finalTimestampMs]
+      properties:
+        messageId:
+          type: string
+          format: uuid
+        terminalStatus:
+          type: string
+          enum: [success, failed]
+        attemptCount:
+          type: integer
+          minimum: 1
+          maximum: 6
+        finalTimestampMs:
+          type: integer
+          format: int64
+        reason:
+          type: string
+          nullable: true
+          description: Required semantic for failed; may be null on success
+
+    HealthzResponse:
+      type: object
+      required: [status, service]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+        service:
+          type: string
+          enum: [api, notification]
+
+    ErrorIngestUnavailable:
+      type: object
+      properties:
+        error:
+          type: string
+          example: ingest_unavailable
+        detail:
+          type: string
+
+    MockSmsSendRequest:
+      type: object
+      required: [to, body]
+      properties:
+        to:
+          type: string
+        body:
+          type: string
+        messageId:
+          type: string
+          format: uuid
+        attemptIndex:
+          type: integer
+          minimum: 0
+          maximum: 5
