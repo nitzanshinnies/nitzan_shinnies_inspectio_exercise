@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: inspectio-config
+  namespace: inspectio
+data:
+  INSPECTIO_ENV: prod
+  INSPECTIO_AWS_REGION: us-east-1
+  INSPECTIO_REDIS_URL: redis://redis:6379/0
+  INSPECTIO_NOTIFICATION_BASE_URL: http://inspectio-notification:8081
+  INSPECTIO_SMS_URL: http://mock-sms:8080
+  INSPECTIO_TOTAL_SHARDS: "1024"
+  INSPECTIO_WORKER_REPLICAS: "1"
+  INSPECTIO_WORKER_INDEX: "0"
+  INSPECTIO_MAX_SQS_FIFO_INFLIGHT_GROUPS: "64"
+  INSPECTIO_OUTCOMES_MAX_LIMIT: "10000"
+  INSPECTIO_MOCK_FAILURE_RATE: "0"
