@@ -3,6 +3,7 @@
 - **`plans/NEW_SYSTEM_IMPLEMENTATION_BLUEPRINT.md`** — normative architecture and **§29** agent contract.
 - **`plans/IMPLEMENTATION_PHASES.md`** — phased implementation plan (P0–P10).
 - **`plans/openapi.yaml`** — canonical HTTP JSON shapes (**§15** + **§29.6** + mock **`/send`**).
+- **Greenfield code** lives in **`src/inspectio/`** only — **do not** import or copy from **`v1_obsolete/`** (archived); see **`IMPLEMENTATION_PHASES.md`** (*`v1_obsolete` boundary*) and blueprint **§29.11**.
 
 ## Local stack (v2)
 
@@ -30,7 +31,7 @@ Services: **redis**, **localstack** (S3 + Kinesis), **mock-sms** (image **`deplo
 
 ### AWS S3 and credentials
 
-- **Bucket name:** default **`inspectio-test-bucket`**. Override with **`INSPECTIO_S3_BUCKET`** or **`S3_BUCKET`**. Key layout and lifecycle semantics are defined in **`plans/NEW_SYSTEM_IMPLEMENTATION_BLUEPRINT.md`** (journal / ingest), not a legacy tree.
+- **Bucket name:** default **`inspectio-test-bucket`**. Override with **`INSPECTIO_S3_BUCKET`** or **`S3_BUCKET`**. Greenfield object layout and semantics are defined in **`plans/NEW_SYSTEM_IMPLEMENTATION_BLUEPRINT.md`** — **`v1_obsolete/`** is archived reference, not a code dependency (**see also** **`IMPLEMENTATION_PHASES.md`**, *`v1_obsolete` boundary*).
 - **Same credentials as the AWS CLI:** Compose injects **`AWS_ACCESS_KEY_ID`**, **`AWS_SECRET_ACCESS_KEY`**, optional **`AWS_SESSION_TOKEN`**, **`AWS_DEFAULT_REGION`**, and **`AWS_ENDPOINT_URL`** into app containers. Defaults **`test` / `test`** and **`http://localstack:4566`** are for LocalStack only.
 - Copy **`.env.example`** → **`.env`** and edit, or export variables in your shell before `docker compose up` (e.g. `eval "$(aws configure export-credentials --format env --profile …)"` when your CLI uses SSO or temporary keys). **`.env`** is gitignored.
 
