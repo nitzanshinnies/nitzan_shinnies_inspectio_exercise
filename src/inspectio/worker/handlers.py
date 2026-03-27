@@ -12,7 +12,7 @@ from inspectio.ingest.ingest_consumer import (
     try_claim_idempotency,
 )
 from inspectio.ingest.schema import MessageIngestedV1
-from inspectio.ingest.sqs_fifo_consumer import RawSqsMessage, SqsFifoBatchFetcher
+from inspectio.ingest.sqs_fifo_consumer import RawSqsMessage
 from inspectio.journal.writer import JournalWriter
 from inspectio import scheduler_surface
 from inspectio.settings import Settings
@@ -26,9 +26,8 @@ async def process_raw_sqs_message(
     settings: Settings,
     writer: JournalWriter,
     redis_client: redis.Redis,
-    fetcher: SqsFifoBatchFetcher,
-) -> None:
-    """Apply ingest template A, delete SQS, then schedule first send."""
+) -> bool:
+    """Apply ingest template A and schedule first send. Returns True when caller may delete."""
     data = json.loads(raw.body)
     ingested = MessageIngestedV1.model_validate(data)
     rt = scheduler_surface.require_runtime()
@@ -39,7 +38,7 @@ async def process_raw_sqs_message(
             ingested.shard_id,
             rt.owned_range,
         )
-        return
+        return False
     claim = await try_claim_idempotency(
         redis_client,
         settings,
@@ -48,12 +47,10 @@ async def process_raw_sqs_message(
     )
     if claim == "collision":
         log.error("idempotency collision for key=%s", ingested.idempotency_key)
-        await fetcher.delete_message(raw.receipt_handle)
-        return
+        return True
     if claim == "duplicate_same":
-        await fetcher.delete_message(raw.receipt_handle)
-        return
+        return True
     await append_ingest_template_a(writer, ingested)
-    await fetcher.delete_message(raw.receipt_handle)
     msg = rt.bootstrap_from_ingest(ingested)
     scheduler_surface.new_message(msg)
+    return True

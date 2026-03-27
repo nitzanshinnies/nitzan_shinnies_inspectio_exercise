@@ -183,7 +183,6 @@ class WorkerRuntime:
                     },
                 )
                 await self._journal.append_record(r_term)
-                await self._journal.flush_shard(shard_id)
                 st.status = "success"
                 await self._post_terminal(
                     st.message_id,
@@ -208,7 +207,6 @@ class WorkerRuntime:
                     },
                 )
                 await self._journal.append_record(r_next)
-                await self._journal.flush_shard(shard_id)
                 st.next_attempt_index = attempt_index + 1
                 st.next_due_at_ms = due
                 return False
@@ -225,7 +223,6 @@ class WorkerRuntime:
                 },
             )
             await self._journal.append_record(r_term)
-            await self._journal.flush_shard(shard_id)
             st.status = "failed"
             await self._post_terminal(
                 st.message_id,

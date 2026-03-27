@@ -83,3 +83,28 @@ class SqsFifoBatchFetcher:
             QueueUrl=queue_url,
             ReceiptHandle=receipt_handle,
         )
+
+    async def delete_messages_batch(self, receipt_handles: list[str]) -> None:
+        """Delete up to 10 messages with one SQS API call."""
+        if not receipt_handles:
+            return
+        queue_url = self._settings.ingest_queue_url.strip()
+        await self.start()
+        assert self._sqs_client is not None
+        chunk = receipt_handles[:10]
+        entries = [
+            {
+                "Id": str(i),
+                "ReceiptHandle": handle,
+            }
+            for i, handle in enumerate(chunk)
+        ]
+        resp = await self._sqs_client.delete_message_batch(
+            QueueUrl=queue_url,
+            Entries=entries,
+        )
+        failed = resp.get("Failed", []) or []
+        if failed:
+            for row in failed:
+                idx = int(row["Id"])
+                await self.delete_message(chunk[idx])

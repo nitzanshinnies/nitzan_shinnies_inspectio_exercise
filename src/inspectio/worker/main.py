@@ -81,17 +81,21 @@ async def _sqs_loop(
                 continue
             if not batch:
                 continue
+            to_delete: list[str] = []
             for raw in batch:
                 try:
-                    await process_raw_sqs_message(
+                    should_delete = await process_raw_sqs_message(
                         raw,
                         settings=settings,
                         writer=journal,
                         redis_client=redis_client,
-                        fetcher=fetcher,
                     )
+                    if should_delete:
+                        to_delete.append(raw.receipt_handle)
                 except Exception:
                     log.exception("ingest handler failed")
+            for i in range(0, len(to_delete), 10):
+                await fetcher.delete_messages_batch(to_delete[i : i + 10])
     finally:
         await fetcher.stop()
 
@@ -135,6 +139,7 @@ async def _run() -> None:
     try:
         await asyncio.gather(*tasks)
     finally:
+        await journal.flush_all()
         await journal.stop()
         await http_client.aclose()
         await redis_client.aclose()
