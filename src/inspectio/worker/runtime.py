@@ -146,7 +146,6 @@ class WorkerRuntime:
                 payload={"attemptIndex": attempt_index},
             )
             await self._journal.append_record(r_attempt)
-            await self._journal.flush_shard(shard_id)
 
             ok, http_status, err_cls = await post_send(
                 self._http,
