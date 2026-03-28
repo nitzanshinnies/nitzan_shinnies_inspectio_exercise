@@ -24,6 +24,9 @@ from inspectio.worker.runtime import WorkerRuntime
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("inspectio.worker")
+logging.getLogger("aiobotocore.credentials").setLevel(logging.WARNING)
+logging.getLogger("botocore.credentials").setLevel(logging.WARNING)
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
 async def _snapshot_loop(
@@ -67,26 +70,34 @@ async def _sqs_loop(
     stop: asyncio.Event,
 ) -> None:
     fetcher = SqsFifoBatchFetcher(settings)
-    while not stop.is_set():
-        try:
-            batch = await fetcher.receive_messages(max_messages=10, wait_seconds=20)
-        except Exception as exc:
-            log.exception("sqs receive failed: %s", exc)
-            await asyncio.sleep(1.0)
-            continue
-        if not batch:
-            continue
-        for raw in batch:
+    await fetcher.start()
+    try:
+        while not stop.is_set():
             try:
-                await process_raw_sqs_message(
-                    raw,
-                    settings=settings,
-                    writer=journal,
-                    redis_client=redis_client,
-                    fetcher=fetcher,
-                )
-            except Exception:
-                log.exception("ingest handler failed")
+                batch = await fetcher.receive_messages(max_messages=10, wait_seconds=20)
+            except Exception as exc:
+                log.exception("sqs receive failed: %s", exc)
+                await asyncio.sleep(1.0)
+                continue
+            if not batch:
+                continue
+            to_delete: list[str] = []
+            for raw in batch:
+                try:
+                    should_delete = await process_raw_sqs_message(
+                        raw,
+                        settings=settings,
+                        writer=journal,
+                        redis_client=redis_client,
+                    )
+                    if should_delete:
+                        to_delete.append(raw.receipt_handle)
+                except Exception:
+                    log.exception("ingest handler failed")
+            for i in range(0, len(to_delete), 10):
+                await fetcher.delete_messages_batch(to_delete[i : i + 10])
+    finally:
+        await fetcher.stop()
 
 
 async def _run() -> None:
@@ -102,6 +113,7 @@ async def _run() -> None:
     shard_ids = list(range(start, end))
     hwm = await bootstrap_hwm_for_shards(settings, shard_ids)
     journal = JournalWriter(settings, initial_hwm=hwm)
+    await journal.start()
     runtime = WorkerRuntime(settings, journal, http_client)
     scheduler_surface.configure_runtime(runtime)
 
@@ -121,12 +133,15 @@ async def _run() -> None:
         asyncio.create_task(
             _wakeup_loop(stop, settings.wakeup_interval_ms),
         ),
+        asyncio.create_task(runtime.terminal_retry_loop(stop)),
         asyncio.create_task(_journal_flush_loop(journal, stop)),
         asyncio.create_task(_snapshot_loop(runtime, journal, settings, stop)),
     ]
     try:
         await asyncio.gather(*tasks)
     finally:
+        await journal.flush_all()
+        await journal.stop()
         await http_client.aclose()
         await redis_client.aclose()
 

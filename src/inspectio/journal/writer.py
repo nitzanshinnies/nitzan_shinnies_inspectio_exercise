@@ -52,6 +52,9 @@ class JournalWriter:
         self._segment_seq: dict[tuple[int, str, str, str, str], int] = {}
         self._locks: dict[int, asyncio.Lock] = defaultdict(asyncio.Lock)
         self._session = aioboto3.Session()
+        self._s3_client_ctx: Any | None = None
+        self._s3_client: Any | None = None
+        self._client_lock = asyncio.Lock()
 
     def _client_kwargs(self) -> dict[str, Any]:
         kw: dict[str, Any] = {"region_name": self._settings.aws_region}
@@ -59,29 +62,49 @@ class JournalWriter:
             kw["endpoint_url"] = self._settings.aws_endpoint_url
         return kw
 
+    async def start(self) -> None:
+        """Open a long-lived S3 client to avoid per-put setup overhead."""
+        async with self._client_lock:
+            if self._s3_client is not None:
+                return
+            self._s3_client_ctx = self._session.client("s3", **self._client_kwargs())
+            self._s3_client = await self._s3_client_ctx.__aenter__()
+
+    async def stop(self) -> None:
+        """Close the long-lived S3 client."""
+        async with self._client_lock:
+            if self._s3_client_ctx is None:
+                return
+            await self._s3_client_ctx.__aexit__(None, None, None)
+            self._s3_client_ctx = None
+            self._s3_client = None
+
     async def _put_object_with_retry(self, key: str, body: bytes) -> None:
         delay = S3_RETRY_BASE_DELAY_SEC
-        async with self._session.client("s3", **self._client_kwargs()) as s3:
-            for attempt in range(S3_RETRY_MAX_ATTEMPTS):
-                try:
-                    await s3.put_object(Bucket=self._bucket, Key=key, Body=body)
-                    return
-                except ClientError as exc:
-                    code = exc.response.get("Error", {}).get("Code", "")
-                    if code not in (
-                        "Throttling",
-                        "SlowDown",
-                        "ServiceUnavailable",
-                        "InternalError",
-                    ):
-                        raise
-                    if attempt == S3_RETRY_MAX_ATTEMPTS - 1:
-                        raise
-                    log.warning(
-                        "s3_put_retry key=%s code=%s attempt=%s", key, code, attempt
-                    )
-                    await asyncio.sleep(delay)
-                    delay = min(delay * 2, S3_RETRY_MAX_DELAY_SEC)
+        await self.start()
+        assert self._s3_client is not None
+        for attempt in range(S3_RETRY_MAX_ATTEMPTS):
+            try:
+                await self._s3_client.put_object(
+                    Bucket=self._bucket, Key=key, Body=body
+                )
+                return
+            except ClientError as exc:
+                code = exc.response.get("Error", {}).get("Code", "")
+                if code not in (
+                    "Throttling",
+                    "SlowDown",
+                    "ServiceUnavailable",
+                    "InternalError",
+                ):
+                    raise
+                if attempt == S3_RETRY_MAX_ATTEMPTS - 1:
+                    raise
+                log.warning(
+                    "s3_put_retry key=%s code=%s attempt=%s", key, code, attempt
+                )
+                await asyncio.sleep(delay)
+                delay = min(delay * 2, S3_RETRY_MAX_DELAY_SEC)
 
     def _next_record_index_locked(self, shard_id: int) -> int:
         start = max(self._hwm.get(shard_id, -1), self._last_assigned.get(shard_id, -1))
