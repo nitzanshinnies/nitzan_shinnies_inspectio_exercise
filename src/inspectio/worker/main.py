@@ -82,9 +82,10 @@ async def _sqs_loop(
             if not batch:
                 continue
             to_delete: list[str] = []
+            shards_to_flush: set[int] = set()
             for raw in batch:
                 try:
-                    should_delete = await process_raw_sqs_message(
+                    should_delete, shard_flush = await process_raw_sqs_message(
                         raw,
                         settings=settings,
                         writer=journal,
@@ -92,8 +93,12 @@ async def _sqs_loop(
                     )
                     if should_delete:
                         to_delete.append(raw.receipt_handle)
+                        if shard_flush is not None:
+                            shards_to_flush.add(shard_flush)
                 except Exception:
                     log.exception("ingest handler failed")
+            for sid in shards_to_flush:
+                await journal.flush_shard(sid)
             for i in range(0, len(to_delete), 10):
                 await fetcher.delete_messages_batch(to_delete[i : i + 10])
     finally:

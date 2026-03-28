@@ -81,7 +81,7 @@ Rough order of impact for **in-cluster drain** and **admission** throughput:
 2. **API admission** — **`INSPECTIO_MAX_SQS_FIFO_INFLIGHT_GROUPS`** (default **64**): higher allows more concurrent `SendMessageBatch` pipelines across distinct `MessageGroupId`s for large **`/messages/repeat`** payloads (see **`plans/SQS_FIFO_THROUGHPUT_AND_ADMISSION_PLAN.md`**).
 3. **Journal batching** — In **`configmap.yaml`**, **`INSPECTIO_JOURNAL_FLUSH_INTERVAL_MS`** and **`INSPECTIO_JOURNAL_FLUSH_MAX_LINES`**: larger windows mean **fewer S3 `PutObject`** calls per shard (slightly higher memory and crash window; still durable once flushed).
 4. **Per-shard send parallelism** — **`INSPECTIO_MAX_PARALLEL_SENDS_PER_SHARD`** (worker): raise if mock SMS and CPU allow.
-5. **Code path** — The largest single win is usually **not forcing an S3 flush on every ingest** (today **`append_ingest_template_a`** ends with **`flush_shard`**): batching ingest lines into the normal flush loop cuts **one PUT per message**; that is an application change on a performance-focused branch, not a manifest knob.
+5. **Ingest journal** — **`append_ingest_template_a`** appends only; the worker **flushes each touched shard once per SQS receive batch** before **`DeleteMessage`**, so multiple ingests on the same shard share a segment when possible (§18.3).
 6. **Infra** — S3 prefix scaling, optional **high-throughput FIFO**, **ElastiCache** for Redis, right-sized **CPU/memory** on worker pods, **`podManagementPolicy: Parallel`** on **new** StatefulSets for faster rollouts.
 
 ## Public ingress

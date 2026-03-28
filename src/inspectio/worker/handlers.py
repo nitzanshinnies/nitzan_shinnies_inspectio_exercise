@@ -26,8 +26,13 @@ async def process_raw_sqs_message(
     settings: Settings,
     writer: JournalWriter,
     redis_client: redis.Redis,
-) -> bool:
-    """Apply ingest template A and schedule first send. Returns True when caller may delete."""
+) -> tuple[bool, int | None]:
+    """Apply ingest template A and schedule first send.
+
+    Returns ``(delete_receipt, shard_to_flush)`` where ``shard_to_flush`` is set
+    when ingest journal lines were appended (caller must flush that shard before
+    SQS delete). ``None`` when there is nothing new to flush for this message.
+    """
     data = json.loads(raw.body)
     ingested = MessageIngestedV1.model_validate(data)
     rt = scheduler_surface.require_runtime()
@@ -41,10 +46,10 @@ async def process_raw_sqs_message(
     )
     if claim == "collision":
         log.error("idempotency collision for key=%s", ingested.idempotency_key)
-        return True
+        return True, None
     if claim == "duplicate_same":
-        return True
+        return True, None
     await append_ingest_template_a(writer, ingested)
     msg = rt.bootstrap_from_ingest(ingested)
     scheduler_surface.new_message(msg)
-    return True
+    return True, ingested.shard_id
