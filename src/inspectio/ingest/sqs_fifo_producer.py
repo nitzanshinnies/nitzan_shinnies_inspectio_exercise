@@ -10,6 +10,7 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 import aioboto3
+from botocore.exceptions import ClientError
 
 from inspectio.ingest.ingest_producer import (
     IngestPutInput,
@@ -21,11 +22,27 @@ from inspectio.ingest.schema import MessageIngestPayload, MessageIngestedV1
 from inspectio.settings import Settings
 
 MAX_SQS_FIFO_SEND_BATCH = 10
+SQS_SEND_MAX_ATTEMPTS = 8
+SQS_SEND_BASE_DELAY_SEC = 0.05
+SQS_SEND_MAX_DELAY_SEC = 2.0
 
 
 def _deduplication_id(idempotency_key: str) -> str:
     """FIFO MessageDeduplicationId (max 128 chars)."""
     return hashlib.sha256(idempotency_key.encode("utf-8")).hexdigest()
+
+
+def _is_sqs_transient_error(exc: ClientError) -> bool:
+    code = exc.response.get("Error", {}).get("Code", "")
+    return code in (
+        "Throttling",
+        "ThrottlingException",
+        "RequestThrottled",
+        "TooManyRequestsException",
+        "ServiceUnavailable",
+        "InternalError",
+        "SlowDown",
+    )
 
 
 class SqsFifoIngestProducer:
@@ -100,10 +117,21 @@ async def _send_fifo_batch(
     send_single: Callable[..., Awaitable[str | None]],
 ) -> list[IngestPutResult]:
     batch = _build_batch_entries(chunk)
-    response = await client.send_message_batch(
-        QueueUrl=queue_url,
-        Entries=batch,
-    )
+    delay = SQS_SEND_BASE_DELAY_SEC
+    response: dict[str, Any] | None = None
+    for attempt in range(SQS_SEND_MAX_ATTEMPTS):
+        try:
+            response = await client.send_message_batch(
+                QueueUrl=queue_url,
+                Entries=batch,
+            )
+            break
+        except ClientError as exc:
+            if not _is_sqs_transient_error(exc) or attempt == SQS_SEND_MAX_ATTEMPTS - 1:
+                raise
+            await asyncio.sleep(delay)
+            delay = min(delay * 2, SQS_SEND_MAX_DELAY_SEC)
+    assert response is not None
     message_id_by_idx: dict[int, str | None] = {}
     for row in response.get("Successful", []):
         message_id_by_idx[int(row["Id"])] = (
@@ -141,12 +169,23 @@ async def _send_single_fifo_message(
         idempotency_key=item.idempotency_key,
     ).to_json_dict()
     body = json.dumps(value, separators=(",", ":"), sort_keys=True)
-    resp = await client.send_message(
-        QueueUrl=queue_url,
-        MessageBody=body,
-        MessageGroupId=partition_key_for_shard(item.shard_id),
-        MessageDeduplicationId=_deduplication_id(item.idempotency_key),
-    )
+    delay = SQS_SEND_BASE_DELAY_SEC
+    resp: dict[str, Any] | None = None
+    for attempt in range(SQS_SEND_MAX_ATTEMPTS):
+        try:
+            resp = await client.send_message(
+                QueueUrl=queue_url,
+                MessageBody=body,
+                MessageGroupId=partition_key_for_shard(item.shard_id),
+                MessageDeduplicationId=_deduplication_id(item.idempotency_key),
+            )
+            break
+        except ClientError as exc:
+            if not _is_sqs_transient_error(exc) or attempt == SQS_SEND_MAX_ATTEMPTS - 1:
+                raise
+            await asyncio.sleep(delay)
+            delay = min(delay * 2, SQS_SEND_MAX_DELAY_SEC)
+    assert resp is not None
     mid = resp.get("MessageId")
     return str(mid) if mid else None
 

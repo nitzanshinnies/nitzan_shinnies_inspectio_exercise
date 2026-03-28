@@ -27,12 +27,12 @@ spec:
             - --sizes
             - "1000"
             - --chunk-max
-            - "500"
+            - "1000"
             - --http-timeout-sec
             - "300"
             - --outcome-timeout-sec
-            - "3600"
+            - "7200"
             - --outcome-limit
-            - "10000"
+            - "20000"
             - --wait-outcomes
             - --json-summary

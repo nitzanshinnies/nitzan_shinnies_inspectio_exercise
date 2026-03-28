@@ -84,6 +84,10 @@ Rough order of impact for **in-cluster drain** and **admission** throughput:
 5. **Ingest journal** — **`append_ingest_template_a`** appends only; the worker **flushes each touched shard once per SQS receive batch** before **`DeleteMessage`**, so multiple ingests on the same shard share a segment when possible (§18.3).
 6. **Infra** — S3 prefix scaling, optional **high-throughput FIFO**, **ElastiCache** for Redis, right-sized **CPU/memory** on worker pods, **`podManagementPolicy: Parallel`** on **new** StatefulSets for faster rollouts.
 
+**SQS admission:** `SqsFifoIngestProducer` retries **`send_message_batch`** / **`send_message`** with exponential backoff on **throttling** and similar transient `ClientError` codes (see `sqs_fifo_producer.py`).
+
+**Larger architectural options** (FIFO swaps, fewer journal lines, etc.): **`plans/PERFORMANCE_ARCH_FUTURE.md`**.
+
 ## Public ingress
 
 Expose **`inspectio-api`** with your platform pattern (ALB Ingress, Gateway API, etc.); this directory leaves the Service as **ClusterIP** only.

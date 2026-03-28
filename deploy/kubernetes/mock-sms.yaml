@@ -16,7 +16,7 @@ metadata:
   name: mock-sms
   namespace: inspectio
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       app.kubernetes.io/name: mock-sms

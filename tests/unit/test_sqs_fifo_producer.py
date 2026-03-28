@@ -5,6 +5,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from botocore.exceptions import ClientError
 
 from inspectio.ingest.ingest_producer import IngestPutInput
 from inspectio.ingest.sqs_fifo_producer import (
@@ -121,6 +122,46 @@ async def test_parallel_groups_limited_by_semaphore() -> None:
         await producer.put_messages(messages)
 
     assert mock_client.send_message_batch.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_send_message_batch_retries_on_throttling() -> None:
+    """Transient Throttling on SendMessageBatch is retried before surfacing."""
+    settings = Settings(ingest_queue_url="https://sqs.example/queue.fifo")
+    producer = SqsFifoIngestProducer(settings)
+    messages = [_msg(0, 0)]
+    mock_client = AsyncMock()
+    calls = {"n": 0}
+
+    async def batch_with_throttle(*_a: object, **_kwargs: object) -> dict:
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise ClientError(
+                {"Error": {"Code": "Throttling", "Message": "slow down"}},
+                "SendMessageBatch",
+            )
+        return _success_batch(1)
+
+    mock_client.send_message_batch = AsyncMock(side_effect=batch_with_throttle)
+    session = MagicMock()
+    cm = MagicMock()
+    cm.__aenter__ = AsyncMock(return_value=mock_client)
+    cm.__aexit__ = AsyncMock(return_value=False)
+    session.client = MagicMock(return_value=cm)
+
+    with (
+        patch(
+            "inspectio.ingest.sqs_fifo_producer.aioboto3.Session", return_value=session
+        ),
+        patch(
+            "inspectio.ingest.sqs_fifo_producer.asyncio.sleep", new_callable=AsyncMock
+        ),
+    ):
+        out = await producer.put_messages(messages)
+
+    assert calls["n"] == 2
+    assert len(out) == 1
+    assert out[0].message_id == "m0"
 
 
 @pytest.mark.unit
