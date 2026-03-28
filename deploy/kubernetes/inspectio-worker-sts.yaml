@@ -19,7 +19,7 @@ spec:
       labels:
         app: inspectio-worker-sts
     spec:
-      serviceAccountName: inspectio-apps
+      serviceAccountName: inspectio-app
       enableServiceLinks: false
       containers:
         - name: worker
@@ -42,4 +42,4 @@ spec:
             - configMapRef:
                 name: inspectio-config
             - secretRef:
-                name: inspectio-aws
+                name: inspectio-secrets

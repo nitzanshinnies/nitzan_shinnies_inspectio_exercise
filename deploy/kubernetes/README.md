@@ -9,7 +9,7 @@ Blueprint references: **§7** (AWS runtime), **§28.6** (in-cluster load tests).
 1. **EKS** cluster and `kubectl` configured.
 2. **S3 bucket** for journals (writer uses `INSPECTIO_S3_BUCKET`).
 3. **SQS FIFO** queue; URL as **`INSPECTIO_INGEST_QUEUE_URL`** (HTTPS, `*.fifo`).
-4. **IAM** (IRSA): grant the role in **`serviceaccount.yaml`** **S3** read/write on the bucket prefix and **SQS** `ReceiveMessage`, `DeleteMessage`, `SendMessage`, `SendMessageBatch` on the queue.
+4. **IAM** (IRSA): grant the role in **`serviceaccount.yaml`** (ServiceAccount **`inspectio-app`**) **S3** read/write on the bucket prefix and **SQS** `ReceiveMessage`, `DeleteMessage`, `SendMessage`, `SendMessageBatch` on the queue.
 5. **Redis**: manifests include an in-cluster **redis** Deployment for parity with compose. For production, point **`INSPECTIO_REDIS_URL`** in **`configmap.yaml`** at **ElastiCache** and drop the **redis** resources from `kustomization.yaml` after validation.
 
 ## Build and push images
@@ -38,8 +38,10 @@ Never commit real URLs. Use **`secret-aws.env.example`** as a template:
 cp deploy/kubernetes/secret-aws.env.example /secure/inspect-aws.env
 # edit values
 kubectl apply -f deploy/kubernetes/namespace.yaml
-kubectl -n inspectio create secret generic inspectio-aws --from-env-file=/secure/inspect-aws.env
+kubectl -n inspectio create secret generic inspectio-secrets --from-env-file=/secure/inspect-aws.env
 ```
+
+The Secret name **`inspectio-secrets`** matches **`secretRef`** on API and worker pods. **Keys inside** the Secret remain **`INSPECTIO_*`** / **`AWS_*`** (see the example file); only the Kubernetes object name changed from older `inspectio-aws` docs.
 
 For **real AWS**, do **not** set **`AWS_ENDPOINT_URL`** on API/worker pods.
 
@@ -70,6 +72,17 @@ kubectl -n inspectio logs -f job/inspectio-load-test
 The Job prints JSON with **`admission_rps`**, chunk latency percentiles, and (with **`--wait-outcomes`**) **`e2e_rps`** and **`drain_sec`**.
 
 Tune **`--sizes`**, **`--chunk-max`**, and Job resource limits to suit your cluster.
+
+## Performance (durability-preserving levers)
+
+Rough order of impact for **in-cluster drain** and **admission** throughput:
+
+1. **Horizontal scale** — Raise **`StatefulSet`** `spec.replicas` and set **`INSPECTIO_WORKER_REPLICAS`** to the same value. Scale **`inspectio-api`** (admission + parallel FIFO sends across groups). Scale **`inspectio-notification`** if terminal HTTP becomes hot.
+2. **API admission** — **`INSPECTIO_MAX_SQS_FIFO_INFLIGHT_GROUPS`** (default **64**): higher allows more concurrent `SendMessageBatch` pipelines across distinct `MessageGroupId`s for large **`/messages/repeat`** payloads (see **`plans/SQS_FIFO_THROUGHPUT_AND_ADMISSION_PLAN.md`**).
+3. **Journal batching** — In **`configmap.yaml`**, **`INSPECTIO_JOURNAL_FLUSH_INTERVAL_MS`** and **`INSPECTIO_JOURNAL_FLUSH_MAX_LINES`**: larger windows mean **fewer S3 `PutObject`** calls per shard (slightly higher memory and crash window; still durable once flushed).
+4. **Per-shard send parallelism** — **`INSPECTIO_MAX_PARALLEL_SENDS_PER_SHARD`** (worker): raise if mock SMS and CPU allow.
+5. **Code path** — The largest single win is usually **not forcing an S3 flush on every ingest** (today **`append_ingest_template_a`** ends with **`flush_shard`**): batching ingest lines into the normal flush loop cuts **one PUT per message**; that is an application change on a performance-focused branch, not a manifest knob.
+6. **Infra** — S3 prefix scaling, optional **high-throughput FIFO**, **ElastiCache** for Redis, right-sized **CPU/memory** on worker pods, **`podManagementPolicy: Parallel`** on **new** StatefulSets for faster rollouts.
 
 ## Public ingress
 

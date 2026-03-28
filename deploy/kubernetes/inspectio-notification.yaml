@@ -26,7 +26,7 @@ spec:
       labels:
         app.kubernetes.io/name: inspectio-notification
     spec:
-      serviceAccountName: inspectio-apps
+      serviceAccountName: inspectio-app
       containers:
         - name: notification
           image: inspectio-app:latest
