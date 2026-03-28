@@ -133,6 +133,7 @@ async def _run() -> None:
         asyncio.create_task(
             _wakeup_loop(stop, settings.wakeup_interval_ms),
         ),
+        asyncio.create_task(runtime.terminal_retry_loop(stop)),
         asyncio.create_task(_journal_flush_loop(journal, stop)),
         asyncio.create_task(_snapshot_loop(runtime, journal, settings, stop)),
     ]

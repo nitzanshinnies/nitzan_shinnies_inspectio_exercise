@@ -31,14 +31,8 @@ async def process_raw_sqs_message(
     data = json.loads(raw.body)
     ingested = MessageIngestedV1.model_validate(data)
     rt = scheduler_surface.require_runtime()
-    if not rt.owns_shard(ingested.shard_id):
-        log.warning(
-            "skip ingest shard not owned mid=%s shard=%s range=%s",
-            ingested.message_id,
-            ingested.shard_id,
-            rt.owned_range,
-        )
-        return False
+    # Shared SQS consumption: any worker may ingest any shard.
+    # Shard ownership is still used for local snapshot partitioning.
     claim = await try_claim_idempotency(
         redis_client,
         settings,

@@ -36,6 +36,16 @@ class RuntimeMessageState:
     status: RetryRuntimeStatus
 
 
+@dataclass(slots=True)
+class TerminalPublishTask:
+    message_id: str
+    terminal_status: Literal["success", "failed"]
+    attempt_count: int
+    final_ts: int
+    reason: str | None
+    retries: int = 0
+
+
 class WorkerRuntime:
     """Owns shard range, per-`messageId` locks, SMS + journal + outcomes."""
 
@@ -53,6 +63,7 @@ class WorkerRuntime:
         self._shard_sem: dict[int, asyncio.Semaphore] = defaultdict(
             lambda: asyncio.Semaphore(settings.max_parallel_sends_per_shard)
         )
+        self._terminal_retry_q: asyncio.Queue[TerminalPublishTask] = asyncio.Queue()
         self._owned = owned_shard_range(
             settings.worker_index,
             settings.total_shards,
@@ -121,7 +132,10 @@ class WorkerRuntime:
 
     async def dispatch_new_message(self, message: Message) -> None:
         """First send attempt after ingest (paired with `bootstrap_from_ingest`)."""
-        await self.async_send(message)
+        try:
+            await self.async_send(message)
+        except Exception:
+            log.exception("dispatch_new_message failed mid=%s", message.message_id)
 
     async def async_send(self, message: Message) -> bool:
         """Run one send attempt with full journal + SMS (§25 async counterpart)."""
@@ -184,6 +198,7 @@ class WorkerRuntime:
                 )
                 await self._journal.append_record(r_term)
                 st.status = "success"
+                log.info("terminal success mid=%s attempts=%s", st.message_id, ac)
                 await self._post_terminal(
                     st.message_id,
                     terminal_status="success",
@@ -209,6 +224,12 @@ class WorkerRuntime:
                 await self._journal.append_record(r_next)
                 st.next_attempt_index = attempt_index + 1
                 st.next_due_at_ms = due
+                log.debug(
+                    "retry scheduled mid=%s next_attempt=%s due_ms=%s",
+                    st.message_id,
+                    st.next_attempt_index,
+                    st.next_due_at_ms,
+                )
                 return False
 
             r_term = await self._journal.build_record(
@@ -224,6 +245,11 @@ class WorkerRuntime:
             )
             await self._journal.append_record(r_term)
             st.status = "failed"
+            log.info(
+                "terminal failed mid=%s attempts=%s",
+                st.message_id,
+                FAILED_ATTEMPT_COUNT,
+            )
             await self._post_terminal(
                 st.message_id,
                 terminal_status="failed",
@@ -232,6 +258,19 @@ class WorkerRuntime:
                 reason="sms_exhausted",
             )
             return False
+
+    async def _post_terminal_once(self, task: TerminalPublishTask) -> bool:
+        base = self._settings.notification_base_url.rstrip("/")
+        url = f"{base}/internal/v1/outcomes/terminal"
+        payload = {
+            "messageId": task.message_id,
+            "terminalStatus": task.terminal_status,
+            "attemptCount": task.attempt_count,
+            "finalTimestampMs": task.final_ts,
+            "reason": task.reason,
+        }
+        await self._http.post(url, json=payload, timeout=10.0)
+        return True
 
     async def _post_terminal(
         self,
@@ -242,19 +281,49 @@ class WorkerRuntime:
         final_ts: int,
         reason: str | None,
     ) -> None:
-        base = self._settings.notification_base_url.rstrip("/")
-        url = f"{base}/internal/v1/outcomes/terminal"
-        payload = {
-            "messageId": message_id,
-            "terminalStatus": terminal_status,
-            "attemptCount": attempt_count,
-            "finalTimestampMs": final_ts,
-            "reason": reason,
-        }
+        task = TerminalPublishTask(
+            message_id=message_id,
+            terminal_status=terminal_status,
+            attempt_count=attempt_count,
+            final_ts=final_ts,
+            reason=reason,
+        )
         try:
-            await self._http.post(url, json=payload, timeout=10.0)
+            await self._post_terminal_once(task)
         except httpx.HTTPError as exc:
             log.warning("terminal notify failed mid=%s err=%s", message_id, exc)
+            await self._terminal_retry_q.put(task)
+
+    async def terminal_retry_loop(self, stop: asyncio.Event) -> None:
+        """Best-effort retry for terminal outcome publication."""
+        while not stop.is_set():
+            try:
+                task = await asyncio.wait_for(self._terminal_retry_q.get(), timeout=1.0)
+            except TimeoutError:
+                continue
+            try:
+                await self._post_terminal_once(task)
+            except httpx.HTTPError as exc:
+                retries = task.retries + 1
+                if retries <= 20:
+                    backoff = min(2 ** min(retries, 6), 30)
+                    await asyncio.sleep(backoff)
+                    await self._terminal_retry_q.put(
+                        TerminalPublishTask(
+                            message_id=task.message_id,
+                            terminal_status=task.terminal_status,
+                            attempt_count=task.attempt_count,
+                            final_ts=task.final_ts,
+                            reason=task.reason,
+                            retries=retries,
+                        )
+                    )
+                else:
+                    log.error(
+                        "terminal notify dropped after retries mid=%s err=%s",
+                        task.message_id,
+                        exc,
+                    )
 
     async def wakeup_due(self) -> None:
         """Dispatch due pending messages (tick path)."""

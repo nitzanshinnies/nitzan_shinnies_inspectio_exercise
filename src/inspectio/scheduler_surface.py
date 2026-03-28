@@ -10,11 +10,13 @@ PDF mapping (README must duplicate):
 from __future__ import annotations
 
 import asyncio
+import logging
 
 from inspectio.models import Message
 from inspectio.worker.runtime import WorkerRuntime
 
 _runtime: WorkerRuntime | None = None
+log = logging.getLogger("inspectio.scheduler_surface")
 
 
 def configure_runtime(runtime: WorkerRuntime) -> None:
@@ -44,10 +46,20 @@ def send(message: Message) -> bool:
 
 
 def new_message(message: Message) -> None:
-    asyncio.get_running_loop().create_task(
+    task = asyncio.get_running_loop().create_task(
         require_runtime().dispatch_new_message(message)
     )
+    task.add_done_callback(_log_task_exception)
 
 
 def wakeup() -> None:
-    asyncio.get_running_loop().create_task(require_runtime().wakeup_due())
+    task = asyncio.get_running_loop().create_task(require_runtime().wakeup_due())
+    task.add_done_callback(_log_task_exception)
+
+
+def _log_task_exception(task: asyncio.Task[object]) -> None:
+    if task.cancelled():
+        return
+    exc = task.exception()
+    if exc is not None:
+        log.exception("scheduler task failed", exc_info=exc)
