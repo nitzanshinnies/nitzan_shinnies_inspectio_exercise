@@ -1,0 +1,45 @@
+# Shard-aware workers: INSPECTIO_WORKER_INDEX comes from StatefulSet ordinal (pod name suffix).
+# Keep INSPECTIO_WORKER_REPLICAS in configmap.yaml equal to spec.replicas here.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: inspectio-worker-sts
+  namespace: inspectio
+  labels:
+    app.kubernetes.io/name: inspectio-worker-sts
+spec:
+  replicas: 12
+  serviceName: inspectio-worker-headless
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      app: inspectio-worker-sts
+  template:
+    metadata:
+      labels:
+        app: inspectio-worker-sts
+    spec:
+      serviceAccountName: inspectio-apps
+      enableServiceLinks: false
+      containers:
+        - name: worker
+          image: inspectio-app:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+            - |
+              ORDINAL="${HOSTNAME##*-}"
+              export INSPECTIO_WORKER_INDEX="$ORDINAL"
+              exec python -m inspectio.worker.main
+          env:
+            # Override broken Kubernetes service env vars that collide with INSPECTIO_* port ints.
+            - name: INSPECTIO_API_PORT
+              value: "8000"
+            - name: INSPECTIO_NOTIFICATION_PORT
+              value: "8081"
+          envFrom:
+            - configMapRef:
+                name: inspectio-config
+            - secretRef:
+                name: inspectio-aws

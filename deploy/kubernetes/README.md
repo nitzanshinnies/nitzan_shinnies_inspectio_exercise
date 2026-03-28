@@ -48,8 +48,10 @@ For **real AWS**, do **not** set **`AWS_ENDPOINT_URL`** on API/worker pods.
 ```bash
 kubectl apply -k deploy/kubernetes/
 kubectl -n inspectio rollout status deployment/inspectio-api
-kubectl -n inspectio rollout status deployment/inspectio-worker
+kubectl -n inspectio rollout status statefulset/inspectio-worker-sts
 ```
+
+**Workers:** the stack uses **`StatefulSet` `inspectio-worker-sts`** (not a Deployment). Set **`INSPECTIO_WORKER_REPLICAS`** in **`configmap.yaml`** to the **same value** as **`spec.replicas`** on the StatefulSet so snapshot shard ownership matches. Pods export **`INSPECTIO_WORKER_INDEX`** from the pod ordinal (`HOSTNAME` suffix). **`podManagementPolicy: Parallel`** speeds rollouts (Kubernetes does **not** allow changing this field on an existing StatefulSet; recreate the STS if you need to switch from `OrderedReady`).
 
 ## Measure performance (normative path)
 

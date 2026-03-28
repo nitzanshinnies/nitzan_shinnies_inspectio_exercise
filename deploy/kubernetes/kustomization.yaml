@@ -10,4 +10,5 @@ resources:
   - mock-sms.yaml
   - inspectio-notification.yaml
   - inspectio-api.yaml
-  - inspectio-worker.yaml
+  - inspectio-worker-headless.yaml
+  - inspectio-worker-sts.yaml
