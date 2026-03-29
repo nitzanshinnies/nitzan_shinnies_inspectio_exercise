@@ -46,7 +46,7 @@ norecursedirs = [
 testpaths = ["tests"]
 markers = [
     "unit: no I/O; pure domain, clocks, hashing, journal line parse/build",
-    "integration: I/O to docker services, moto, or LocalStack",
+    "integration: I/O to docker services, moto, LocalStack, or in-process multi-app ASGI (e.g. L1→L2)",
     "e2e: multi-container stack; optional CI tier",
     "performance: load scripts / large N; AWS claims only in-cluster",
 ]

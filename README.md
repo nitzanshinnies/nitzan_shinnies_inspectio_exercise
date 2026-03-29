@@ -48,7 +48,7 @@ Implementation targets **v3** only. **Normative docs:** **`plans/ASSIGNMENT.pdf`
 - **`inspectio.v3.l1`**: **FastAPI** serves a small **demo UI** at **`GET /`** and **proxies** **`/messages`**, **`/messages/repeat`**, **`/messages/success`**, **`/messages/failed`**, **`/healthz`** to L2 using **`httpx`** (**`INSPECTIO_L2_BASE_URL`**, e.g. **`http://inspectio-api:8000`** on the compose network). Browsers should use **L1 only** (CORS/TLS terminate at L1 in real deploys; compose uses same-origin **`http://127.0.0.1:8080`**).
 - **Demo UI:** **Send once** (`POST /messages`) and **Repeat N** with a **single** **`fetch`** to **`POST /messages/repeat?count=N`** (coalesced admission per master plan).
 - **Run:** **`uvicorn inspectio.v3.l1.serve:app --host 0.0.0.0 --port 8080`** with **`INSPECTIO_L2_BASE_URL`** set.
-- **Tests:** **`pytest tests/unit/test_v3_l1_proxy.py -m unit`** (in-process L1→L2 ASGI chain).
+- **Tests:** **`pytest tests/integration/test_v3_l1_proxy.py -m integration`** (in-process L1→L2 ASGI chain; matches P5 “light integration” scope).
 
 ## Local stack
 

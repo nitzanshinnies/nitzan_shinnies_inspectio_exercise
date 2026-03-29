@@ -1,4 +1,4 @@
-"""P5: L1 static root + proxy to L2 (in-process ASGI, no network)."""
+"""P5: L1 static root + proxy to L2 (in-process ASGI, no TCP)."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from inspectio.v3.l2.app import create_l2_app
 from inspectio.v3.l2.memory_enqueue import ListBulkEnqueue
 
 
-@pytest.mark.unit
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_get_root_returns_demo_html() -> None:
     backend = ListBulkEnqueue()
@@ -36,7 +36,7 @@ async def test_get_root_returns_demo_html() -> None:
     assert b"/messages/repeat" in r.content
 
 
-@pytest.mark.unit
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_post_messages_via_l1_returns_202() -> None:
     backend = ListBulkEnqueue()
@@ -59,3 +59,35 @@ async def test_post_messages_via_l1_returns_202() -> None:
     data = r.json()
     assert "messageId" in data
     assert len(backend.items) == 1
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_post_messages_repeat_via_l1_returns_202() -> None:
+    backend = ListBulkEnqueue()
+    l2 = create_l2_app(
+        enqueue_backend=backend,
+        clock_ms=lambda: 1_700_000_000_000,
+        shard_count=1,
+    )
+    transport_l2 = httpx.ASGITransport(app=l2)
+    async with httpx.AsyncClient(
+        transport=transport_l2, base_url="http://l2"
+    ) as l2_client:
+        l1 = create_l1_app(l2_client=l2_client)
+        transport_l1 = httpx.ASGITransport(app=l1)
+        async with httpx.AsyncClient(
+            transport=transport_l1, base_url="http://l1"
+        ) as client:
+            r = await client.post(
+                "/messages/repeat",
+                params={"count": 3},
+                json={"body": "repeat-proxy"},
+            )
+    assert r.status_code == 202
+    data = r.json()
+    assert data.get("accepted") == 3
+    assert data.get("count") == 3
+    assert "batchCorrelationId" in data
+    assert len(backend.items) == 1
+    assert backend.items[0].count == 3
