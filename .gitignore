@@ -24,6 +24,3 @@ venv/
 # Local file-backed S3 (set LOCAL_S3_ROOT to this path for inspectio-persistence)
 .local-s3/*
 !.local-s3/.gitkeep
-
-# Assignment brief (local copy; do not commit)
-plans/ASSIGNMENT.pdf
