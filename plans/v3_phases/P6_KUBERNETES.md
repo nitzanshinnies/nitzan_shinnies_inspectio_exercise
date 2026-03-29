@@ -8,11 +8,11 @@
 
 ## Done when
 
-- [ ] Namespace, Services, Deployments (or StatefulSet for workers): **api** **replicas ≥ 2**, **expander** (1 replica unless P3 multi-replica dedupe), **worker(s)** aligned with **K** shards, **redis** (or **ElastiCache** endpoint via env—**9**).
-- [ ] **L1** Deployment if P5 produced a separate image.
-- [ ] ConfigMap for queue URLs, **K**, redis URL; **Secrets** or **IRSA** for AWS—no secrets in git.
-- [ ] **`deploy/kubernetes/README.md`**: apply order, **`kubectl set image`**, **`rollout status`**, immutable **selector** pitfalls (prefer patterns from workspace rules).
-- [ ] Probes: L2 **`/healthz`**; non-HTTP workers—**exec**/TCP or document none.
+- [x] Namespace, Services, Deployments (or StatefulSet for workers): **api** **replicas ≥ 2**, **expander** (1 replica unless P3 multi-replica dedupe), **worker(s)** aligned with **K** shards, **redis** (or **ElastiCache** endpoint via env—**9**).
+- [x] **L1** Deployment if P5 produced a separate image.
+- [x] ConfigMap for queue URLs, **K**, redis URL; **Secrets** or **IRSA** for AWS—no secrets in git.
+- [x] **`deploy/kubernetes/README.md`**: apply order, **`kubectl set image`**, **`rollout status`**, immutable **selector** pitfalls (prefer patterns from workspace rules).
+- [x] Probes: L2 **`/healthz`**; non-HTTP workers—**exec**/TCP or document none.
 
 ## Out of scope
 
