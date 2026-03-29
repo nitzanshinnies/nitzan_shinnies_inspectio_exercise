@@ -4,7 +4,7 @@ info:
   version: "1.0.0"
   description: |
     Canonical JSON shapes. Implementations must match these schemas.
-    Source of truth narrative: plans/NEW_SYSTEM_IMPLEMENTATION_BLUEPRINT.md
+    Source of truth narrative: v2_obsolete/plans/NEW_SYSTEM_IMPLEMENTATION_BLUEPRINT.md (archived v2 spec)
 
 tags:
   - name: public-api

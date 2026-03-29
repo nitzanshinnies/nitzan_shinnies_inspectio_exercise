@@ -81,7 +81,7 @@ Tune **`--sizes`**, **`--chunk-max`**, and Job resource limits to suit your clus
 Rough order of impact for **in-cluster drain** and **admission** throughput:
 
 1. **Horizontal scale** — Raise **`StatefulSet`** `spec.replicas` and set **`INSPECTIO_WORKER_REPLICAS`** to the same value. Scale **`inspectio-api`** (admission + parallel FIFO sends across groups). Scale **`inspectio-notification`** if terminal HTTP becomes hot.
-2. **API admission** — **`INSPECTIO_MAX_SQS_FIFO_INFLIGHT_GROUPS`** (default **64**): higher allows more concurrent `SendMessageBatch` pipelines across distinct `MessageGroupId`s for large **`/messages/repeat`** payloads (see **`plans/SQS_FIFO_THROUGHPUT_AND_ADMISSION_PLAN.md`**).
+2. **API admission** — **`INSPECTIO_MAX_SQS_FIFO_INFLIGHT_GROUPS`** (default **64**): higher allows more concurrent `SendMessageBatch` pipelines across distinct `MessageGroupId`s for large **`/messages/repeat`** payloads (see **`v2_obsolete/plans/SQS_FIFO_THROUGHPUT_AND_ADMISSION_PLAN.md`**).
 3. **Worker receive** — **`INSPECTIO_SQS_RECEIVE_CONCURRENCY`** (default **4**): multiple independent long-poll loops per worker pod (each opens its own SQS client) to raise dequeue + §18.3 throughput toward aggregate N1 targets.
 4. **Journal batching** — In **`configmap.yaml`**, **`INSPECTIO_JOURNAL_FLUSH_INTERVAL_MS`** and **`INSPECTIO_JOURNAL_FLUSH_MAX_LINES`**: larger windows mean **fewer S3 `PutObject`** calls per shard (slightly higher memory and crash window; still durable once flushed).
 5. **Per-shard send parallelism** — **`INSPECTIO_MAX_PARALLEL_SENDS_PER_SHARD`** (worker): raise if mock SMS and CPU allow.
@@ -90,7 +90,7 @@ Rough order of impact for **in-cluster drain** and **admission** throughput:
 
 **SQS admission:** `SqsFifoIngestProducer` retries **`send_message_batch`** / **`send_message`** with exponential backoff on **throttling** and similar transient `ClientError` codes (see `sqs_fifo_producer.py`).
 
-**Larger architectural options** (FIFO swaps, fewer journal lines, etc.): **`plans/PERFORMANCE_ARCH_FUTURE.md`**.
+**Larger architectural options** (FIFO swaps, fewer journal lines, etc.): **`v2_obsolete/plans/PERFORMANCE_ARCH_FUTURE.md`**.
 
 ## Public ingress
 

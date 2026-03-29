@@ -4,7 +4,7 @@ This document orders delivery for the **`inspectio`** package described in **`NE
 
 **Normative spec:** the blueprint wins on behavior; this file wins on **order** and **PR boundaries**.
 
-**SQS FIFO admission (throughput):** `plans/SQS_FIFO_THROUGHPUT_AND_ADMISSION_PLAN.md` documents FIFO batch limits (10 per `SendMessageBatch`), **`MessageGroupId`** routing, parallel admission **across** groups vs serialized pipelines **within** a group, backpressure, and how to validate aggregate throughput in-cluster. Use it alongside **§17** when working on **`src/inspectio/ingest/sqs_fifo_producer.py`**.
+**SQS FIFO admission (throughput):** `SQS_FIFO_THROUGHPUT_AND_ADMISSION_PLAN.md` documents FIFO batch limits (10 per `SendMessageBatch`), **`MessageGroupId`** routing, parallel admission **across** groups vs serialized pipelines **within** a group, backpressure, and how to validate aggregate throughput in-cluster. Use it alongside **§17** when working on **`src/inspectio/ingest/sqs_fifo_producer.py`**.
 
 ### `v1_obsolete` boundary (agents — **hard**)
 
@@ -12,7 +12,7 @@ The tree **`v1_obsolete/`** is an **archived implementation**, not a dependency 
 
 - **Do not** add `import inspectio_exercise`, `from v1_obsolete…`, path hacks into **`v1_obsolete/project/src`**, or copy-paste v1 modules into **`src/inspectio/`**.
 - **Do not** treat **`v1_obsolete/**`** tests (e.g. under **`v1_obsolete/project/tests`** or **`obsolete_tests`**) as the canonical suite to mirror 1:1; greenfield tests live under repo-root **`tests/`** per this file and **§28**.
-- **May read** **`v1_obsolete/plans/*`** only when the blueprint explicitly cites a **trap** or **rejected** equivalence (e.g. **§2.3** “relative” retries vs **§6.2**). Prefer **this blueprint** + **`plans/openapi.yaml`** for behavior.
+- **May read** **`v1_obsolete/plans/*`** only when the blueprint explicitly cites a **trap** or **rejected** equivalence (e.g. **§2.3** “relative” retries vs **§6.2**). Prefer **this blueprint** + **`../../plans/openapi.yaml`** for behavior.
 - **Mock SMS in Docker:** **root `docker-compose.yml`** builds the mock from **`deploy/mock-sms/Dockerfile`** (greenfield stub). **Do not** set the mock-SMS **build context** to **`v1_obsolete/`**. **Do not** add a runtime **`import inspectio_exercise`** in **`src/inspectio`** API/worker/notification code.
 
 Same rule appears in blueprint **§29.11** (forbidden list).
@@ -179,7 +179,7 @@ All application code under **`src/inspectio/`**:
 
 **Prerequisites:** **P0**, **P1** (for **`shardId`**), **P2** (for ingest record encoding).
 
-**Read first:** **§15**, **§16.4**, **§17.1**, **§29.4** (API vars), **§29.10**, **`plans/openapi.yaml`**.
+**Read first:** **§15**, **§16.4**, **§17.1**, **§29.4** (API vars), **§29.10**, **`../../plans/openapi.yaml`**.
 
 **§29.2 touch rows (verbatim):**
 
@@ -195,7 +195,7 @@ All application code under **`src/inspectio/`**:
 
 - **`POST /messages`**, **`POST /messages/repeat`**, **`GET /healthz`** per **OpenAPI** + **§15**; **202** bodies match schema.
 - **`GET /messages/success|failed`**: return **`501`** with stable JSON **or** omit routes until **P7** — if omitted, document in README; **prefer** registering routes that return **501** so OpenAPI paths exist (**agents:** pick one approach and keep **OpenAPI** as source of truth).
-- **`SendMessageBatch`** with **`MessageGroupId`** = **`partition_key_for_shard(shard_id)`**; chunks ≤ **10** per FIFO limit; route may batch up to **500** logical rows per **§15** (producer loops chunks). See **`plans/SQS_FIFO_THROUGHPUT_AND_ADMISSION_PLAN.md`** for parallel cross-group admission.
+- **`SendMessageBatch`** with **`MessageGroupId`** = **`partition_key_for_shard(shard_id)`**; chunks ≤ **10** per FIFO limit; route may batch up to **500** logical rows per **§15** (producer loops chunks). See **`SQS_FIFO_THROUGHPUT_AND_ADMISSION_PLAN.md`** for parallel cross-group admission.
 - Route handlers **must not** `await` **`send()`** or worker activation (**TC-API-008**).
 
 **Do not** implement **`Idempotency-Key`** / **409** (**§29.10**).
@@ -203,7 +203,7 @@ All application code under **`src/inspectio/`**:
 **Exit criteria**
 
 - **`pytest -m "unit or integration"`** — **TC-API-001–005**, **TC-API-008**.
-- Validate OpenAPI: e.g. **`npx @redocly/cli lint plans/openapi.yaml`** (optional CI) or manual diff.
+- Validate OpenAPI: e.g. **`npx @redocly/cli lint ../../plans/openapi.yaml`** (optional CI) or manual diff.
 
 ---
 
@@ -298,7 +298,7 @@ All application code under **`src/inspectio/`**:
 
 **Prerequisites:** **P3**, **P6** (terminals published).
 
-**Read first:** **§5.2**, **§15.3**, **§29.6**, **`plans/openapi.yaml`**.
+**Read first:** **§5.2**, **§15.3**, **§29.6**, **`../../plans/openapi.yaml`**.
 
 **§29.2 touch rows (verbatim):**
 
@@ -419,6 +419,6 @@ P6,P7 → P8 (snapshots; can parallel P7 tail if replay tested without notificat
 ## Checklist per PR (all phases)
 
 1. README env table / commands if new variables (**§26**).
-2. **`plans/openapi.yaml`** updated before code if HTTP shape changes (**§29.13**).
+2. **`../../plans/openapi.yaml`** updated before code if HTTP shape changes (**§29.13**).
 3. Tests name **TC-** ids (**§28.8**).
 4. No **§29.11** forbidden patterns.

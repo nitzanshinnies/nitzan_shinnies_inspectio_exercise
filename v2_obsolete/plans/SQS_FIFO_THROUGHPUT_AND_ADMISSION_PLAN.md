@@ -4,7 +4,7 @@ This document is the **normative design plan** for **SQS FIFO ingest** on the AP
 
 **Product NFR:** **Cross-message ingest or admission order is not required.** The system does **not** promise that messages are processed or visible in the order they were submitted. **`MessageGroupId`** exists because **Amazon SQS FIFO** requires it and because we align it with **shard routing** (**§16.4**); it is **not** documented here as a user-facing ordering guarantee.
 
-**Related:** `plans/NEW_SYSTEM_IMPLEMENTATION_BLUEPRINT.md` (§1, §9 Phase 1, §10.3, §12, §15–§17, N1), `plans/IMPLEMENTATION_PHASES.md` (**P3** admission, **P5** consumer).
+**Related:** `NEW_SYSTEM_IMPLEMENTATION_BLUEPRINT.md` (§1, §9 Phase 1, §10.3, §12, §15–§17, N1), `IMPLEMENTATION_PHASES.md` (**P3** admission, **P5** consumer).
 
 ---
 
@@ -48,7 +48,7 @@ These bound any admission strategy. **Authoritative detail:** [Amazon SQS quotas
 
 ## 3. Blueprint and NFR reconciliation
 
-This section **locks** how **`plans/NEW_SYSTEM_IMPLEMENTATION_BLUEPRINT.md`** requirements map to **SQS FIFO**.
+This section **locks** how **`NEW_SYSTEM_IMPLEMENTATION_BLUEPRINT.md`** requirements map to **SQS FIFO**.
 
 | Blueprint reference | Requirement | SQS FIFO interpretation |
 |---------------------|-------------|-------------------------|
