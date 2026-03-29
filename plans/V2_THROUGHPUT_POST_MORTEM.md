@@ -2,7 +2,7 @@
 
 This document records **what we built**, **how we measured it on AWS EKS**, **what the numbers showed**, and **what failed or misled us**. It is written for engineers who will pick up **aggregate ingest (N1) targets** (e.g. “tens of thousands of messages per second”) without repeating the same blind alleys.
 
-**Companion implementation:** pull request targeting `main` from branch `feat/fast-drain-durability-perf` (FIFO admit optimizations, worker receive concurrency, load-test harness, plan updates).
+**Companion implementation:** GitHub PR **#69** (`feat/fast-drain-durability-perf` → `main`) for code; **#70** (`v2-post-mortem` → `main`) stacks this document on the same implementation branch history.
 
 ---
 
@@ -137,6 +137,7 @@ Interpretation: **10,000 msg/s** was **not** approached; **~500 msg/s** aggregat
 | **Port-forward load tests** | Misleading “AWS perf” | Run Job **in cluster** |
 | **Ignoring SQS / worker lag** | Admit “succeeds” but queue explodes | Watch **ApproximateAgeOfOldestMessage**, worker CPU, journal flush |
 | **Mixing HTTP RPS vs message RPS** | Wrong expectations | Driver `admission_rps` is **messages/sec** for the phase |
+| **Outcome `limit` smaller than batch** | Drain never “completes” in driver | **`outcome-limit` / `INSPECTIO_OUTCOMES_MAX_LIMIT` ≥ batch** (see §10.11) |
 
 ---
 
@@ -150,8 +151,87 @@ Interpretation: **10,000 msg/s** was **not** approached; **~500 msg/s** aggregat
 
 ---
 
-## 10. Revision history
+## 10. Gaps and topics a future architect should still validate
+
+The sections above are accurate for **what was run and observed**; they are **not** a complete capacity model. Before betting a design on N1-scale ingest, explicitly close these gaps.
+
+### 10.1 Dual worker surfaces (`Deployment` + `StatefulSet`)
+
+The measured cluster listed both **`Deployment/inspectio-worker`** and **`StatefulSet/inspectio-worker-sts`**. This post mortem **does not** prove whether both attach to the **same** SQS queue, whether one is legacy/unused, or how duplicate consumers interact with **§17.4** Redis dedupe. **Risk:** hidden double-consumption, confusing scale knobs, or masked latency. **Action:** document the **single** supported worker topology for production-like tests; remove or isolate the unused path before drawing firm drain conclusions.
+
+### 10.2 Burstable instances (`t3.large`)
+
+**t3** is **CPU-credit** based. Sustained admit/load can **exhaust credits** and flatten performance in ways that look like “application limits.” The runs here did not include **CloudWatch `CPUCreditBalance`** (or equivalent) in the write-up. **Action:** repeat critical runs on **non-burstable** (e.g. `m6i`, `c6i`) or **unlimited** mode with cost eyes open, and chart credits alongside `admission_rps`.
+
+### 10.3 Observability baseline (missing artifacts)
+
+We cite **driver JSON** and qualitative checks; we did **not** archive a standard dashboard set for:
+
+- SQS: **`ApproximateNumberOfMessagesVisible`**, **`ApproximateAgeOfOldestMessage`**, throttles on `SendMessageBatch` / `ReceiveMessage`
+- API: per-pod CPU/memory, **p95/p99 server-side latency** for `/messages/repeat` (if instrumented)
+- Redis: memory, evictions, command latency
+- S3: journal **`PutObject`** rates / throttles per prefix
+
+**Action:** define a **minimal metric bundle** for any future “we hit X msg/s” claim.
+
+### 10.4 Workload shape (payload size and realism)
+
+Load tests used a **small fixed `body`**. **Larger bodies** inflate JSON, SQS payload size, hashing, and network bytes per message; **`admission_rps` will drop** without any code change. **Action:** bracket tests with **min / typical / max** body sizes from the product.
+
+### 10.5 End-to-end path vs admit-only
+
+Most high-load numbers here are **admit-only** (`--no-wait-outcomes`). **Drain** involves workers, **S3 journal**, **mock-sms**, notification, and outcomes indexing — any of which can become **the** bottleneck while admit still looks “fine.” **Action:** run paired tests: **admit SLO** and **e2e time-to-terminal** under the same offered load.
+
+### 10.6 Statistical rigor and regression baseline
+
+Reported **`admission_rps`** are from **single or few runs** on a shared dev/study cluster; **variance**, **time-of-day**, and **queue backlog state** at test start were not controlled. There is no **A/B** “before vs after homogeneous encoding” on identical infra in this document. **Action:** for regressions, store **N runs**, median/IQR, and **commit SHA + image digest** per row.
+
+### 10.7 External ingress vs in-cluster Service
+
+Tests targeted **`ClusterIP`** `inspectio-api` from inside the namespace. **ALB/NLB**, **TLS**, **HTTP/2**, and **idle timeouts** can change **client-visible** throughput and error modes. **Action:** if production admits through ingress, add an **in-VPC but through ingress** phase (still not laptop port-forward).
+
+### 10.8 Config coupling (`INSPECTIO_WORKER_REPLICAS` vs StatefulSet)
+
+**§29 / deploy README** require **`INSPECTIO_WORKER_REPLICAS`** to match **StatefulSet `spec.replicas`** for shard ownership consistency. Scaling workers **only** in one place is a **correctness** pitfall unrelated to RPS but lethal for replay/snapshots. **Action:** treat this as a **pre-flight checklist** item on every scale test.
+
+### 10.9 Idempotency key volume
+
+Large repeats create **O(N)** Redis keys (`SET NX`, TTL). At very high sustained rates, **memory**, **key cardinality**, and **RDB/AOF** behavior matter. **Action:** model **peak keys** and **Redis maxmemory** policy for worst-case bursts.
+
+### 10.10 Synthetic downstream (mock SMS)
+
+End-to-end behavior in this stack uses **mock-sms**, not carrier latency or external quotas. **Conclusions about “system throughput”** are about **this exercise topology**, not SMS vendor reality.
+
+### 10.11 Outcomes API limits vs drain tests
+
+When using **`--wait-outcomes`**, the driver polls **`GET /messages/success`** and **`/messages/failed`** with an **`outcome-limit`** (and the API clamps to **`INSPECTIO_OUTCOMES_MAX_LIMIT`**). If **`limit < batch size`**, polling can **miss** terminals that rolled off the “last N” window, producing **false negatives** (looks like incomplete drain). **Action:** for e2e load tests, set **outcome limit ≥ admitted batch** (or change the driver to track by id without relying on truncated lists).
+
+### 10.12 Single-process API (`uvicorn` / asyncio)
+
+Each API pod ran a **single** Uvicorn worker in these tests. CPU-heavy work (**orjson**, hashing, building huge `messageIds` arrays) contends on **one event loop per pod** unless you add **multiple processes** per Deployment pod. **Action:** treat “more replicas” and “more cores per pod” as **independent** knobs; profile **one pod under `repeat`** with `top`/`py-spy` before scaling horizontally only.
+
+### 10.13 Kubernetes and VPC networking under churn
+
+High **connection counts** (many parallel `httpx` clients × many pods) can stress **CoreDNS**, **conntrack** tables, and **kube-proxy** behavior before AWS limits bite. Symptoms: **intermittent** `ConnectTimeout`, elevated DNS latency, **5xx** from the client perspective with healthy app logs. **Action:** for extreme RPS tests, monitor **node-level** network metrics and consider **NodeLocal DNSCache** or **prefix delegation** tuning per your EKS guide — not investigated in this post mortem.
+
+### 10.14 SQS visibility timeout and redelivery
+
+Under worker or journal slowness, **visibility timeout** expiry causes **redelivery**. **§17.4** dedupe should collapse duplicates, but **extra SQS API volume** and **journal noise** still cost money and confuse operators. **Action:** align **visibility timeout** with **p99 journal flush + handler** time; watch **receive/delete ratio** and **duplicate** idempotency hits during overload.
+
+### 10.15 Cost and blast radius of experiments
+
+Scaling the node group **2 → 4** (even briefly) and raising API replicas **12 → 24** has **real AWS cost**. The exercises here were on a **shared study cluster**; results may include **noisy neighbors** (other workloads) unless the namespace is dedicated. **Action:** tag resources, cap **max nodes** in Terraform/eksctl, and record **account/region** when comparing runs across teams.
+
+### 10.16 FIFO deduplication window
+
+SQS FIFO uses a **deduplication interval** (on the order of **minutes**) for `MessageDeduplicationId`. Bursts of **retries** or **replay tests** inside that window can **suppress** legitimate sends if keys collide by mistake. **Action:** load and chaos tests should use **fresh idempotency keys** per logical message unless explicitly testing dedupe.
+
+---
+
+## 11. Revision history
 
 | Date (UTC) | Author / context | Note |
 |------------|------------------|------|
 | 2026-03-29 | Agent session closeout | Initial post mortem from EKS experiments and code review |
+| 2026-03-29 | Architect review pass | Added §10 gaps (dual worker, t3 credits, observability, payload shape, e2e vs admit, statistics, ingress, worker replica coupling, Redis keys, mock SMS) |
+| 2026-03-29 | Second pass | §10.11–10.16: outcomes limit, uvicorn single-process, k8s networking, SQS visibility/redelivery, cost/blast radius, FIFO dedupe window; PR #69/#70 pointers |
