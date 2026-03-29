@@ -1,6 +1,6 @@
-# Local stack: deps + greenfield app containers (see plans/IMPLEMENTATION_PHASES.md P9).
+# Local dependencies only until v3 app services land (see plans/V3_ASYNC_PIPELINE_IMPLEMENTATION_PLAN.md).
+# v2 app stack (api, worker, notification, mock-sms) is archived under v2_obsolete/archive/.
 # Default S3 bucket name is inspectio-test-bucket (LocalStack init + INSPECTIO_S3_BUCKET).
-# Pass the same credentials as your AWS CLI: set vars in `.env` (see `.env.example`) or export before `docker compose up`.
 name: inspectio
 
 x-aws-apps: &aws_apps
@@ -37,96 +37,3 @@ services:
       timeout: 3s
       retries: 10
       start_period: 15s
-
-  mock-sms:
-    build:
-      context: .
-      dockerfile: deploy/mock-sms/Dockerfile
-    environment:
-      INSPECTIO_MOCK_SMS_PORT: "8080"
-      INSPECTIO_MOCK_FAILURE_RATE: "0"
-    ports:
-      - "8090:8080"
-
-  inspectio-notification:
-    build:
-      context: .
-      dockerfile: deploy/docker/Dockerfile
-    command:
-      [
-        "uvicorn",
-        "inspectio.notification.app:app",
-        "--host",
-        "0.0.0.0",
-        "--port",
-        "8081",
-      ]
-    depends_on:
-      redis:
-        condition: service_started
-    environment:
-      INSPECTIO_ENV: dev
-      INSPECTIO_NOTIFICATION_PORT: "8081"
-      INSPECTIO_REDIS_URL: redis://redis:6379/0
-      <<: *aws_apps
-    ports:
-      - "8081:8081"
-
-  inspectio-api:
-    build:
-      context: .
-      dockerfile: deploy/docker/Dockerfile
-    command:
-      [
-        "uvicorn",
-        "inspectio.api.app:app",
-        "--host",
-        "0.0.0.0",
-        "--port",
-        "8000",
-      ]
-    depends_on:
-      localstack:
-        condition: service_healthy
-      redis:
-        condition: service_started
-      mock-sms:
-        condition: service_started
-      inspectio-notification:
-        condition: service_started
-    environment:
-      INSPECTIO_ENV: dev
-      INSPECTIO_API_PORT: "8000"
-      INSPECTIO_AWS_REGION: ${INSPECTIO_AWS_REGION:-${AWS_DEFAULT_REGION:-us-east-1}}
-      <<: *aws_apps
-      INSPECTIO_INGEST_QUEUE_URL: ${INSPECTIO_INGEST_QUEUE_URL:-http://localstack:4566/000000000000/inspectio-ingest.fifo}
-      INSPECTIO_REDIS_URL: redis://redis:6379/0
-      INSPECTIO_NOTIFICATION_BASE_URL: http://inspectio-notification:8081
-      INSPECTIO_SMS_URL: http://mock-sms:8080
-    ports:
-      - "8000:8000"
-
-  inspectio-worker:
-    build:
-      context: .
-      dockerfile: deploy/docker/Dockerfile
-    command: ["python", "-m", "inspectio.worker.main"]
-    depends_on:
-      localstack:
-        condition: service_healthy
-      redis:
-        condition: service_started
-      mock-sms:
-        condition: service_started
-      inspectio-notification:
-        condition: service_started
-    environment:
-      INSPECTIO_ENV: dev
-      INSPECTIO_AWS_REGION: ${INSPECTIO_AWS_REGION:-${AWS_DEFAULT_REGION:-us-east-1}}
-      <<: *aws_apps
-      INSPECTIO_INGEST_QUEUE_URL: ${INSPECTIO_INGEST_QUEUE_URL:-http://localstack:4566/000000000000/inspectio-ingest.fifo}
-      INSPECTIO_REDIS_URL: redis://redis:6379/0
-      INSPECTIO_NOTIFICATION_BASE_URL: http://inspectio-notification:8081
-      INSPECTIO_SMS_URL: http://mock-sms:8080
-      INSPECTIO_WORKER_REPLICAS: "1"
-      INSPECTIO_WORKER_INDEX: "0"
