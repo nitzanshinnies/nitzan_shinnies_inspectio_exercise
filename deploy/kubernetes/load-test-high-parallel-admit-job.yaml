@@ -6,8 +6,8 @@
 # **Scheduling:** use **small** `resources.requests.cpu` on tight clusters (e.g. 2-node EKS);
 # high requests (2–4 cores) often stay Pending with `Insufficient cpu`. Bursts use `limits` instead.
 #
-# Example wait (align with activeDeadlineSeconds):
-#   kubectl -n inspectio wait --for=condition=complete job/inspectio-load-test-10k-admit --timeout=2h
+# Example wait (cap operator wait to the Job deadline; avoid multi-hour kubectl wait):
+#   kubectl -n inspectio wait --for=condition=complete job/inspectio-load-test-10k-admit --timeout=15m
 #   kubectl -n inspectio logs job/inspectio-load-test-10k-admit
 apiVersion: batch/v1
 kind: Job
@@ -17,7 +17,7 @@ metadata:
 spec:
   ttlSecondsAfterFinished: 86400
   backoffLimit: 0
-  activeDeadlineSeconds: 7200
+  activeDeadlineSeconds: 900
   template:
     spec:
       serviceAccountName: inspectio-app

@@ -3,13 +3,13 @@
 # Timeouts (keep aligned):
 # - Driver: --max-total-sec 0 disables the script wall clock (otherwise large admits abort early).
 # - Job: activeDeadlineSeconds must exceed worst-case admit duration.
-# - Operator: kubectl wait --for=condition=complete --timeout=... must be >= expected runtime.
+# - Operator: kubectl wait --timeout=... should match activeDeadlineSeconds (fail fast; no hour-scale waits).
 #
 # Example:
 #   kubectl -n inspectio delete job inspectio-n1-admit-bench --ignore-not-found
 #   # set image to your ECR tag, then:
 #   kubectl apply -f deploy/kubernetes/n1-admit-bench-job.yaml
-#   kubectl -n inspectio wait --for=condition=complete job/inspectio-n1-admit-bench --timeout=45m
+#   kubectl -n inspectio wait --for=condition=complete job/inspectio-n1-admit-bench --timeout=8m
 #   kubectl -n inspectio logs job/inspectio-n1-admit-bench
 apiVersion: batch/v1
 kind: Job
@@ -18,7 +18,7 @@ metadata:
   namespace: inspectio
 spec:
   ttlSecondsAfterFinished: 3600
-  activeDeadlineSeconds: 7200
+  activeDeadlineSeconds: 480
   backoffLimit: 0
   template:
     spec:
