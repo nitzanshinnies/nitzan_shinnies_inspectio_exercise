@@ -1,0 +1,12 @@
+# Headless Service for StatefulSet pod DNS / stable network identity (ordinal in hostname).
+apiVersion: v1
+kind: Service
+metadata:
+  name: inspectio-worker-headless
+  namespace: inspectio
+  labels:
+    app.kubernetes.io/name: inspectio-worker-sts
+spec:
+  clusterIP: None
+  selector:
+    app: inspectio-worker-sts
