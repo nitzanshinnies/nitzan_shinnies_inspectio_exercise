@@ -9,6 +9,10 @@ Implementation targets **v3** only. **Normative docs:** **`plans/ASSIGNMENT.pdf`
 
 - **`inspectio.v3`** lives under **`src/inspectio/v3/`**: queue envelopes **`BulkIntentV1`** / **`SendUnitV1`** (Pydantic, JSON aliases `schemaVersion`, `traceId`, `batchCorrelationId`, `receivedAtMs`, `attemptsCompleted` = **0** before the first `try_send`), pure **`domain/retry_schedule`** (deadlines at **0, 500, 2000, 4000, 8000, 16000** ms after `receivedAtMs`), and **`assignment_surface`** (`Message`, **`try_send` → `bool`**, void **`send`** wrapper). Verify with **`pytest -m unit`**.
 
+## V3 L2 (phase P1)
+
+- **`inspectio.v3.l2`**: FastAPI app from **`create_l2_app`** — **`POST /messages`** and **`POST /messages/repeat?count=`** each enqueue **one** **`BulkIntentV1`** (single path uses **`count=1`**). **`Idempotency-Key`** with in-process TTL (no second enqueue on replay; **409** if the key is reused with a different payload). Repeat responses use the **summary** shape in **`plans/openapi.yaml`** (`batchCorrelationId`, `count`, `accepted`). **`GET /messages/success|failed`** return **`{"items": []}`** until P4 + shared outcomes store. Inject **`clock_ms`** and a **`ListBulkEnqueue`** (or any **`enqueue`**) for tests.
+
 ## Local stack
 
 The **repository root** `docker-compose.yml` currently runs **dependencies only**: **redis** and **localstack** (S3 + SQS). The v2 app containers were removed from compose when the code was archived; see **`v2_obsolete/archive/`** for the old stack. Compose project name is **`inspectio`** (`name:` in the file). Stop it with:
