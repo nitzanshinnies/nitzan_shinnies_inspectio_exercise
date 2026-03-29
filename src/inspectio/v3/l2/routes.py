@@ -33,12 +33,12 @@ def build_router(deps: L2Dependencies) -> APIRouter:
         return {"items": []}
 
     @router.post("/messages", status_code=202)
-    def post_messages(
+    async def post_messages(
         payload: PostMessageRequestBody,
         idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
         trace_id: Annotated[str | None, Header(alias="X-Trace-Id")] = None,
     ) -> dict[str, str | int]:
-        return _admit_bulk(
+        return await _admit_bulk(
             deps=deps,
             body=payload.body,
             to=payload.to,
@@ -48,7 +48,7 @@ def build_router(deps: L2Dependencies) -> APIRouter:
         )
 
     @router.post("/messages/repeat", status_code=202)
-    def post_messages_repeat(
+    async def post_messages_repeat(
         count: Annotated[int, Query()],
         payload: PostMessageRequestBody,
         idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
@@ -56,7 +56,7 @@ def build_router(deps: L2Dependencies) -> APIRouter:
     ) -> dict[str, str | int]:
         if count < 1:
             raise HTTPException(status_code=400, detail="count must be >= 1")
-        return _admit_bulk(
+        return await _admit_bulk(
             deps=deps,
             body=payload.body,
             to=payload.to,
@@ -68,7 +68,7 @@ def build_router(deps: L2Dependencies) -> APIRouter:
     return router
 
 
-def _admit_bulk(
+async def _admit_bulk(
     *,
     deps: L2Dependencies,
     body: str,
@@ -115,7 +115,7 @@ def _admit_bulk(
         received_at_ms=deps.clock_ms(),
         metadata=metadata,
     )
-    deps.enqueue_backend.enqueue(bulk)
+    await deps.enqueue_backend.enqueue(bulk)
     return _response_for_admission(
         batch_id=batch_id,
         count=count,

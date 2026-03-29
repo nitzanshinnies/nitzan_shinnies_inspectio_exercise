@@ -29,6 +29,8 @@ services:
       AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
       INSPECTIO_S3_BUCKET: ${INSPECTIO_S3_BUCKET:-${S3_BUCKET:-inspectio-test-bucket}}
       INSPECTIO_INGEST_QUEUE_NAME: ${INSPECTIO_INGEST_QUEUE_NAME:-inspectio-ingest.fifo}
+      INSPECTIO_V3_BULK_QUEUE_NAME: ${INSPECTIO_V3_BULK_QUEUE_NAME:-inspectio-v3-bulk}
+      INSPECTIO_V3_SEND_QUEUE_NAME: ${INSPECTIO_V3_SEND_QUEUE_NAME:-inspectio-v3-send-0}
     volumes:
       - ./deploy/localstack/init/ready.d:/etc/localstack/init/ready.d:ro
     healthcheck:

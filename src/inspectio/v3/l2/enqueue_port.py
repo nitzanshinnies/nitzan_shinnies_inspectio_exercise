@@ -8,5 +8,5 @@ from inspectio.v3.schemas.bulk_intent import BulkIntentV1
 
 
 class BulkEnqueuePort(Protocol):
-    def enqueue(self, bulk: BulkIntentV1) -> None:
-        """Accept one logical bulk for downstream expander/SQS."""
+    async def enqueue(self, bulk: BulkIntentV1) -> None:
+        """Accept one logical bulk for downstream expander/SQS (async for aioboto3)."""

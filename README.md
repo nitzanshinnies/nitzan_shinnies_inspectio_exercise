@@ -11,7 +11,13 @@ Implementation targets **v3** only. **Normative docs:** **`plans/ASSIGNMENT.pdf`
 
 ## V3 L2 (phase P1)
 
-- **`inspectio.v3.l2`**: FastAPI app from **`create_l2_app`** — **`POST /messages`** and **`POST /messages/repeat?count=`** each enqueue **one** **`BulkIntentV1`** (single path uses **`count=1`**). **`Idempotency-Key`** with in-process TTL (no second enqueue on replay; **409** if the key is reused with a different payload). Repeat responses use the **summary** shape in **`plans/openapi.yaml`** (`batchCorrelationId`, `count`, `accepted`). **`GET /messages/success|failed`** return **`{"items": []}`** until P4 + shared outcomes store. Inject **`clock_ms`** and a **`ListBulkEnqueue`** (or any **`enqueue`**) for tests.
+- **`inspectio.v3.l2`**: FastAPI app from **`create_l2_app`** — **`POST /messages`** and **`POST /messages/repeat?count=`** each enqueue **one** **`BulkIntentV1`** (single path uses **`count=1`**). **`Idempotency-Key`** with in-process TTL (no second enqueue on replay; **409** if the key is reused with a different payload). Repeat responses use the **summary** shape in **`plans/openapi.yaml`** (`batchCorrelationId`, `count`, `accepted`). **`GET /messages/success|failed`** return **`{"items": []}`** until P4 + shared outcomes store. Inject **`clock_ms`** and a **`ListBulkEnqueue`** or **`SqsBulkEnqueue`**; **`BulkEnqueuePort.enqueue`** is **async** (P2 **`aioboto3`**).
+
+## V3 SQS (phase P2)
+
+- **Standard bulk queue** (not FIFO) for **`BulkIntentV1`**: LocalStack init creates **`inspectio-v3-bulk`** (override with **`INSPECTIO_V3_BULK_QUEUE_NAME`**) and a placeholder send queue **`inspectio-v3-send-0`** (**`INSPECTIO_V3_SEND_QUEUE_NAME`**) for P3.
+- **Environment:** **`INSPECTIO_V3_BULK_QUEUE_URL`** (required for real enqueue), **`AWS_ENDPOINT_URL`** (e.g. `http://127.0.0.1:4566` against compose LocalStack), **`AWS_DEFAULT_REGION`**, **`AWS_ACCESS_KEY_ID`** / **`AWS_SECRET_ACCESS_KEY`** (defaults **`test`/`test`** for LocalStack). Use **`build_sqs_bulk_enqueue_from_env()`** from **`inspectio.v3.settings`** or construct **`SqsBulkEnqueue`** manually.
+- **Integration test (opt-in):** with LocalStack healthy, set **`INSPECTIO_SQS_INTEGRATION=1`** and **`INSPECTIO_V3_BULK_QUEUE_URL`** to your queue URL (example: `http://127.0.0.1:4566/000000000000/inspectio-v3-bulk`), then run **`pytest tests/integration/test_v3_sqs_bulk_roundtrip.py -m integration`**. CI without Docker leaves these unset so the test is skipped.
 
 ## Local stack
 
