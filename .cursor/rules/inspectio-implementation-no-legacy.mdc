@@ -1,0 +1,17 @@
+---
+description: Inspectio v3 — no legacy v1/v2 code, imports, or in-repo references
+alwaysApply: true
+---
+
+# Inspectio: implementation surface (v3 only)
+
+**Legacy stacks v1 and v2 are removed from this repository.** They must **not** be resurrected by copy-paste, **import**, path hacks, or **comments that instruct readers to open removed trees**.
+
+When editing **`src/inspectio/`**, **`tests/`**, **`scripts/`**, **`deploy/`**, **`docker-compose.yml`**, or **`pyproject.toml`**:
+
+- **Do not** `import inspectio_exercise` or any package path that belonged to removed code.
+- **Do not** reference **`v1_obsolete/`**, **`v2_obsolete/`**, or “archived blueprint / §29 FIFO ingest” as an implementation source in **code or tests** (docstrings, asserts, comments pointing at deleted paths).
+- **Normative inputs for behavior:** **`plans/ASSIGNMENT.pdf`** (local, gitignored), **`plans/openapi.yaml`**, **`plans/V3_ASYNC_PIPELINE_IMPLEMENTATION_PLAN.md`**, and workspace **`.cursor/rules/`** where applicable.
+- **Historical markdown** under **`plans/`** (e.g. throughput post mortems) is **not** a spec to implement against unless the human explicitly says so.
+
+**Docker:** **`deploy/mock-sms/Dockerfile`** remains the mock image for stacks that still use it until v3 removes it per the v3 plan; **do not** recreate removed **`v1_obsolete`** build contexts.

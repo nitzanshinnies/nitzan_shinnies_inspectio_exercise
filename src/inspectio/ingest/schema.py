@@ -1,4 +1,4 @@
-"""`MessageIngestedV1` ingest stream record (§17.2, §29.5 `bodyHash`)."""
+"""`MessageIngestedV1` ingest stream record ."""
 
 from __future__ import annotations
 
@@ -12,12 +12,12 @@ _BODY_HASH_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 
 
 def body_hash_for_text(body: str) -> str:
-    """Lowercase hex SHA-256 of UTF-8 bytes of `body` (§29.5)."""
+    """Lowercase hex SHA-256 of UTF-8 bytes of `body` ."""
     return hashlib.sha256(body.encode("utf-8")).hexdigest()
 
 
 class MessageIngestPayload(BaseModel):
-    """`payload` object inside `MessageIngestedV1` (§17.2)."""
+    """`payload` object inside `MessageIngestedV1` ."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -26,7 +26,7 @@ class MessageIngestPayload(BaseModel):
 
 
 class MessageIngestedV1(BaseModel):
-    """UTF-8 JSON record written to the ingest stream (§17.2) plus `bodyHash` (§29.5)."""
+    """UTF-8 JSON record written to the ingest stream  plus `bodyHash` ."""
 
     model_config = ConfigDict(frozen=True, populate_by_name=True)
 

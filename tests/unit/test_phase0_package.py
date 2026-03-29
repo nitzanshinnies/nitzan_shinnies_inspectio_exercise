@@ -1,4 +1,4 @@
-"""P0 exit criteria: importable package (v2_obsolete/plans/IMPLEMENTATION_PHASES.md P0)."""
+"""P0 exit criteria: importable inspectio package."""
 
 from __future__ import annotations
 

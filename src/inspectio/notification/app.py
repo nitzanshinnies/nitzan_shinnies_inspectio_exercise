@@ -1,4 +1,4 @@
-"""Notification service: internal terminal ingest + Redis-backed GET lists (§29.6)."""
+"""Notification service: internal terminal ingest + Redis-backed GET lists ."""
 
 from __future__ import annotations
 

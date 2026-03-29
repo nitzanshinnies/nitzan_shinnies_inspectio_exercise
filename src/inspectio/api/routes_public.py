@@ -1,4 +1,4 @@
-"""Public HTTP routes (§15)."""
+"""Public HTTP routes ."""
 
 from __future__ import annotations
 

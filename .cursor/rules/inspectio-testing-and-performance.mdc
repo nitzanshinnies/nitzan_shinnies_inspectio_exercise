@@ -7,14 +7,14 @@ alwaysApply: true
 
 Applies when changing **`src/inspectio/`**, **`tests/`**, **`scripts/full_flow_load_test.py`**, or **`deploy/kubernetes/load-test*.yaml`**.
 
-## Automated tests (mirror greenfield / v2 style)
+## Automated tests (v3)
 
 - **Markers** (see **`pyproject.toml`** `[tool.pytest.ini_options]`): **`unit`**, **`integration`**, **`e2e`**, **`performance`**. Required marker set is asserted in **`tests/unit/test_phase0_pytest_markers.py`**.
-- **`unit`:** no I/O — domain, schedule, sharding, journal records, ingest templates, pure producers (e.g. **`tests/unit/`**, **`tests/unit/domain/`**, **`tests/unit/journal/`**, **`tests/unit/ingest/`**).
+- **`unit`:** no I/O — domain, schedule, sharding, adapters, pure logic under **`tests/unit/`** (subpackages as the tree grows).
 - **`integration`:** I/O to LocalStack, moto, Redis, or other dockerized deps (**`tests/integration/`** and similar).
 - **`e2e`:** full multi-container flow against compose (or k8s); mark explicitly; may be optional in CI — still **maintain** tests for critical paths as the stack grows.
 - **Coverage expectation:** new behavior gets **unit** tests for logic; cross-service or HTTP contracts get **integration** or **e2e** as appropriate. Do not merge “performance-only” paths without **unit** coverage of the core algorithms and failure modes.
-- **Archived spec:** **`v2_obsolete/plans/IMPLEMENTATION_PHASES.md`** and **§28** in the archived blueprint describe the original TC / phase mapping; **v3** should keep the same **test layering** even when specs move.
+- **Layering:** follow **`plans/V3_ASYNC_PIPELINE_IMPLEMENTATION_PLAN.md`** for what to test per phase; do not mirror removed legacy test suites.
 
 ## Performance and AWS
 
@@ -30,4 +30,4 @@ Applies when changing **`src/inspectio/`**, **`tests/`**, **`scripts/full_flow_l
 
 ## Driver knobs
 
-- **`scripts/full_flow_load_test.py`**: **`--max-total-sec 0`** disables the script wall clock for long admits (then the **Job** deadline is the backstop). **`--http-timeout-sec`**, **`--outcome-timeout-sec`**, and **`--outcome-limit`** must stay consistent with **`INSPECTIO_OUTCOMES_MAX_LIMIT`** when using **`--wait-outcomes`** (see **`plans/V2_THROUGHPUT_POST_MORTEM.md`** §10.11).
+- **`scripts/full_flow_load_test.py`**: **`--max-total-sec 0`** disables the script wall clock for long admits (then the **Job** deadline is the backstop). **`--http-timeout-sec`**, **`--outcome-timeout-sec`**, and **`--outcome-limit`** must stay consistent with **`INSPECTIO_OUTCOMES_MAX_LIMIT`** when using **`--wait-outcomes`** ( **`outcome-limit` must be ≥ batch size** or polling misses terminals).

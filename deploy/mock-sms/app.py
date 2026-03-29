@@ -1,4 +1,4 @@
-"""Minimal mock SMS HTTP surface for greenfield Inspectio (plans/openapi.yaml / §19)."""
+"""Minimal mock SMS HTTP surface (see plans/openapi.yaml mock-sms paths)."""
 
 from __future__ import annotations
 

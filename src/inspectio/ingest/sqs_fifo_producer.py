@@ -1,4 +1,4 @@
-"""SQS FIFO producer for API admission path (§17, SQS-P1)."""
+"""SQS FIFO producer for API admission path ."""
 
 from __future__ import annotations
 

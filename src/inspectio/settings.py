@@ -1,4 +1,4 @@
-"""Pydantic settings (blueprint §29.4)."""
+"""Pydantic settings (blueprint)."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """Environment-backed settings; names align with blueprint §29.4."""
+    """Environment-backed settings; names align with blueprint"""
 
     model_config = SettingsConfigDict(
         env_prefix="INSPECTIO_",

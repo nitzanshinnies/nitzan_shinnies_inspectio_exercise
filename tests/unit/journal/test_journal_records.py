@@ -1,4 +1,4 @@
-"""P2 journal codec tests (TC-JNL-001–005, §18.1–18.2, §28.8)."""
+"""P2 journal codec tests."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""SQS ingest handler: dedupe, journal §18.3, delete, §25 `new_message`."""
+"""SQS ingest handler: dedupe, journal, delete, `new_message`."""
 
 from __future__ import annotations
 

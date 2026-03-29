@@ -1,1 +1,1 @@
-"""SMS HTTP client (§19)."""
+"""SMS HTTP client ."""

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "inspectio"
 version = "0.0.0"
-description = "Inspectio SMS retry scheduler (greenfield; see plans/)"
+description = "Inspectio SMS retry scheduler (v3; see plans/)"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -27,7 +27,6 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-# Defaults from pytest’s `norecursedirs` plus `v1_obsolete` (archived tree; not imported or built by greenfield tooling).
 norecursedirs = [
     "*.egg",
     ".*",
@@ -38,12 +37,11 @@ norecursedirs = [
     "node_modules",
     "venv",
     "{arch}",
-    "v1_obsolete",
 ]
 testpaths = ["tests"]
 markers = [
-    "unit: no I/O; pure domain, clocks, hashing, journal line parse/build (§28.2)",
-    "integration: I/O to docker services, moto, or LocalStack (§28.2)",
-    "e2e: multi-container stack; optional CI tier (§28.2)",
-    "performance: load scripts / large N; AWS claims only in-cluster (§28.2)",
+    "unit: no I/O; pure domain, clocks, hashing, journal line parse/build",
+    "integration: I/O to docker services, moto, or LocalStack",
+    "e2e: multi-container stack; optional CI tier",
+    "performance: load scripts / large N; AWS claims only in-cluster",
 ]

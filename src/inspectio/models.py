@@ -1,4 +1,4 @@
-"""Pure data contracts for ingest/retry state (§4.1–§4.2)."""
+"""Pure data contracts for ingest/retry state ."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ FAILED_ATTEMPT_COUNT = 6
 
 @dataclass(frozen=True, slots=True)
 class Message:
-    """Payload required to invoke SMS send (§19)."""
+    """Payload required to invoke SMS send ."""
 
     message_id: str
     to: str
@@ -27,7 +27,7 @@ class Message:
 
 @dataclass(frozen=True, slots=True)
 class RetryStateV1:
-    """Retry state contract for scheduler runtime/recovery (§4.2)."""
+    """Retry state contract for scheduler runtime/recovery ."""
 
     message_id: str
     attempt_count: int

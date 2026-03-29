@@ -1,4 +1,4 @@
-"""Mock/real SMS HTTP client (§19)."""
+"""Mock/real SMS HTTP client ."""
 
 from __future__ import annotations
 

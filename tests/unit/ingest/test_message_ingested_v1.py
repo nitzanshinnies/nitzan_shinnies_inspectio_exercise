@@ -1,4 +1,4 @@
-"""P2 ingest schema tests (ingest stream contract, §17.2, §29.5)."""
+"""P2 ingest schema tests (ingest stream contract)."""
 
 from __future__ import annotations
 

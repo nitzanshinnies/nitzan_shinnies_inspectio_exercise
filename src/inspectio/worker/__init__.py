@@ -1,1 +1,1 @@
-"""Worker: SQS FIFO ingest + scheduler (§29)."""
+"""Worker: SQS FIFO ingest + scheduler ."""

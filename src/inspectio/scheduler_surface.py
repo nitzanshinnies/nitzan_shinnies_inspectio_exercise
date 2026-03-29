@@ -1,5 +1,5 @@
 """
-Assignment-mandated surface (§25). Wired to `WorkerRuntime` by worker `main`.
+Assignment-mandated surface . Wired to `WorkerRuntime` by worker `main`.
 
 PDF mapping (README must duplicate):
   send          <- boolean send(Message)

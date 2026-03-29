@@ -1,4 +1,4 @@
-"""Deterministic shard assignment math (§16.2–16.3)."""
+"""Deterministic shard assignment math ."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ def owned_shard_range(
     total_shards: int,
     worker_count: int,
 ) -> tuple[int, int]:
-    """Return ``[start, end_excl)`` shard ids owned by ``pod_index`` (§16.3)."""
+    """Return ``[start, end_excl)`` shard ids owned by ``pod_index`` ."""
     validate_total_shards_vs_workers(total_shards, worker_count)
     if pod_index < 0 or pod_index >= worker_count:
         msg = f"pod_index must be in [0, {worker_count})"
@@ -39,13 +39,13 @@ def shard_for_message(message_id: str, total_shards: int) -> int:
 
 
 def shards_per_pod(total_shards: int, worker_count: int) -> int:
-    """``ceil(TOTAL_SHARDS / W)`` per §16.1."""
+    """``ceil(TOTAL_SHARDS / W)`` per"""
     validate_total_shards_vs_workers(total_shards, worker_count)
     return math.ceil(total_shards / worker_count)
 
 
 def validate_total_shards_vs_workers(total_shards: int, worker_count: int) -> None:
-    """§16.1: ``TOTAL_SHARDS >= W``; both must be positive."""
+    """: ``TOTAL_SHARDS >= W``; both must be positive."""
     if total_shards < MIN_TOTAL_SHARDS:
         msg = f"total_shards must be >= {MIN_TOTAL_SHARDS}"
         raise ValueError(msg)
@@ -53,5 +53,5 @@ def validate_total_shards_vs_workers(total_shards: int, worker_count: int) -> No
         msg = f"worker_count must be >= {MIN_WORKER_COUNT}"
         raise ValueError(msg)
     if total_shards < worker_count:
-        msg = "total_shards must be >= worker_count (§16.1 TOTAL_SHARDS >= W)"
+        msg = "total_shards must be >= worker_count "
         raise ValueError(msg)

@@ -1,1 +1,1 @@
-"""S3 journal segments, records, replay (§18)."""
+"""S3 journal segments, records, replay ."""

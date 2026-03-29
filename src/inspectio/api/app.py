@@ -1,4 +1,4 @@
-"""FastAPI factory for inspectio-api (§15 + SQS FIFO producer)."""
+"""FastAPI factory for inspectio-api ."""
 
 from __future__ import annotations
 

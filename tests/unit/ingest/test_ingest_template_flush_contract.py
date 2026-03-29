@@ -1,4 +1,4 @@
-"""Ingest template A defers flush; worker batches flush before SQS delete (§18.3)."""
+"""Ingest template A defers flush; worker batches flush before SQS delete ."""
 
 from __future__ import annotations
 

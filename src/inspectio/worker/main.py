@@ -1,4 +1,4 @@
-"""Worker entry: SQS ingest + scheduler + optional snapshot (§29.3)."""
+"""Worker entry: SQS ingest + scheduler + optional snapshot ."""
 
 from __future__ import annotations
 

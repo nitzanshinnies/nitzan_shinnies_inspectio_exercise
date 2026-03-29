@@ -1,4 +1,4 @@
-"""Shared ingest types and shard routing (§16.4, §17)."""
+"""Shared ingest types and shard routing ."""
 
 from __future__ import annotations
 
@@ -31,5 +31,5 @@ class IngestPutResult:
 
 
 def partition_key_for_shard(shard_id: int) -> str:
-    """§16.4 / §17 — SQS FIFO `MessageGroupId` (fixed-width decimal)."""
+    """/ — SQS FIFO `MessageGroupId` (fixed-width decimal)."""
     return f"{shard_id:05d}"

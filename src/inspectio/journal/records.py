@@ -1,4 +1,4 @@
-"""`JournalRecordV1` NDJSON line codec and gzip segment parsing (§18.1–18.2)."""
+"""`JournalRecordV1` NDJSON line codec and gzip segment parsing ."""
 
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ class JournalDecodeError(JournalError):
 
 
 class JournalValidationError(JournalError):
-    """Parsed line failed §18.2 payload rules."""
+    """Parsed line failed payload rules."""
 
 
 class JournalRecordIndexError(JournalError):
@@ -39,7 +39,7 @@ class JournalRecordIndexError(JournalError):
 
 
 class JournalRecordV1(BaseModel):
-    """One NDJSON line in a gzip journal segment (§18.2)."""
+    """One NDJSON line in a gzip journal segment ."""
 
     model_config = ConfigDict(frozen=True, populate_by_name=True)
 
@@ -148,7 +148,7 @@ def _validate_terminal(payload: dict[str, Any]) -> None:
 def validate_payload_for_type(
     record_type: JournalRecordType, payload: dict[str, Any]
 ) -> None:
-    """Validate §18.2 payload keys and types for `record_type`."""
+    """Validate payload keys and types for `record_type`."""
     if record_type == "INGEST_APPLIED":
         _validate_ingest_applied(payload)
     elif record_type == "DISPATCH_SCHEDULED":
@@ -164,7 +164,7 @@ def validate_payload_for_type(
 
 
 def decode_line(line: str) -> JournalRecordV1:
-    """Parse one UTF-8 JSON object; enforce `v` and §18.2 payload rules."""
+    """Parse one UTF-8 JSON object; enforce `v` and payload rules."""
     stripped = line.strip()
     if not stripped:
         raise JournalDecodeError("empty journal line")
@@ -206,7 +206,7 @@ def validate_monotonic_record_index(
 
 
 def parse_gzip_ndjson_segment(segment: bytes) -> list[JournalRecordV1]:
-    """Decompress a gzip blob and parse NDJSON lines (§18.1)."""
+    """Decompress a gzip blob and parse NDJSON lines ."""
     try:
         text = gzip.decompress(segment).decode("utf-8")
     except OSError as exc:

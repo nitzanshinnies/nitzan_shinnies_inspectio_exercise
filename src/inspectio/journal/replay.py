@@ -1,4 +1,4 @@
-"""Snapshot load + journal tail replay (§18.4)."""
+"""Snapshot load + journal tail replay ."""
 
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ log = logging.getLogger("inspectio.journal.replay")
 
 @dataclass(frozen=True, slots=True)
 class SnapshotShardV1:
-    """Minimal snapshot shape for worker restart (§18.4)."""
+    """Minimal snapshot shape for worker restart ."""
 
     shard_id: int
     last_record_index: int

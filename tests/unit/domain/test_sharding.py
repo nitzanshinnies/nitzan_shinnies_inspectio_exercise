@@ -1,4 +1,4 @@
-"""P1 sharding tests (TC-SHA-*)."""
+"""P1 sharding tests."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""S3 gzip journal segments with §29.8 flush policy."""
+"""S3 gzip journal segments with flush policy."""
 
 from __future__ import annotations
 
@@ -250,7 +250,7 @@ async def write_snapshot(
     last_record_index: int,
     pending: list[dict],
 ) -> None:
-    """Best-effort snapshot write (§18.4)."""
+    """Best-effort snapshot write ."""
     bucket = settings.s3_bucket.strip()
     if not bucket:
         return

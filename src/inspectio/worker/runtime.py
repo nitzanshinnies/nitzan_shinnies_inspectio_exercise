@@ -1,4 +1,4 @@
-"""Async scheduler runtime: immediate path + 500ms wakeup (§20, §29.9)."""
+"""Async scheduler runtime: immediate path + 500ms wakeup ."""
 
 from __future__ import annotations
 
@@ -79,7 +79,7 @@ class WorkerRuntime:
         return start <= shard_id < end
 
     def restore_snapshot_pending(self, items: list[dict]) -> None:
-        """Hydrate pending messages from snapshot JSON (§18.4)."""
+        """Hydrate pending messages from snapshot JSON ."""
         for row in items:
             mid = str(row["messageId"])
             st = RuntimeMessageState(
@@ -114,7 +114,7 @@ class WorkerRuntime:
         return rows
 
     def bootstrap_from_ingest(self, ingested: MessageIngestedV1) -> Message:
-        """Register pending state after durable ingest; caller then invokes §25 `new_message`."""
+        """Register pending state after durable ingest; caller then invokes `new_message`."""
         to = ingested.payload.to or self._settings.default_to_e164
         now = int(time.time() * 1000)
         st = RuntimeMessageState(
@@ -138,7 +138,7 @@ class WorkerRuntime:
             log.exception("dispatch_new_message failed mid=%s", message.message_id)
 
     async def async_send(self, message: Message) -> bool:
-        """Run one send attempt with full journal + SMS (§25 async counterpart)."""
+        """Run one send attempt with full journal + SMS ."""
         async with self._locks[message.message_id]:
             st = self._states.get(message.message_id)
             if st is None or st.status != "pending":

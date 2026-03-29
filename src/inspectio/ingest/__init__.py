@@ -1,1 +1,1 @@
-"""Ingest stream contracts and producers (§17)."""
+"""Ingest stream contracts and producers ."""

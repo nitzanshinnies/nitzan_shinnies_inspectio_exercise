@@ -1,4 +1,4 @@
-"""SQS FIFO long-poll consumer (§29.6)."""
+"""SQS FIFO long-poll consumer ."""
 
 from __future__ import annotations
 

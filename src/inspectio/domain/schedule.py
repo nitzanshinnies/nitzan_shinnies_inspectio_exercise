@@ -1,4 +1,4 @@
-"""Pure schedule math for retry deadlines (§6.2)."""
+"""Pure schedule math for retry deadlines ."""
 
 from __future__ import annotations
 
@@ -8,14 +8,14 @@ MAX_COMPLETED_SEND_COUNT = len(RETRY_OFFSET_MS) - 1
 
 
 def is_send_due(now_ms: int, next_due_at_ms: int) -> bool:
-    """True iff a wakeup tick may dispatch a send (§6.2 not-before-due; boundary inclusive)."""
+    """True iff a wakeup tick may dispatch a send ."""
     return now_ms >= next_due_at_ms
 
 
 def next_due_ms(arrival_ms: int, completed_send_count: int) -> int:
     """Return absolute due timestamp for the next send attempt.
 
-    The schedule is anchored to the original ``arrival_ms`` per blueprint §6.2.
+    The schedule is anchored to the original ``arrival_ms`` per blueprint
     ``completed_send_count`` is the number of completed sends before the next one.
     """
     if completed_send_count < MIN_COMPLETED_SEND_COUNT:

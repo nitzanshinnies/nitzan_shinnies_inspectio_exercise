@@ -1,4 +1,4 @@
-"""P1 model contract tests for Message / RetryStateV1 (TC-DOM-*)."""
+"""P1 model contract tests for Message / RetryStateV1."""
 
 from __future__ import annotations
 

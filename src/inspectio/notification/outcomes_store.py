@@ -1,4 +1,4 @@
-"""Redis bounded lists for terminal outcomes (§5.2)."""
+"""Redis bounded lists for terminal outcomes ."""
 
 from __future__ import annotations
 

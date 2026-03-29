@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""In-VPC load driver for greenfield Inspectio (§28.6, P10).
+"""In-VPC load driver for greenfield Inspectio .
 
 Primary metrics (valid **AWS throughput claims** only when run **inside** the
 cluster/VPC—see workspace rules):

@@ -1,18 +1,18 @@
 openapi: 3.0.3
 info:
-  title: Inspectio HTTP contracts (public §15 + internal §29.6)
+  title: Inspectio HTTP contracts (public API + internal services)
   version: "1.0.0"
   description: |
     Canonical JSON shapes. Implementations must match these schemas.
-    Source of truth narrative: v2_obsolete/plans/NEW_SYSTEM_IMPLEMENTATION_BLUEPRINT.md (archived v2 spec)
+    Source of truth narrative: plans/ASSIGNMENT.pdf + plans/V3_ASYNC_PIPELINE_IMPLEMENTATION_PLAN.md (implement v3; evolve this file with code)
 
 tags:
   - name: public-api
-    description: External API (§15) — port INSPECTIO_API_PORT default 8000
+    description: External API — port INSPECTIO_API_PORT default 8000
   - name: notification-internal
-    description: Notification service (§29.6) — port INSPECTIO_NOTIFICATION_PORT default 8081
+    description: Notification service — port INSPECTIO_NOTIFICATION_PORT default 8081
   - name: mock-sms
-    description: Mock provider (§19) — host port mapped to 8090 in docker-compose.yml
+    description: Mock SMS provider — host port mapped to 8090 in docker-compose.yml
 
 servers:
   - url: http://127.0.0.1:8000
@@ -185,7 +185,7 @@ paths:
   /send:
     post:
       tags: [mock-sms]
-      summary: Mock SMS dispatch (§19)
+      summary: Mock SMS dispatch
       servers:
         - url: http://127.0.0.1:8090
       requestBody:

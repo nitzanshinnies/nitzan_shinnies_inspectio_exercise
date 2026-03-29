@@ -1,4 +1,4 @@
-# In-cluster performance driver (§28.6). Apply after workloads are healthy.
+# In-cluster performance driver. Apply after workloads are healthy.
 # Logs: kubectl -n inspectio logs job/inspectio-load-test -f
 #
 # Tweak args / env below; image must include scripts/ (see deploy/docker/Dockerfile).

@@ -1,4 +1,4 @@
-"""P0 exit criteria: pytest collection (v2_obsolete/plans/IMPLEMENTATION_PHASES.md P0)."""
+"""P0 exit criteria: pytest collection for repo-root tests/."""
 
 from __future__ import annotations
 

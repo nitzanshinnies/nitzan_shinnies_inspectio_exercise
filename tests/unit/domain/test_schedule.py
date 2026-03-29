@@ -1,4 +1,4 @@
-"""P1 domain schedule tests (TC-DOM-*)."""
+"""P1 domain schedule tests."""
 
 from __future__ import annotations
 

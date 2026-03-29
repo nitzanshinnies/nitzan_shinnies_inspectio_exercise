@@ -1,1 +1,1 @@
-"""Public HTTP API (§15)."""
+"""Public HTTP API ."""

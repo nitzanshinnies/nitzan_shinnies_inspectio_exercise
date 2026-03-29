@@ -1,8 +1,8 @@
-# Greenfield Inspectio on EKS (P10)
+# Inspectio on EKS
 
-Kubernetes manifests for **`src/inspectio/`** only. **Do not** apply **`v1_obsolete/project/deploy/kubernetes/`** for this stack.
+Kubernetes manifests for **`src/inspectio/`** and this repository’s **`deploy/kubernetes/`** layout. Operational notes below reflect the **current** stack; align changes with **`plans/V3_ASYNC_PIPELINE_IMPLEMENTATION_PLAN.md`** as v3 evolves.
 
-Blueprint references: **§7** (AWS runtime), **§28.6** (in-cluster load tests).
+**Load tests:** run drivers **in-cluster** (not laptop `port-forward` for throughput claims); see **`load-test-job.yaml`** and workspace rules.
 
 ## Prerequisites (AWS)
 
@@ -57,7 +57,7 @@ kubectl -n inspectio rollout status statefulset/inspectio-worker-sts
 
 ## Measure performance (normative path)
 
-**Throughput / end-to-end numbers for AWS must come from an in-cluster driver** hitting **`http://inspectio-api:8000`**, not from `kubectl port-forward` on a laptop (see repo workspace rules and **§28.6**).
+**Throughput / end-to-end numbers for AWS must come from an in-cluster driver** hitting **`http://inspectio-api:8000`**, not from `kubectl port-forward` on a laptop (see repo workspace rules).
 
 1. Ensure **`INSPECTIO_OUTCOMES_MAX_LIMIT`** in **ConfigMap** is **≥** your test size (default **10000** here) so **`--wait-outcomes`** can observe all terminals.
 2. Use the same **`inspectio-app`** image (includes **`scripts/`**).
@@ -81,16 +81,16 @@ Tune **`--sizes`**, **`--chunk-max`**, and Job resource limits to suit your clus
 Rough order of impact for **in-cluster drain** and **admission** throughput:
 
 1. **Horizontal scale** — Raise **`StatefulSet`** `spec.replicas` and set **`INSPECTIO_WORKER_REPLICAS`** to the same value. Scale **`inspectio-api`** (admission + parallel FIFO sends across groups). Scale **`inspectio-notification`** if terminal HTTP becomes hot.
-2. **API admission** — **`INSPECTIO_MAX_SQS_FIFO_INFLIGHT_GROUPS`** (default **64**): higher allows more concurrent `SendMessageBatch` pipelines across distinct `MessageGroupId`s for large **`/messages/repeat`** payloads (see **`v2_obsolete/plans/SQS_FIFO_THROUGHPUT_AND_ADMISSION_PLAN.md`**).
-3. **Worker receive** — **`INSPECTIO_SQS_RECEIVE_CONCURRENCY`** (default **4**): multiple independent long-poll loops per worker pod (each opens its own SQS client) to raise dequeue + §18.3 throughput toward aggregate N1 targets.
+2. **API admission** — **`INSPECTIO_MAX_SQS_FIFO_INFLIGHT_GROUPS`** (default **64**): when using **FIFO** ingest, higher values allow more concurrent `SendMessageBatch` pipelines across distinct `MessageGroupId`s for large **`/messages/repeat`** payloads (tune against **SQS** throttles).
+3. **Worker receive** — **`INSPECTIO_SQS_RECEIVE_CONCURRENCY`** (default **4**): multiple independent long-poll loops per worker pod (each opens its own SQS client) to raise dequeue + journal-flush throughput toward aggregate targets.
 4. **Journal batching** — In **`configmap.yaml`**, **`INSPECTIO_JOURNAL_FLUSH_INTERVAL_MS`** and **`INSPECTIO_JOURNAL_FLUSH_MAX_LINES`**: larger windows mean **fewer S3 `PutObject`** calls per shard (slightly higher memory and crash window; still durable once flushed).
 5. **Per-shard send parallelism** — **`INSPECTIO_MAX_PARALLEL_SENDS_PER_SHARD`** (worker): raise if mock SMS and CPU allow.
-6. **Ingest journal** — **`append_ingest_template_a`** appends only; the worker **flushes each touched shard once per SQS receive batch** before **`DeleteMessage`**, so multiple ingests on the same shard share a segment when possible (§18.3).
+6. **Ingest journal** — **`append_ingest_template_a`** appends only; the worker **flushes each touched shard once per SQS receive batch** before **`DeleteMessage`**, so multiple ingests on the same shard share a segment when possible (durable-before-ack pattern).
 7. **Infra** — S3 prefix scaling, optional **high-throughput FIFO**, **ElastiCache** for Redis, right-sized **CPU/memory** on worker pods, **`podManagementPolicy: Parallel`** on **new** StatefulSets for faster rollouts.
 
 **SQS admission:** `SqsFifoIngestProducer` retries **`send_message_batch`** / **`send_message`** with exponential backoff on **throttling** and similar transient `ClientError` codes (see `sqs_fifo_producer.py`).
 
-**Larger architectural options** (FIFO swaps, fewer journal lines, etc.): **`v2_obsolete/plans/PERFORMANCE_ARCH_FUTURE.md`**.
+**Architectural shifts** (Standard vs FIFO queues, journal layout, etc.): drive from **`plans/V3_ASYNC_PIPELINE_IMPLEMENTATION_PLAN.md`** and **ASSIGNMENT.pdf**, not removed legacy docs.
 
 ## Public ingress
 

@@ -1,1 +1,1 @@
-"""Notification / outcomes service (§29.6)."""
+"""Notification / outcomes service ."""

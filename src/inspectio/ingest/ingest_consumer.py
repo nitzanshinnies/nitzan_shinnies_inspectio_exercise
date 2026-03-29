@@ -1,4 +1,4 @@
-"""Ingest journal template A + idempotency helpers (§17.4, §29.7)."""
+"""Ingest journal template A + idempotency helpers ."""
 
 from __future__ import annotations
 
@@ -49,7 +49,7 @@ async def append_ingest_template_a(
     """Append `INGEST_APPLIED` then `DISPATCH_SCHEDULED` (reason immediate).
 
     Does **not** flush: the SQS consumer flushes affected shards once per receive
-    batch before `DeleteMessage` (§18.3 durability without one PUT per message).
+    batch before `DeleteMessage` .
     """
     now = int(time.time() * 1000)
     bh = body_hash_for_text(ingested.payload.body)
