@@ -8,15 +8,15 @@
 
 ## Done when
 
-- [ ] Worker entrypoint (e.g. **`python -m inspectio.v3.worker.main`**); model **one consumer per send queue** or **shard index** env—**document**.
-- [ ] **Receive loop** + **timer/multiplex**: **`wakeup`** scans due work; **long poll** + **batch receive** where it helps throughput (**3.2**, **7.2**).
-- [ ] On **`SendUnitV1`**: **newMessage-equivalent** → run **attempt #1** immediately when the unit is first handled (**4.7**); **`asyncio.Lock`** per id (**4.5**). PDF **thread-safe** `send`: achieve exclusion via this lock (single event loop is not multi-threaded, but lock still serializes concurrent **tasks** for one id).
-- [ ] On **`try_send` False**: schedule next attempt at **`receivedAtMs + offset`** for attempts **2..6**; on **6th failure** → **failed** outcome, discard active state (**4.7**). On **`True`** → **success** outcome; **`attemptCount`** **1–6** per OpenAPI.
-- [ ] **Redis** lists (or zset) capped at **100** per success/failed; **most recent first** for **GET** (**4.8**). L2 GET handlers read same store—**no** in-process-only outcomes with multiple L2 replicas.
-- [ ] **SQS delete** after terminal persisted and safe (or documented ordering).
-- [ ] **Redelivery:** duplicate **`SendUnitV1`** must not double-run side effects—dedupe by **`message_id`** in worker or idempotent state rebuild from message.
-- [ ] **e2e** (compose): api + redis + localstack + expander + worker; repeat **count=10** → poll success (**full stack recycle** before run per workspace rules).
-- [ ] **README** (master **6**, rule **6**): structures, sync, complexity, **gaps** (**AC5** / no S3 recovery), AWS run, **planned S3 schema** for a later wave.
+- [x] Worker entrypoint (e.g. **`python -m inspectio.v3.worker.main`**); model **one consumer per send queue** or **shard index** env—**document**.
+- [x] **Receive loop** + **timer/multiplex**: **`wakeup`** scans due work; **long poll** + **batch receive** where it helps throughput (**3.2**, **7.2**).
+- [x] On **`SendUnitV1`**: **newMessage-equivalent** → run **attempt #1** immediately when the unit is first handled (**4.7**); **`asyncio.Lock`** per id (**4.5**). PDF **thread-safe** `send`: achieve exclusion via this lock (single event loop is not multi-threaded, but lock still serializes concurrent **tasks** for one id).
+- [x] On **`try_send` False**: schedule next attempt at **`receivedAtMs + offset`** for attempts **2..6**; on **6th failure** → **failed** outcome, discard active state (**4.7**). On **`True`** → **success** outcome; **`attemptCount`** **1–6** per OpenAPI.
+- [x] **Redis** lists (or zset) capped at **100** per success/failed; **most recent first** for **GET** (**4.8**). L2 GET handlers read same store—**no** in-process-only outcomes with multiple L2 replicas.
+- [x] **SQS delete** after terminal persisted and safe (or documented ordering).
+- [x] **Redelivery:** duplicate **`SendUnitV1`** must not double-run side effects—dedupe by **`message_id`** in worker or idempotent state rebuild from message.
+- [x] **e2e** (compose): api + redis + localstack + expander + worker; repeat **count=10** → poll success (**full stack recycle** before run per workspace rules).
+- [x] **README** (master **6**, rule **6**): structures, sync, complexity, **gaps** (**AC5** / no S3 recovery), AWS run, **planned S3 schema** for a later wave.
 
 ## Layout (suggested)
 

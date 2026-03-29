@@ -31,12 +31,15 @@ class SendScheduler:
         outcomes: OutcomesWritePort,
         delete_sqs_message: Callable[[str], Awaitable[None]],
         metrics: SendWorkerMetrics,
+        persist_terminal_stub: Callable[[dict[str, Any]], Awaitable[None]]
+        | None = None,
     ) -> None:
         self._clock_ms = clock_ms
         self._try_send_fn = try_send
         self._outcomes = outcomes
         self._delete_sqs = delete_sqs_message
         self._metrics = metrics
+        self._persist_terminal_stub = persist_terminal_stub
         self._active: dict[str, ActiveSendUnit] = {}
         self._terminal_message_ids: set[str] = set()
         self._locks: dict[str, asyncio.Lock] = {}
@@ -45,6 +48,35 @@ class SendScheduler:
         if message_id not in self._locks:
             self._locks[message_id] = asyncio.Lock()
         return self._locks[message_id]
+
+    async def _emit_persist_stub(
+        self,
+        *,
+        message_id: str,
+        terminal_status: str,
+        attempt_count: int,
+        final_timestamp_ms: int,
+        reason: str | None,
+        trace_id: str,
+        batch_correlation_id: str,
+        shard: int,
+    ) -> None:
+        stub = self._persist_terminal_stub
+        if stub is None:
+            return
+        payload: dict[str, Any] = {
+            "schemaVersion": 1,
+            "kind": "MessageTerminalV1",
+            "messageId": message_id,
+            "terminalStatus": terminal_status,
+            "attemptCount": attempt_count,
+            "finalTimestampMs": final_timestamp_ms,
+            "reason": reason,
+            "traceId": trace_id,
+            "batchCorrelationId": batch_correlation_id,
+            "shard": shard,
+        }
+        await stub(payload)
 
     async def ingest_send_unit_sqs_message(self, sqs_message: dict[str, str]) -> None:
         """Parse body; dedupe duplicate SQS deliveries by ``messageId``."""
@@ -111,34 +143,67 @@ class SendScheduler:
                 if ok:
                     ac = w.completed_try_sends
                     sh = w.shard
+                    trace_id = w.trace_id
+                    batch_correlation_id = w.batch_correlation_id
                     await self._outcomes.record_success(
                         message_id=mid,
                         attempt_count=ac,
                         final_timestamp_ms=ts,
+                    )
+                    await self._emit_persist_stub(
+                        message_id=mid,
+                        terminal_status="success",
+                        attempt_count=ac,
+                        final_timestamp_ms=ts,
+                        reason=None,
+                        trace_id=trace_id,
+                        batch_correlation_id=batch_correlation_id,
+                        shard=sh,
                     )
                     receipt_to_delete = w.receipt_handle
                     self._terminal_message_ids.add(mid)
                     del self._active[mid]
                     self._metrics.send_ok += 1
                     _log.info(
-                        "send_ok messageId=%s attempts=%s shard=%s",
+                        "send_ok messageId=%s traceId=%s batchCorrelationId=%s "
+                        "attempts=%s shard=%s",
                         mid,
+                        trace_id,
+                        batch_correlation_id,
                         ac,
                         sh,
                     )
                 elif w.completed_try_sends >= 6:
                     sh = w.shard
+                    trace_id = w.trace_id
+                    batch_correlation_id = w.batch_correlation_id
                     await self._outcomes.record_failed(
                         message_id=mid,
                         attempt_count=6,
                         final_timestamp_ms=ts,
                         reason="max_try_send_failures",
                     )
+                    await self._emit_persist_stub(
+                        message_id=mid,
+                        terminal_status="failed",
+                        attempt_count=6,
+                        final_timestamp_ms=ts,
+                        reason="max_try_send_failures",
+                        trace_id=trace_id,
+                        batch_correlation_id=batch_correlation_id,
+                        shard=sh,
+                    )
                     receipt_to_delete = w.receipt_handle
                     self._terminal_message_ids.add(mid)
                     del self._active[mid]
                     self._metrics.send_fail += 1
-                    _log.info("send_fail messageId=%s shard=%s", mid, sh)
+                    _log.info(
+                        "send_fail messageId=%s traceId=%s batchCorrelationId=%s shard=%s",
+                        mid,
+                        trace_id,
+                        batch_correlation_id,
+                        sh,
+                    )
 
             if receipt_to_delete is not None:
                 await self._delete_sqs(receipt_to_delete)

@@ -136,6 +136,19 @@ class V3WorkerSettings(BaseSettings):
         default=True,
         validation_alias="INSPECTIO_V3_TRY_SEND_ALWAYS_SUCCEED",
     )
+    persist_queue_url: str | None = Field(
+        default=None,
+        validation_alias="INSPECTIO_V3_PERSIST_QUEUE_URL",
+    )
+
+    @field_validator("persist_queue_url", mode="before")
+    @classmethod
+    def _persist_url_empty_as_none(cls, value: object) -> str | None:
+        if value is None:
+            return None
+        if isinstance(value, str) and not value.strip():
+            return None
+        return str(value).strip()
 
 
 def sqs_client_kwargs_from_worker_settings(

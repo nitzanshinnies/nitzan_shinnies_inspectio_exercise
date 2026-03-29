@@ -96,4 +96,5 @@ services:
       <<: *aws_apps
       REDIS_URL: redis://redis:6379/0
       INSPECTIO_V3_WORKER_SEND_QUEUE_URL: http://localstack:4566/000000000000/inspectio-v3-send-0
+      INSPECTIO_V3_PERSIST_QUEUE_URL: ${INSPECTIO_V3_PERSIST_QUEUE_URL:-http://localstack:4566/000000000000/inspectio-v3-persist}
       INSPECTIO_V3_TRY_SEND_ALWAYS_SUCCEED: ${INSPECTIO_V3_TRY_SEND_ALWAYS_SUCCEED:-true}

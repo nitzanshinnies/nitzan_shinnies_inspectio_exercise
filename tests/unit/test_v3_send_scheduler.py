@@ -189,3 +189,78 @@ async def test_try_send_async_supported() -> None:
     )
     await sched.wakeup_scan_due()
     assert outcomes.success and deleted == ["rh-z"]
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_persist_stub_called_on_success_with_terminal_payload() -> None:
+    t = [10_000]
+
+    def clock() -> int:
+        return t[0]
+
+    outcomes = _MemOutcomes()
+    deleted: list[str] = []
+    persist: list[dict[str, object]] = []
+
+    async def delete_rh(rh: str) -> None:
+        deleted.append(rh)
+
+    async def persist_stub(payload: dict[str, object]) -> None:
+        persist.append(payload)
+
+    sched = SendScheduler(
+        clock_ms=clock,
+        try_send=lambda _m: True,
+        outcomes=outcomes,
+        delete_sqs_message=delete_rh,
+        metrics=SendWorkerMetrics(),
+        persist_terminal_stub=persist_stub,
+    )
+    u = _unit()
+    await sched.ingest_send_unit_sqs_message(
+        {"ReceiptHandle": "rh-p", "Body": u.model_dump_json(by_alias=True)},
+    )
+    await sched.wakeup_scan_due()
+    assert len(persist) == 1
+    assert persist[0]["terminalStatus"] == "success"
+    assert persist[0]["messageId"] == "m-1"
+    assert persist[0]["traceId"] == "t1"
+    assert persist[0]["batchCorrelationId"] == "b1"
+    assert persist[0]["shard"] == 0
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_persist_stub_called_on_failed_terminal() -> None:
+    t = [26_000]
+
+    def clock() -> int:
+        return t[0]
+
+    outcomes = _MemOutcomes()
+    persist: list[dict[str, object]] = []
+
+    async def persist_stub(payload: dict[str, object]) -> None:
+        persist.append(payload)
+
+    async def delete_rh(_rh: str) -> None:
+        return None
+
+    sched = SendScheduler(
+        clock_ms=clock,
+        try_send=lambda _m: False,
+        outcomes=outcomes,
+        delete_sqs_message=delete_rh,
+        metrics=SendWorkerMetrics(),
+        persist_terminal_stub=persist_stub,
+    )
+    u = _unit()
+    await sched.ingest_send_unit_sqs_message(
+        {"ReceiptHandle": "rh-pf", "Body": u.model_dump_json(by_alias=True)},
+    )
+    await sched.wakeup_scan_due()
+    assert len(persist) == 1
+    assert persist[0]["terminalStatus"] == "failed"
+    assert persist[0]["reason"] == "max_try_send_failures"
+    assert persist[0]["attemptCount"] == 6

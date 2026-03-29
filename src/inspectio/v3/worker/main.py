@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import time
+from typing import Any
 
 import aioboto3
 
@@ -49,9 +51,21 @@ async def amain() -> None:
 
     async with session.client("sqs", **kw) as client:
         q = settings.send_queue_url
+        persist_url = settings.persist_queue_url
 
         async def delete_rh(rh: str) -> None:
             await client.delete_message(QueueUrl=q, ReceiptHandle=rh)
+
+        async def persist_terminal_stub(payload: dict[str, Any]) -> None:
+            if not persist_url:
+                return
+            try:
+                await client.send_message(
+                    QueueUrl=persist_url,
+                    MessageBody=json.dumps(payload),
+                )
+            except Exception as exc:
+                _log.warning("L5 persist stub send failed: %s", exc)
 
         scheduler = SendScheduler(
             clock_ms=clock_ms,
@@ -59,6 +73,7 @@ async def amain() -> None:
             outcomes=outcomes,
             delete_sqs_message=delete_rh,
             metrics=metrics,
+            persist_terminal_stub=persist_terminal_stub,
         )
 
         async def receive_loop() -> None:

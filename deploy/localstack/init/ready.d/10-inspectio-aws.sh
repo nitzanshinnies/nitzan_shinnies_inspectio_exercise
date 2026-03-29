@@ -17,10 +17,12 @@ aws sqs create-queue \
   2>/dev/null || true
 v3_bulk_name="${INSPECTIO_V3_BULK_QUEUE_NAME:-inspectio-v3-bulk}"
 aws sqs create-queue --queue-name "${v3_bulk_name}" 2>/dev/null || true
+v3_persist_name="${INSPECTIO_V3_PERSIST_QUEUE_NAME:-inspectio-v3-persist}"
+aws sqs create-queue --queue-name "${v3_persist_name}" 2>/dev/null || true
 shard_k="${INSPECTIO_V3_SEND_SHARD_COUNT:-2}"
 i=0
 while [ "${i}" -lt "${shard_k}" ]; do
   aws sqs create-queue --queue-name "inspectio-v3-send-${i}" 2>/dev/null || true
   i=$((i + 1))
 done
-echo "inspectio localstack init: bucket=${bucket} sqs_fifo_queue=${queue_name} v3_bulk_standard=${v3_bulk_name} v3_send_shards=${shard_k}"
+echo "inspectio localstack init: bucket=${bucket} sqs_fifo_queue=${queue_name} v3_bulk_standard=${v3_bulk_name} v3_persist_standard=${v3_persist_name} v3_send_shards=${shard_k}"
