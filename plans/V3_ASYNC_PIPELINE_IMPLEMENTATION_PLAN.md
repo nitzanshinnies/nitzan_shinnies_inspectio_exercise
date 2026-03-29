@@ -1,243 +1,230 @@
 # V3 — Async pipeline implementation plan (agent-oriented)
 
-This document is written for **autonomous coding agents** and humans implementing the **v3** architecture: **fully asynchronous** ingress, **SQS-centric** messaging on AWS ( **no Kinesis**; org may **explicitly deny** some services — verify before use), **in-memory persistence only** until a later phase, and a **performance north star** of **~10 000 `send()`-equivalent operations per second** aggregate under load (see **§2** for how “10k/s” is defined and measured).
-
-**Normative precedence for agents**
-
-1. **`plans/ASSIGNMENT.pdf`** (local; gitignored) — product contract: `send` / `newMessage` / `wakeup`, retry table, REST surface, NFRs.
-2. **`plans/openapi.yaml`** — public HTTP shapes; update this **before** code when routes or fields change.
-3. **This plan** — delivery order, invariants, and acceptance for the **v3 pipeline** only. It **does not** re-lock archived **v2** §29 FIFO-only ingest; v3 **replaces** that path for new code.
-4. **`plans/V2_THROUGHPUT_POST_MORTEM.md`** — lessons (admit vs drain, driver design, timeouts); follow **`nitzan_shinnies_inspectio_exercise/.cursor/rules/inspectio-testing-and-performance.mdc`** and workspace rules for **in-cluster** AWS load tests and **bounded** Job / `kubectl wait` timeouts.
-5. **Workspace `.cursor/rules/`** (antigravity repo) — e.g. **in-cluster load tests**, **EKS agent executes commands**, **restart stack before tests** where applicable.
-
-**Out of scope for initial implementation waves (explicit)**
-
-- Durable **S3 / journal** persistence and crash recovery (**ASSIGNMENT** AC5 deferred).
-- **Kinesis**, **MSK**, or any streaming bus **not** available in the target account.
-- Changing **ASSIGNMENT** method **signatures** (`send`, `newMessage`, `wakeup`) — wrappers/adapters allowed.
-- **External mock SMS** (**mock-sms** HTTP service) — **not used** in v3 phase 1; see **§3.6**.
+This document is written for **autonomous coding agents** and humans implementing the **v3** architecture: **fully asynchronous** ingress, **SQS-centric** messaging on AWS (**no Kinesis**; org may **explicitly deny** some services — verify before use), **in-memory (non-durable) state** until a later phase, and a **performance north star** of **~10 000 `send()` invocations per second** aggregate under load (see **§2**).
 
 ---
 
-## 1) Target architecture (four layers)
+## 0) Assignment (ASSIGNMENT.pdf) traceability
+
+**Source:** `plans/ASSIGNMENT.pdf` (local; gitignored). **Do not change** the three method **signatures** from the PDF; **wrappers and internal adapters** are allowed (see **§3.6**).
+
+| PDF clause | Requirement | V3 plan handling | Phase-1 status |
+|------------|-------------|------------------|----------------|
+| **Arrival** | `newMessage(Message)` when each SMS enters | Map to: after **SendUnitV1** exists, worker runs **`new_message`-equivalent** (immediate **attempt #1** per retry table). **Bulk HTTP** → **one** `BulkIntentV1` → expander creates **N** units → each unit enters the worker path as **one** logical arrival. | **Pass** (by construction) |
+| **Tick** | `wakeup()` every **500 ms** (**exact**), concurrent with arrivals | **§3.5** — per-process or per-shard timer; must not starve **ReceiveMessage**. | **Pass** |
+| **send** | `boolean send(Message)` thread-safe | **§3.6** — internal **`try_send(message) -> bool`** (or injectable callable); **public** Java-style signature preserved in **`assignment_surface`** module if required; **void** Python body allowed **only** as **thin wrapper** that returns **`bool`** to scheduler. | **Pass** (adapter) |
+| **Retry table** | **#1** at **0 s** (inside `newMessage`); **#2–#6** at **0.5 s, 2 s, 4 s, 8 s, 16 s** after **initial arrival**; **#6** fail → discard, **failed** | **§3.7** — deadlines are **absolute epoch ms from first arrival** (`receivedAtMs`), not gaps between attempts. | **Pass** |
+| **REST** | `POST /messages`, `POST /messages/repeat?count=N`, `GET` success/failed **limit=100** | **§3.1**; keep **`plans/openapi.yaml`** aligned. | **Pass** |
+| **Repeat response** | Returns **list of messageIds** **or a summary** | **Performance:** prefer **summary** (`batchCorrelationId`, `count`, optional sampling) if **openapi** and **human** accept; **full `messageIds`** remains **ASSIGNMENT-valid** and may be required for **e2e** tests that poll by id — **pick one per release** and document in **openapi**. | **Configurable** |
+| **Outcomes** | **Last 100** each; sort by **most recent attempt** time; fields: **`messageId`**, **`attemptCount`**, **`finalTimestamp`**, **reason** if failed | **§3.8** — response shapes must match **openapi** **Outcome** schemas. | **Pass** |
+| **NFR throughput** | Design for **tens of thousands/sec** | **§2** | **Target / measure** |
+| **NFR contention** | Minimize locks / hot spots | Sharded queues, per-`messageId` lock only (**§3.5**). | **Pass** |
+| **NFR idempotency** | Reasonable if **`newMessage` twice** for same payload | **§3.2** + expander dedupe. | **Pass** |
+| **NFR crash** | Restart continues from **persisted** state (**S3** in PDF) | **Deferred** — **§1 out of scope**; document as **known gap** in **README** (required by PDF deliverables). | **Deferred (AC5)** |
+| **NFR time** | Not **before** due; not **significantly later** under load | **§6** acceptance + tests with clock control. | **Pass** |
+| **README** | Data structures, sync, complexity, gaps, AWS run, **S3 layout/schema** | **§6** — include **S3 schema as “planned / phase 2”** when persistence is absent. | **Pass** (honest gaps) |
+| **AWS** | Runs on **AWS** with provided credentials | **§4** P6–P7 — **EKS/ECS/EC2** acceptable. | **Pass** |
+
+---
+
+## 1) Normative precedence for agents
+
+1. **`plans/ASSIGNMENT.pdf`**
+2. **`plans/openapi.yaml`** — update **before** code when HTTP shapes change; v3 should add a **description** pointer to **this plan** when v3 ships (alongside any archived v2 reference).
+3. **This plan** — v3 pipeline only; does **not** revive archived **v2** FIFO ingest as default.
+4. **`plans/V2_THROUGHPUT_POST_MORTEM.md`** — measurement pitfalls; **`nitzan_shinnies_inspectio_exercise/.cursor/rules/inspectio-testing-and-performance.mdc`** and workspace rules (**in-cluster** load tests, **bounded** timeouts).
+
+**Out of scope for initial waves (explicit)**
+
+- **Durable S3 persistence** and **AC5** restart recovery (PDF requires S3 — **re-enable in a later wave**; see **§0**).
+- **Kinesis** / MSK / unavailable streaming.
+- **Changing** PDF method **signatures** — **not allowed**; **adapters** are.
+- **mock-sms** HTTP service — **not used** in phase 1 (**§3.6**).
+
+---
+
+## 2) Target architecture (five layers)
 
 ### L1 — Single message origin (“edge”)
 
-- **One deployable** serves **static frontend** (HTML/JS/CSS) and is the **only** browser entrypoint.
-- Forwards **all** API operations to **L2** via **internal** URL (Kubernetes **Service** / later **ALB**). **No** direct browser calls to L2 bypassing L1 (CORS and security stay centralized on L1).
-- **Coalescing rule:** UI or clients MUST NOT spam **N** identical HTTP calls for **N** copies. They issue **one** request with **`count`** (and later, **recipient list** when multi-recipient is modeled). L1 passes that **single** request downstream unchanged (no fan-out in the browser).
+- **One deployable** serves **static frontend** (HTML/JS/CSS); **optional plus** per PDF.
+- Proxies **all** API calls to **L2** (internal **Service** / **Ingress**). Browsers do **not** call **L2** directly (centralize **CORS** / TLS on **L1**).
+- **Coalescing:** **one** `POST /messages/repeat?count=N` with **one** JSON body — **no** **N** parallel duplicate posts from the UI for load tests.
 
-### L2 — API / admission tier (behind load balancer)
+### L2 — API / admission (behind load balancer)
 
-- **Horizontally scaled** **stateless** HTTP service(s) behind a **load balancer** (cluster **Service** `type: LoadBalancer` or **Ingress**/ALB on AWS).
-- **Responsibilities:** validate **`openapi`** contracts, **auth placeholders** (if any), **idempotency key** acceptance, **enqueue** work to **L3** (SQS). **Do not** perform **`send()`** or heavy per-recipient work on the request thread beyond cheap validation and serialization.
-- **Ordering:** **not** required across messages (**ASSIGNMENT** does not require global ingest order). Optimize for **throughput** and **availability**.
+- Stateless **FastAPI** (or equivalent) behind **LB**; validates **openapi**; **enqueue** **BulkIntentV1** to SQS; **no** per-recipient **`send()`** here.
+- **Ordering:** PDF does **not** require global cross-message order; optimize for **throughput** and **correct per-`messageId` scheduling**.
 
-### L3 — Message fabric + broker logic (AWS **SQS**)
+### L3 — SQS + broker (**expander** workers)
 
-- **Queues:** use **Amazon SQS Standard** queues for **high aggregate throughput** unless a human explicitly locks **FIFO** for a subset. Prefer **multiple** queues (**sharding**) to avoid implicit hotspots and to allow **parallel `ReceiveMessage`** fleets.
-- **Critical clarification:** SQS **does not** natively “split one message into **N** child messages.” The **broker** role is implemented as **application workers** (see **§3.3**) that consume **bulk-intent** messages and **produce** **per-unit** messages. This is still “async” and “brokered”; it is **not** a managed multi-cast feature.
+- **Standard** queues + **sharding** (env-driven **K** send queues) unless human locks **FIFO**.
+- SQS **cannot** split one message into **N**; **expander** workers implement **broker** logic (**BulkIntentV1** → **N × SendUnitV1**).
 
-### L4 — Workers
+### L4 — **Send** workers (scheduler + `send`)
 
-- **Expander / fan-out workers:** consume **bulk admit** messages; generate **per-send-unit** messages (unique **logical id** per unit); publish to **sharded send queues** using **batched** APIs (`SendMessageBatch`, ≤10 entries per call) with **parallelism across queues**.
-- **Send workers:** consume **per-send-unit** messages; invoke an **in-process, void `send(Message)`** (no HTTP, no **mock-sms**); maintain **in-memory** retry / schedule state per **§ASSIGNMENT**; expose hooks for **L5**. See **§3.6**.
+- Consume **SendUnitV1**; run **`newMessage` / `wakeup` / `send`** semantics **in process** per **§3.5–3.7**; **void / bool `send`** per **§3.6**.
+- Publish **terminal events** to **OutcomesStore** (**§3.8**).
 
-### L5 — Persistence (stub in v3 phase 1)
+### L5 — Persistence (stub)
 
-- **No durable writes** in the first delivery waves. Optional **in-memory** ring buffer or **no-op** “persistence queue” consumer for **interface compatibility** only.
-- **Later wave:** pluggable adapter (S3 journal, DynamoDB, etc.) **without** changing L2/L3 **envelope** shapes where possible.
-
----
-
-## 2) Performance goal: “10 000 messages per second” (define and measure)
-
-### 2.1 Meaning (locked for this plan)
-
-- **Primary metric:** **aggregate rate of completed in-process `send()` invocations** (the **void** implementation returns; count **calls**, not HTTP) over a **steady window**, not **HTTP admissions/sec** alone.
-- **Burst scenario:** a **single** user operation that targets **up to 10 000 recipients** should drive **~10 000 send invocations completed** within **~1 s** **once the pipeline is saturated** and downstream allows it. Treat this as an **SLO / stretch target**; agents must **measure** and report actual **p50/p99** latencies and **achieved RPS** using the **in-cluster** harness (**§8**).
-
-### 2.2 Implications for design
-
-- **Admission** may complete in **milliseconds** if it only enqueues **O(1)** bulk work; **send** path must run with **very high concurrency** (many worker replicas × async tasks / threads as appropriate). **No** outbound HTTP on **`send`** in phase 1, so **connection pools** are not the bottleneck—**CPU**, **scheduling**, and **SQS receive/delete** throughput are.
-- **Per-unit messages** in SQS imply **receive → process → delete** capacity must match **10k/s**; **batch receive** and **horizontal scaling** of **send workers** are mandatory.
-- **Response bodies:** avoid **O(N)** JSON arrays on hot paths (v2 post mortem); return **correlation / batch ids** and fetch details via **async** APIs if needed.
+- Phase 1: **no S3 journal**; optional **no-op** persist queue for interface only.
+- Later: S3 layout per PDF (**§0** table) without breaking queue envelopes where possible.
 
 ---
 
-## 3) Concrete components and contracts
+## 3) Performance goal (“10k/s”)
 
-### 3.1 HTTP surface (L1/L2)
+### 3.1 Meaning (locked for this plan)
 
-Maintain **`plans/openapi.yaml`** as source of truth. **Minimum** for parity with **ASSIGNMENT**:
+- **Primary metric:** **completed in-process `send` attempts per second** (count calls into the **`try_send` / `send` path** after dequeue), measured over a steady window.
+- **Burst:** one logical **`count=10 000`** submit should drive **~10 000** such completions within **~1 s** when the fleet is sized for it — **SLO / stretch**; **report p50/p99** and achieved RPS via **Phase P7** harness (**in-cluster** for AWS claims).
+
+### 3.2 Design implications
+
+- **Admission** should be **O(1)** w.r.t. **N** (bulk enqueue + **summary** response if chosen).
+- **SQS** **receive → handle → delete** must sustain target RPS (**batch receive**, many replicas).
+- **Void `send`** removes HTTP latency from **`send`**; bottlenecks become **CPU**, **scheduler**, **SQS APIs**.
+
+---
+
+## 4) Concrete contracts
+
+### 4.1 HTTP surface (ASSIGNMENT §Minimal API)
 
 | Method | Path | Notes |
 |--------|------|--------|
-| POST | `/messages` | Single send intent; fast **202** or **200** with **`messageId`** per **openapi**. |
-| POST | `/messages/repeat` | **`count`** query param; **one** body; **must not** expand to **N** synchronous internal calls from L2. |
-| GET | `/messages/success`, `/messages/failed` | **limit** ≤ 100 default per **ASSIGNMENT**; backed by **in-memory** indexes initially. |
-| GET | `/healthz` | Liveness for k8s. |
+| POST | `/messages` | Body = message payload; returns **`messageId`** (or **202** + id per **openapi**). |
+| POST | `/messages/repeat` | Query **`count`**; **one** body; **ids list or summary** — **openapi** is authoritative. |
+| GET | `/messages/success`, `/messages/failed` | **`limit`** default **100**; outcome fields per PDF + **openapi**. |
+| GET | `/healthz` | Probes (**PDF** ext / ops). |
 
-**L1** may **proxy** these paths to L2 or **mount** the same app with a **path prefix**; agents must pick **one** documented approach and stick to it.
+### 4.2 Idempotency (PDF **NFR**)
 
-### 3.2 Idempotency
+- **`Idempotency-Key`** header or body field on **single** and **repeat**.
+- **L2:** duplicate key → **same** `batchCorrelationId`, **no** second bulk enqueue (TTL-bounded).
+- **Expander:** at-least-once SQS → **dedupe** so **N** units are not doubled for the same logical bulk.
 
-- Accept **`Idempotency-Key`** (header) or **`idempotencyKey`** (body) on **repeat** and **single** submit.
-- **L2** dedupes **bulk** admission: duplicate keys within a TTL return the **same** **batchCorrelationId** without double-enqueueing.
-- **Expander** dedupes: deterministic **`dedupeKey` → messageId** mapping **or** store seen keys **in memory** (phase 1); document **at-least-once** SQS behavior.
+### 4.3 Queue topology (env)
 
-### 3.3 Suggested queue topology (agents implement names via env)
+| Purpose | Env (suggested) | Producer | Consumer |
+|---------|-----------------|----------|----------|
+| Bulk | `INSPECTIO_V3_BULK_QUEUE_URL` | L2 | Expander |
+| Send shards `0..K-1` | `INSPECTIO_V3_SEND_QUEUE_URLS` or prefix + **K** | Expander | Send workers |
+| Persist stub | `INSPECTIO_V3_PERSIST_QUEUE_URL` (optional) | Send worker | No-op |
 
-Use **Standard** queues unless waived.
+**Shard:** `stable_hash(messageId) % K`.
 
-| Queue purpose | Suggested env var | Producer | Consumer |
-|---------------|-------------------|----------|----------|
-| Bulk intents | `INSPECTIO_V3_BULK_QUEUE_URL` | L2 admission | Expander workers |
-| Send shards **0..K-1** | `INSPECTIO_V3_SEND_QUEUE_URLS` (comma-separated) or prefix + K | Expander | Send workers |
-| Persistence stub (optional) | `INSPECTIO_V3_PERSIST_QUEUE_URL` | Send workers | No-op / metrics worker |
+### 4.4 Message envelopes (**Pydantic** + **tests/unit**)
 
-**Sharding function:** `shard = stable_hash(messageId or batchUnitKey) % K` with **K** configurable (e.g. **16**–**64** to start).
+- **`schemaVersion`**, **`traceId`**, **`batchCorrelationId`** where relevant.
 
-### 3.4 Message envelopes (versioned JSON; agents define **Pydantic** models)
+**BulkIntentV1:** `idempotencyKey`, `batchCorrelationId`, `count`, `body`, `receivedAtMs` (server clock at L2), optional metadata.
 
-All SQS bodies MUST include:
+**SendUnitV1:** `messageId`, `body`, **`receivedAtMs`** (= **initial arrival** for **retry table**), `batchCorrelationId`, `shard`; **`attemptsCompleted`** (int, **0** before first `send`) or equivalent — **agents must document** whether counting starts at **0** or **1** and align **terminal** at **6 failed attempts** per PDF.
 
-- **`schemaVersion`** (int, start at **1**)
-- **`traceId`** / **`batchCorrelationId`** where applicable
+### 4.5 Scheduler / `wakeup()` (**PDF** concurrent with `newMessage`)
 
-**BulkIntentV1 (L2 → expander queue):**
+- **`wakeup` every 500 ms** per worker process (or **elected leader** per shard — choose **one** strategy, document **split-brain** risk for phase 1).
+- **Do not** block the **receive loop** indefinitely; use **non-blocking** schedule scan or **handoff** to a **timer task**.
+- **Per-`messageId` mutex:** at most **one** concurrent **`send` / state mutation** per id (**PDF**).
 
-- `idempotencyKey`, `batchCorrelationId`, `count`, `body` (SMS payload), optional `recipients[]` (future), `receivedAtMs`, `clientMeta` (optional).
+### 4.6 `send` and **`boolean` vs void** (phase 1, **no mock-sms**)
 
-**SendUnitV1 (expander → send queues):**
+- **PDF:** `boolean send(Message)`.
+- **Implementation:** keep a **`try_send(message) -> bool`** (or injectable **`Callable[[Message], bool]`**) used by **retry / terminal** logic. A **`send(message) -> None`** wrapper may **only** call **`try_send`** and **discard** the bool **if** no caller needs it — **scheduler must branch on `bool`**.
+- **Default `try_send`:** return **`True`** (success) with **empty body** for throughput experiments; tests inject **`False`** for retry paths.
+- **Later:** replace **`try_send`** body with real provider I/O **without** changing **PDF** signatures at the **public** boundary.
 
-- `messageId` (unique string), `body`, `attemptCount` (initial **0** or **1** per **ASSIGNMENT** mapping), `nextDueAtMs`, `batchCorrelationId`, `shard`, `receivedAtMs`.
+### 4.7 Retry timeline (**absolute** from **`receivedAtMs`**)
 
-Agents MUST add **`tests/unit`** for JSON round-trip and invalid payload rejection.
+| Attempt | Latest due (ms after **initial arrival**) |
+|---------|---------------------------------------------|
+| #1 | **0** (run **inside** the **`new_message` path** when the unit is first handled) |
+| #2 | **500** |
+| #3 | **2000** |
+| #4 | **4000** |
+| #5 | **8000** |
+| #6 | **16000** |
 
-### 3.5 Scheduler / `wakeup()` mapping
+- **Never** fire **before** `nextDueAt` (PDF **NFR**).
+- After **6-th failed `try_send`** → **discard** + **`failed`** terminal (PDF).
+- **Unit tests** with **fake clock** are **mandatory** for this table.
 
-- **ASSIGNMENT** requires **`wakeup()` every 500 ms**. Implement a **single leader** or **per-shard tick** using:
+### 4.8 Outcomes index (**multi-replica L2**)
 
-  - **asyncio** loop + `asyncio.sleep(0.5)` per worker process **with drift correction**, **or**
-  - **APScheduler** / equivalent **inside** send worker processes,
-
-  such that **due** messages are picked from **in-memory** structures **without** blocking SQS receive loops indefinitely.
-
-- **Per-`messageId` exclusion:** only one concurrent **send / state mutation** per id (**ASSIGNMENT** concurrency rule). Use **`asyncio.Lock` per id** or **actor mailbox** pattern; **unit test** reentrancy / ordering.
-
-### 3.6 `send` implementation (v3 phase 1 — **void**, no mock-sms)
-
-- **ASSIGNMENT** specifies `boolean send(Message)`. For v3 phase 1, implement **`send(message: Message) -> None`** (or equivalent **void**) **inside the send worker process** — **no** **mock-sms** container, **no** HTTP client for SMS.
-- **Adapter for scheduling logic:** the worker’s **retry / terminal** code should treat **`send` completion without exception** as **`true`** (success). If tests need **failure** paths, inject a **`Callable[[Message], bool]`** or similar **test double** — **not** a network hop.
-- **Throughput:** the **void** body may be empty or **minimal** (e.g. increment counter); this isolates **queue + scheduler + Python concurrency** cost for **10k/s** experiments.
-- **Later:** replace the in-process **`send`** body with a real provider client (**HTTP** or SDK) behind the same interface **without** changing SQS envelopes.
-
----
-
-## 4) Implementation phases (mergeable PRs)
-
-Each phase: **tests first** (where feasible), then code, then **docs** (openapi, this plan cross-links only if needed). Follow **four-group imports**, **type hints**, **atomic functions** per workspace interview skill.
-
-### Phase P0 — Repository wiring and guardrails
-
-- **Goal:** pytest markers, CI/local **`pytest`**, **ruff**, **mypy** (if enabled), empty **v3** package namespace **`src/inspectio/v3/`** or agreed module split (**do not** break existing imports until cutover PR).
-- **Tests:** marker compliance; import smoke.
-- **Verify:** `pytest tests/unit -q` green.
-
-### Phase P1 — OpenAPI + L2 admission skeleton (no SQS yet)
-
-- **Goal:** FastAPI routes **stubbed** returning fixed ids; **openapi** updated; **Pydantic** request/response models.
-- **Tests:** **httpx** `TestClient` **unit/integration** for each route.
-- **Verify:** `pytest` + **openapi lint** if present.
-
-### Phase P2 — SQS adapters + LocalStack
-
-- **Goal:** `SqsClient` abstraction (**aioboto3**), **send/receive/delete** helpers, **retry on throttling** with jitter; **compose** LocalStack queue creation (init script or **terraform-less** shell).
-- **Tests:** **integration** with LocalStack (docker); **unit** with **moto** where faster.
-- **Verify:** compose up + `pytest -m integration` subset.
-
-### Phase P3 — Expander worker
-
-- **Goal:** consume **BulkIntentV1**, produce **SendUnitV1** to sharded queues; **SendMessageBatch** with **bounded concurrency**; metrics (**admitted**, **expanded**, **errors**).
-- **Tests:** **unit** for sharding, batching math, idempotency; **integration** with LocalStack **producer → consumer** chain.
-- **Verify:** end-to-end **one** bulk message → **N** visible messages across shards.
-
-### Phase P4 — Send worker + void `send()`
-
-- **Goal:** consume **SendUnitV1**, call **in-process void `send(Message)`** (§3.6), implement **retry schedule** and **terminal** states **in memory**; expose outcomes API backing store (or internal index read by L2).
-- **Tests:** **unit** for schedule table and **send** adapter (**success** vs **injected failure**); **integration** with LocalStack queues only (**no** mock-sms); **e2e** compose (API + workers + LocalStack): **repeat** → **all terminals** observable.
-- **Verify:** `pytest -m e2e` (or marked subset) + manual **curl** smoke.
-
-### Phase P5 — L1 static + proxy
-
-- **Goal:** **Dockerfile** serves static files (**nginx** or **FastAPI StaticFiles**); proxies API to L2 Service; **docker-compose** wiring; **CORS** only on L1 if needed.
-- **Tests:** **smoke** script or **e2e** hitting L1 only.
-- **Verify:** browserless **curl** through L1 → L2 path works.
-
-### Phase P6 — Kubernetes manifests + ConfigMap
-
-- **Goal:** Deployments for **L1**, **L2**, **expander**, **send workers** (separate or combined binary with **`ROLE` env** — pick one and document); **Services**; **Secrets** for queue URLs; **resource requests** sane for small clusters.
-- **Tests:** **none in-cluster in CI** unless you have a cluster; validate YAML with **`kubeconform`** if available.
-- **Verify:** manual **`kubectl apply`** on dev cluster.
-
-### Phase P7 — In-cluster performance harness
-
-- **Goal:** extend **`scripts/full_flow_load_test.py`** (or **`v3` sibling script**) to report **send RPS** (from **worker-exposed metrics** — e.g. **Prometheus** scrape, **stats** HTTP on worker/admin port, or **log-derived** counters), not only admission. **Job** YAML with **short** **`activeDeadlineSeconds`** per **`inspectio-testing-and-performance`** rule.
-- **Tests:** **unit** for metric parsing.
-- **Verify:** **in-cluster** run only for **AWS claims**; compose for **smoke**.
+- **Problem:** terminals are produced on **send workers**; **GET /messages/success|failed** is served by **L2**.
+- **Phase 1 requirement:** a **shared ephemeral store** any **L2** replica can read — e.g. **Redis** (container in compose / ElastiCache on AWS) holding **ring buffers** of terminals, **or** a tiny **dedicated outcomes service**. **Pure in-memory dict inside L2** is **invalid** with **>1** L2 pod unless **sticky sessions** (avoid).
+- **Workers** **push** terminal records (**messageId**, **attemptCount**, **finalTimestamp**, **reason**) to that store; **L2** **reads** for **GET** (sort **most recent first**, cap **limit**).
 
 ---
 
-## 5) Agent execution rules (non-negotiable)
+## 5) Implementation phases (mergeable PRs)
 
-1. **Tests:** every new module gains **unit** tests; cross-boundary behavior gains **integration** or **e2e** tests. Use existing **`pytest` markers** (**`pyproject.toml`**).
-2. **OpenAPI-first** for HTTP changes.
-3. **No Kinesis**; **SQS** is the **only** required AWS messaging primitive unless the human approves **SNS/Lambda/DynamoDB** after quota check.
-4. **AWS performance validation** only from **in-cluster** jobs; **no port-forward baselines** for throughput claims.
-5. **Timeouts:** Job **`activeDeadlineSeconds`** and **`kubectl wait`** stay in the **minute** range for benchmarks unless explicitly documented otherwise (**post mortem** pitfalls).
-6. **Do not** reintroduce **v2** **FIFO ingest** as the default in v3 paths without a written human waiver.
-7. **Memory persistence:** document **data loss** on restart in **README** for v3 phase 1.
+Each phase: **tests first** where feasible; **four-group imports**; **type hints**; **atomic** functions.
 
----
-
-## 6) Acceptance checklist (v3 phase 1 — pipeline + memory)
-
-- [ ] **L1** serves UI and proxies to **L2**; clients can use **single** **`/messages/repeat?count=N`**.
-- [ ] **L2** enqueues **bulk** intent to SQS (**O(1)** HTTP work w.r.t. **N** aside from request size limits).
-- [ ] **Expander** produces **N** **SendUnitV1** messages across **sharded** queues.
-- [ ] **Send workers** run **void `send()`** for all units with **retry** semantics per **ASSIGNMENT** (in memory; **no** mock-sms).
-- [ ] **Outcomes** APIs return recent successes/failures per **openapi**.
-- [ ] **`pytest`** **unit + integration (+ e2e where enabled)** pass locally.
-- [ ] **Load script** documents how to measure **send RPS**; **AWS** numbers only from **in-cluster** run.
-- [ ] **README** section: **architecture diagram** (text ok), **how to run compose**, **known limits** (no durability yet).
+| Phase | Goal | Verify |
+|-------|------|--------|
+| **P0** | Package layout **`src/inspectio/v3/`** (or agreed tree), pytest markers, **assignment_surface** module with **PDF**-shaped stubs | `pytest tests/unit -q` |
+| **P1** | **L2** routes + **openapi** sync; **BulkIntent** enqueue stub | `TestClient` tests |
+| **P2** | **SQS** client (**aioboto3**), LocalStack queues, throttling backoff | `pytest -m integration` |
+| **P3** | **Expander** | bulk → **N** **SendUnitV1** across shards |
+| **P4** | **Send worker**: **§4.6–4.7**, **OutcomesStore** write, **`wakeup`** loop | unit + integration + **e2e** compose |
+| **P5** | **L1** static + proxy | curl via **L1** only |
+| **P6** | **Kubernetes** manifests, ConfigMap / Secrets for URLs | `kubectl` on dev cluster |
+| **P7** | **Load harness** + Job YAML: **send RPS**, **in-cluster** only for AWS claims; **short** deadlines per **inspectio-testing-and-performance** | metrics match **§3.1** |
 
 ---
 
-## 7) Optional AWS services (human confirms availability first)
+## 6) Agent rules (non-negotiable)
 
-Agents **must not** hard-depend on these without explicit approval:
-
-- **SNS** (fan-out to multiple SQS — alternative to custom expander in some patterns)
-- **Lambda** (SQS triggers)
-- **DynamoDB** (idempotency or lease tables for leader election)
-- **ElastiCache** (optional dedup / rate counters)
-
-**Already verified unavailable for this org:** **Kinesis** (**SCP explicit deny** in one check — re-verify if policies change).
+1. **Unit + integration + e2e** per **`pyproject.toml`** markers; new code → new tests.
+2. **OpenAPI-first** for HTTP.
+3. **SQS** required; **no Kinesis**; optional **SNS/Lambda/DynamoDB** only after human confirms quotas.
+4. **AWS performance** claims → **in-cluster Job** only (**no port-forward** baseline).
+5. **Bounded** **`activeDeadlineSeconds`** / **`kubectl wait`** (minutes, not hours) unless explicitly overridden in YAML comments.
+6. **README** must list **PDF deliverables**: structures, sync, complexity, **gaps** (incl. **no AC5** in phase 1), AWS run, **future S3 schema**.
 
 ---
 
-## 8) Observability and debugging
+## 7) Acceptance checklist
 
-- **Structured JSON logs** with **`traceId`**, **`batchCorrelationId`**, **`messageId`**, **`shard`**, **`queueUrl`** (host only if needed).
-- **Prometheus** metrics optional; minimum: **counters** logged periodically (**expanded**, **sent_ok**, **sent_fail**, **throttled**).
-- **Distributed trace** hooks optional (OTel) — do not block P0–P4.
+### 7.1 PDF checklist (phase 1 — honest)
+
+- [ ] **AC1** `newMessage` / equivalent: **attempt #1** immediate; later attempts **scheduled** per **§4.7**.
+- [ ] **AC2** `wakeup` drives **due** retries on **~500 ms** cadence **without** global lock contention.
+- [ ] **AC3** **6** failed **`try_send`** → **failed** terminal, discarded from active schedule.
+- [ ] **AC4** **GET** outcomes last **100** with required fields (**§0**).
+- [ ] **AC5** restart / **S3** recovery — **deferred**; **documented** in **README** as **not yet implemented**.
+- [ ] **AC6** runs on **AWS** with provided credentials (**P6–P7** evidence).
+
+### 7.2 V3 pipeline
+
+- [ ] **L1** → **L2** proxy only for browser clients.
+- [ ] **Repeat** = **one** HTTP request; **expander** creates **N** units.
+- [ ] **Sharded** SQS **send** queues + **batch** publish/consume.
+- [ ] **Outcomes** consistent across **L2** replicas (**§4.8**).
+- [ ] **Load** script reports **send RPS**; AWS numbers from **in-cluster** run only.
 
 ---
 
-## 9) Revision history
+## 8) Observability
+
+- Structured logs: **`traceId`**, **`batchCorrelationId`**, **`messageId`**, **`shard`**.
+- Counters: **expanded**, **send_ok**, **send_fail**, **sqs_throttle**.
+
+---
+
+## 9) Optional AWS services (confirm before hard dependency)
+
+**SNS**, **Lambda**, **DynamoDB**, **ElastiCache** — **human approval**. **Kinesis** was **SCP-denied** in one check; re-verify if policies change.
+
+---
+
+## 10) Revision history
 
 | Date (UTC) | Note |
 |------------|------|
 | 2026-03-29 | Initial v3 async pipeline plan for agent implementation |
-| 2026-03-29 | Drop mock-sms for phase 1; send worker uses in-process void `send()` (§3.6) |
+| 2026-03-29 | Drop mock-sms; void / bool `send` adapter (**§3.6** predecessor) |
+| 2026-03-29 | Coherence pass: **ASSIGNMENT §0** traceability, **§4.7** retry table, **§4.8** outcomes, **five** layers, PDF **AC** / **README** deliverables, fix internal **§** refs |
