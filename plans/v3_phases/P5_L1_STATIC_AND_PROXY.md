@@ -8,10 +8,10 @@
 
 ## Done when
 
-- [ ] Static assets + **nginx** **or** **FastAPI** static + reverse proxy to **`INSPECTIO_L2_BASE_URL`** (internal **Service** URL in compose/k8s).
-- [ ] Demo UI: send once + repeat N via **single** **`fetch`** for repeat.
-- [ ] Compose/README: browser uses **L1 port only**, not raw L2.
-- [ ] Light **integration** tests: GET `/` HTML; POST via L1 proxy → **202** from L2.
+- [x] Static assets + **nginx** **or** **FastAPI** static + reverse proxy to **`INSPECTIO_L2_BASE_URL`** (internal **Service** URL in compose/k8s).
+- [x] Demo UI: send once + repeat N via **single** **`fetch`** for repeat.
+- [x] Compose/README: browser uses **L1 port only**, not raw L2.
+- [x] Light **integration** tests: GET `/` HTML; **`POST /messages`** and **`POST /messages/repeat?count=`** via L1 proxy → **202** from L2 (`tests/integration/test_v3_l1_proxy.py`, marker **`integration`**).
 
 ## Out of scope
 

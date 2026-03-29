@@ -21,7 +21,7 @@ pytestmark = pytest.mark.skipif(
 
 @pytest.mark.e2e
 def test_repeat_ten_eventually_lists_ten_successes() -> None:
-    base = os.environ.get("INSPECTIO_P4_E2E_BASE", "http://127.0.0.1:8000").rstrip("/")
+    base = os.environ.get("INSPECTIO_P4_E2E_BASE", "http://127.0.0.1:8080").rstrip("/")
     with httpx.Client(base_url=base, timeout=30.0) as client:
         before = client.get("/messages/success", params={"limit": 100})
         before.raise_for_status()

@@ -34,7 +34,7 @@ Implementation targets **v3** only. **Normative docs:** **`plans/ASSIGNMENT.pdf`
 - **Outcomes:** **`RedisOutcomesStore`** (**`LPUSH` + `LTRIM`** to 100 items per list) shared by **L2** and workers; **`GET /messages/success|failed`** returns newest-first JSON aligned with **`plans/openapi.yaml`** outcome fields.
 - **Run:** **`inspectio-v3-worker`** or **`python -m inspectio.v3.worker`**. Requires **`REDIS_URL`** / **`INSPECTIO_REDIS_URL`** and AWS/SQS env consistent with LocalStack.
 - **Integration (opt-in):** **`INSPECTIO_REDIS_INTEGRATION=1`** and **`REDIS_URL`** → **`pytest tests/integration/test_v3_redis_outcomes.py -m integration`**.
-- **E2E (opt-in):** With **`docker compose up -d`** (api, expander, worker, redis, localstack), **recycle the stack** before the run (see workspace testing rules), then **`INSPECTIO_P4_E2E=1 pytest tests/e2e/test_v3_p4_compose.py -m e2e`**. Override base URL with **`INSPECTIO_P4_E2E_BASE`** if needed.
+- **E2E (opt-in):** With **`docker compose up -d`** (L1, api, expander, worker, redis, localstack), **recycle the stack** before the run (see workspace testing rules), then **`INSPECTIO_P4_E2E=1 pytest tests/e2e/test_v3_p4_compose.py -m e2e`**. Defaults to **`http://127.0.0.1:8080`** (L1 proxy). Override with **`INSPECTIO_P4_E2E_BASE`**.
 
 ### Deliverables note (master §6, AC5)
 
@@ -43,9 +43,16 @@ Implementation targets **v3** only. **Normative docs:** **`plans/ASSIGNMENT.pdf`
 - **Gaps (AC5):** no **S3** journal or crash recovery for in-flight units—redelivery relies on SQS visibility and worker idempotency/dedupe by **`messageId`** only; multi-replica expander dedupe is still single-process LRU (see P3 README).
 - **Planned S3 (later wave):** durable append-only journal for bulk and/or send units, replay and operator inspection—schema TBD in **`plans/V3_ASYNC_PIPELINE_IMPLEMENTATION_PLAN.md`** / OpenAPI evolution.
 
+## V3 L1 static + proxy (phase P5)
+
+- **`inspectio.v3.l1`**: **FastAPI** serves a small **demo UI** at **`GET /`** and **proxies** **`/messages`**, **`/messages/repeat`**, **`/messages/success`**, **`/messages/failed`**, **`/healthz`** to L2 using **`httpx`** (**`INSPECTIO_L2_BASE_URL`**, e.g. **`http://inspectio-api:8000`** on the compose network). Browsers should use **L1 only** (CORS/TLS terminate at L1 in real deploys; compose uses same-origin **`http://127.0.0.1:8080`**).
+- **Demo UI:** **Send once** (`POST /messages`) and **Repeat N** with a **single** **`fetch`** to **`POST /messages/repeat?count=N`** (coalesced admission per master plan).
+- **Run:** **`uvicorn inspectio.v3.l1.serve:app --host 0.0.0.0 --port 8080`** with **`INSPECTIO_L2_BASE_URL`** set.
+- **Tests:** **`pytest tests/integration/test_v3_l1_proxy.py -m integration`** (in-process L1→L2 ASGI chain; matches P5 “light integration” scope).
+
 ## Local stack
 
-The **repository root** `docker-compose.yml` runs **redis**, **localstack** (S3 + SQS), and v3 app services **`inspectio-api`** (L2 on port **8000**), **`inspectio-expander`**, and **`inspectio-worker`**. Default **`INSPECTIO_V3_SEND_SHARD_COUNT`** is **1** so a single worker covers all send traffic; raise **`K`** and add one worker per **`inspectio-v3-send-{i}`** URL. The v2 app stack remains archived under **`v2_obsolete/archive/`**. Compose project name is **`inspectio`** (`name:` in the file). Stop it with:
+The **repository root** `docker-compose.yml` runs **redis**, **localstack** (S3 + SQS), **`inspectio-l1`** (published **8080** → browser entry), **`inspectio-api`** (L2 on **8000** inside the network only—no host port), **`inspectio-expander`**, and **`inspectio-worker`**. Default **`INSPECTIO_V3_SEND_SHARD_COUNT`** is **1** so a single worker covers all send traffic; raise **`K`** and add one worker per **`inspectio-v3-send-{i}`** URL. The v2 app stack remains archived under **`v2_obsolete/archive/`**. Compose project name is **`inspectio`** (`name:` in the file). Stop it with:
 
 ```bash
 docker compose down
@@ -57,11 +64,11 @@ Bring it up:
 docker compose up -d
 ```
 
-| Service           | Host URL / port        |
-|-------------------|------------------------|
-| LocalStack        | `http://127.0.0.1:4566` |
-| Redis             | `127.0.0.1:6379`       |
-| L2 API (compose)  | `http://127.0.0.1:8000` |
+| Service              | Host URL / port           |
+|----------------------|---------------------------|
+| LocalStack           | `http://127.0.0.1:4566`   |
+| Redis                | `127.0.0.1:6379`          |
+| L1 (browser / demo)  | `http://127.0.0.1:8080`   |
 
 ### AWS S3 and credentials
 
