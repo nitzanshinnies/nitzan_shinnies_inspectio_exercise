@@ -10,7 +10,7 @@ import httpx
 import redis.asyncio as redis
 
 from inspectio.domain.sharding import owned_shard_range
-from inspectio.ingest.sqs_fifo_consumer import SqsFifoBatchFetcher
+from inspectio.ingest.sqs_fifo_consumer import RawSqsMessage, SqsFifoBatchFetcher
 from inspectio.journal.replay import load_snapshot_if_present
 from inspectio.journal.writer import (
     JournalWriter,
@@ -81,22 +81,28 @@ async def _sqs_loop(
                 continue
             if not batch:
                 continue
-            to_delete: list[str] = []
-            shards_to_flush: set[int] = set()
-            for raw in batch:
+
+            async def _one(raw: RawSqsMessage) -> tuple[bool, int | None]:
                 try:
-                    should_delete, shard_flush = await process_raw_sqs_message(
+                    return await process_raw_sqs_message(
                         raw,
                         settings=settings,
                         writer=journal,
                         redis_client=redis_client,
                     )
-                    if should_delete:
-                        to_delete.append(raw.receipt_handle)
-                        if shard_flush is not None:
-                            shards_to_flush.add(shard_flush)
                 except Exception:
                     log.exception("ingest handler failed")
+                    return False, None
+
+            outcomes = await asyncio.gather(*(_one(r) for r in batch))
+            to_delete: list[str] = []
+            shards_to_flush: set[int] = set()
+            for raw, outcome in zip(batch, outcomes, strict=True):
+                should_delete, shard_flush = outcome
+                if should_delete:
+                    to_delete.append(raw.receipt_handle)
+                    if shard_flush is not None:
+                        shards_to_flush.add(shard_flush)
             for sid in shards_to_flush:
                 await journal.flush_shard(sid)
             for i in range(0, len(to_delete), 10):
@@ -133,8 +139,12 @@ async def _run() -> None:
                 if snap is not None:
                     runtime.restore_snapshot_pending(snap.pending)
 
+    sqs_tasks = [
+        asyncio.create_task(_sqs_loop(settings, journal, redis_client, stop))
+        for _ in range(settings.sqs_receive_concurrency)
+    ]
     tasks = [
-        asyncio.create_task(_sqs_loop(settings, journal, redis_client, stop)),
+        *sqs_tasks,
         asyncio.create_task(
             _wakeup_loop(stop, settings.wakeup_interval_ms),
         ),

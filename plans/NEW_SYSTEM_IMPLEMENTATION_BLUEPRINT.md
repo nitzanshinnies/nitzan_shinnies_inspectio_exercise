@@ -480,7 +480,7 @@ Base path: `/` on the **API gateway** service (behind ALB/Ingress). All JSON use
 
 *Informative for humans:* a summary-style body can still satisfy the PDF if you fork the spec; agents following this blueprint **must not**.
 
-**Implementation note (*informative*):** Use **batched** `SendMessageBatch` (**SQS FIFO**, max **10** messages per call per AWS limit) and **parallel batches across distinct `MessageGroupId`s** where safe — see **`plans/SQS_FIFO_THROUGHPUT_AND_ADMISSION_PLAN.md`**; still return **one** HTTP response.
+**Implementation note (*informative*):** Use **batched** `SendMessageBatch` (**SQS FIFO**, max **10** messages per call per AWS limit) and **parallel batches across distinct `MessageGroupId`s** per **`plans/SQS_FIFO_THROUGHPUT_AND_ADMISSION_PLAN.md`**; still return **one** HTTP response.
 
 **Errors:** Same family as §15.1; `400` if `count` out of range.
 
@@ -543,7 +543,7 @@ end_excl = min((pod_index + 1) * SHARDS_PER_POD, TOTAL_SHARDS)
 
 ### 16.4 Ingest routing key
 
-- **SQS FIFO `MessageGroupId`:** string `f"{shardId:05d}"` (fixed-width decimal) — preserves per-shard ordering in the queue (**§17**).
+- **SQS FIFO `MessageGroupId`:** string `f"{shardId:05d}"` (fixed-width decimal) — aligns FIFO **grouping** with **shard routing** (**§17**). **Cross-message ingest order is not a product requirement.**
 
 ## 17) Durable ingest (SQS FIFO) (normative)
 
@@ -586,7 +586,7 @@ Before creating **new** in-memory work for `(idempotencyKey)`:
 
 - **One FIFO queue** per deployment (URL **`INSPECTIO_INGEST_QUEUE_URL`**).
 - **Delete / ack:** consumer **must not** **`DeleteMessage`** until **§18.3** is satisfied for that message (durably journaled state for that ingest). “Enqueue to worker memory” **alone** is insufficient if a crash could lose work before journal lines exist.
-- **Multi-replica workers:** FIFO ordering is **per `MessageGroupId`**; **§29.6** locks a **default single-worker** deployment for Phase 1–2 and defines how to scale safely without breaking **§18.3**.
+- **Multi-replica workers:** AWS FIFO scopes behavior **per `MessageGroupId`**; **§29.6** locks a **default single-worker** deployment for Phase 1–2 and defines how to scale safely without breaking **§18.3**.
 
 ## 18) S3 journal and snapshots (normative)
 
@@ -1142,6 +1142,8 @@ Agents **must** define every name below in `Settings` (defaults as shown; empty 
 | `INSPECTIO_AWS_REGION` | `us-east-1` | all | AWS region |
 | `INSPECTIO_S3_BUCKET` | *(empty)* | all | Journal + snapshots |
 | `INSPECTIO_INGEST_QUEUE_URL` | *(empty)* | all | **HTTPS** URL of **FIFO** SQS queue (`*.fifo`) for **`MessageIngestedV1`** |
+| `INSPECTIO_MAX_SQS_FIFO_INFLIGHT_GROUPS` | `64` | all | Cap concurrent **send** pipelines across distinct **`MessageGroupId`** (admission); see **`plans/SQS_FIFO_THROUGHPUT_AND_ADMISSION_PLAN.md`** |
+| `INSPECTIO_SQS_RECEIVE_CONCURRENCY` | `4` | 5+ | Concurrent long-poll **receive** loops **per worker process** (each uses its own SQS client) |
 | `INSPECTIO_TOTAL_SHARDS` | `1024` | all | **§16** |
 | `INSPECTIO_WORKER_REPLICAS` | `1` | 1–2 | **Locked default `1`** until multi-consumer design is validated; **§29.6** |
 | `INSPECTIO_WORKER_INDEX` | `0` | all | `0 .. INSPECTIO_WORKER_REPLICAS-1` (**StatefulSet ordinal**) |
@@ -1153,7 +1155,7 @@ Agents **must** define every name below in `Settings` (defaults as shown; empty 
 | `INSPECTIO_MAX_PARALLEL_SENDS_PER_SHARD` | `64` | all | **§20.3** |
 | `INSPECTIO_SMS_HTTP_TIMEOUT_SEC` | `5` | all | **§19.3** |
 | `INSPECTIO_REPEAT_MAX_COUNT` | `100000` | all | **§15.2** |
-| `INSPECTIO_INGEST_BUFFER_MAX_MESSAGES` | `10000` | all | **§20.4** |
+| `INSPECTIO_INGEST_BUFFER_MAX_MESSAGES` | `200000` | all | **§20.4** — max **`count`** per **`POST /messages/repeat`** (memory cap check) |
 | `INSPECTIO_IDEMPOTENCY_TTL_SEC` | `86400` | all | **§17.4** |
 | `INSPECTIO_OUTCOMES_MAX_LIMIT` | `1000` | 4+ | Upper bound for **`?limit=`** on public GET |
 | `INSPECTIO_JOURNAL_FLUSH_INTERVAL_MS` | `50` | all | **§29.8** |
@@ -1218,7 +1220,7 @@ Use **`asyncio.Lock`** keyed by **`messageId`** (string) for all mutations to in
 
 - **Importing, vendoring, or subprocess-calling** the archived **`inspectio_exercise`** package or any **`v1_obsolete/project/src`** module from greenfield **`src/inspectio/`** (or adding it as a **runtime** dependency of API/worker/notification). **Docker:** **`mock-sms`** is built from **`deploy/mock-sms/Dockerfile`** per **§29.13** — **not** from **`v1_obsolete/`**. The mock image is separate from **`pyproject.toml`**; **`src/inspectio`** **must not** depend on **`inspectio_exercise`**.
 - **Treating** **`v1_obsolete/**`** unit/integration tests as the contract to implement against; greenfield tests are **§28** + repo-root **`tests/`** per **`IMPLEMENTATION_PHASES.md`**.
-- Replacing **Amazon SQS FIFO** (the durable ingest boundary) with **Redis/RabbitMQ/Kafka-only** plumbing **without** preserving **§17** / **§18.3** semantics (ordering, dedupe, delete-after-journal).
+- Replacing **Amazon SQS FIFO** (the durable ingest boundary) with **Redis/RabbitMQ/Kafka-only** plumbing **without** preserving **§17** / **§18.3** semantics (dedupe, delete-after-journal).
 - **Awaiting** outbound SMS **inside** API request handlers.
 - **`DeleteMessage`** on **SQS** **before** **`INGEST_APPLIED`** is durable (**§18.3**).
 - **Skipping** `scheduler_surface` module (**§25**) or renaming public hook functions.

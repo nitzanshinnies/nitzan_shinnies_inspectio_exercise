@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -11,6 +12,8 @@ from inspectio.ingest.ingest_producer import IngestPutInput
 from inspectio.ingest.sqs_fifo_producer import (
     MAX_SQS_FIFO_SEND_BATCH,
     SqsFifoIngestProducer,
+    _build_batch_entries,
+    _build_heterogeneous_batch_entries,
 )
 from inspectio.settings import Settings
 
@@ -39,6 +42,30 @@ async def test_put_messages_empty_returns_empty() -> None:
     producer = SqsFifoIngestProducer(settings)
     out = await producer.put_messages([])
     assert out == []
+    await producer.stop()
+
+
+@pytest.mark.asyncio
+async def test_shared_sqs_client_single_session_across_put_messages() -> None:
+    """Admission path reuses one aioboto3 SQS client (no per-request TLS handshake)."""
+    settings = Settings(ingest_queue_url="https://sqs.example/queue.fifo")
+    producer = SqsFifoIngestProducer(settings)
+    mock_client = AsyncMock()
+    mock_client.send_message_batch = AsyncMock(return_value=_success_batch(1))
+    session = MagicMock()
+    cm = MagicMock()
+    cm.__aenter__ = AsyncMock(return_value=mock_client)
+    cm.__aexit__ = AsyncMock(return_value=False)
+    session.client = MagicMock(return_value=cm)
+
+    with patch(
+        "inspectio.ingest.sqs_fifo_producer.aioboto3.Session", return_value=session
+    ):
+        await producer.put_messages([_msg(0, 0)])
+        await producer.put_messages([_msg(1, 1)])
+
+    assert session.client.call_count == 1
+    await producer.stop()
 
 
 @pytest.mark.asyncio
@@ -69,6 +96,7 @@ async def test_put_messages_preserves_order_across_shards() -> None:
     assert [r.message_id for r in out] == ["m0", "m1", "m2", "m3"]
     # Shards 0,1,2 → 3 groups; batches: 2+1+1 messages
     assert mock_client.send_message_batch.await_count == 3
+    await producer.stop()
 
 
 @pytest.mark.asyncio
@@ -97,6 +125,7 @@ async def test_single_group_large_repeat_uses_multiple_sequential_batches() -> N
     for c in mock_client.send_message_batch.call_args_list:
         entries = c.kwargs["Entries"]
         assert len(entries) <= MAX_SQS_FIFO_SEND_BATCH
+    await producer.stop()
 
 
 @pytest.mark.asyncio
@@ -122,6 +151,7 @@ async def test_parallel_groups_limited_by_semaphore() -> None:
         await producer.put_messages(messages)
 
     assert mock_client.send_message_batch.await_count == 2
+    await producer.stop()
 
 
 @pytest.mark.asyncio
@@ -162,6 +192,20 @@ async def test_send_message_batch_retries_on_throttling() -> None:
     assert calls["n"] == 2
     assert len(out) == 1
     assert out[0].message_id == "m0"
+    await producer.stop()
+
+
+@pytest.mark.unit
+def test_homogeneous_batch_entries_match_pydantic_encoding() -> None:
+    """Repeat-shaped admits: fast JSON path must match full MessageIngestedV1 encoding."""
+    messages = [_msg(i, (i * 31) % 17) for i in range(23)]
+    fast = _build_batch_entries(messages)
+    slow = _build_heterogeneous_batch_entries(messages)
+    assert len(fast) == len(slow)
+    for a, b in zip(fast, slow, strict=True):
+        assert json.loads(a["MessageBody"]) == json.loads(b["MessageBody"])
+        assert a["MessageGroupId"] == b["MessageGroupId"]
+        assert a["MessageDeduplicationId"] == b["MessageDeduplicationId"]
 
 
 @pytest.mark.unit

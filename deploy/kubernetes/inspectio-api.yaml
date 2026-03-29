@@ -17,7 +17,7 @@ metadata:
   name: inspectio-api
   namespace: inspectio
 spec:
-  replicas: 6
+  replicas: 12
   selector:
     matchLabels:
       app.kubernetes.io/name: inspectio-api

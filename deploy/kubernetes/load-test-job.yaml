@@ -8,15 +8,17 @@ metadata:
   name: inspectio-load-test
   namespace: inspectio
 spec:
+  activeDeadlineSeconds: 60
   backoffLimit: 0
   ttlSecondsAfterFinished: 86400
   template:
     spec:
+      serviceAccountName: inspectio-app
       restartPolicy: Never
       containers:
         - name: driver
           image: inspectio-app:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           env:
             - name: INSPECTIO_LOAD_TEST_API_BASE
               value: http://inspectio-api:8000
@@ -29,9 +31,11 @@ spec:
             - --chunk-max
             - "1000"
             - --http-timeout-sec
-            - "300"
+            - "45"
+            - --max-total-sec
+            - "60"
             - --outcome-timeout-sec
-            - "7200"
+            - "60"
             - --outcome-limit
             - "20000"
             - --wait-outcomes

@@ -1,11 +1,11 @@
 # Performance — larger architectural options (do not lose)
 
-These are **not** implemented in the default greenfield path; they trade blueprint constraints, operational complexity, or correctness surface area for throughput. Revisit when **durability + performance** dominate and **FIFO / record shape** requirements are explicitly relaxed.
+These are **not** implemented in the default greenfield path; they trade blueprint constraints, operational complexity, or correctness surface area for throughput. Revisit when **durability + performance** dominate. **Ingest message order is not a product NFR** (see **`plans/SQS_FIFO_THROUGHPUT_AND_ADMISSION_PLAN.md`**); options below still require **§17 / §29** review when they change the durable boundary or shard routing.
 
 ## 1. Ingest transport
 
-- **Standard SQS queue (non-FIFO)** for admission: removes per-`MessageGroupId` ordering and raises **deduplication / ordering** questions; requires a **human waiver** of **§17 / §29** FIFO-only ingest if the exercise still mandates FIFO.
-- **Fewer, coarser `MessageGroupId`s** (e.g. hash to **N** hot groups instead of per-shard): increases **per-group contention** and can break **per-shard ordering** assumptions in the blueprint; only if product explicitly allows.
+- **Standard SQS queue (non-FIFO)** for admission: different dedupe and at-least-once story than FIFO; requires a **human waiver** of **§17 / §29** FIFO-only ingest and new tests.
+- **Fewer, coarser `MessageGroupId`s** (e.g. hash to **N** hot groups instead of per-shard): increases **per-group contention**; must remain consistent with **worker shard ownership** (**§16.3**) and **§29.6** scaling rules.
 
 ## 2. Journal and recovery
 

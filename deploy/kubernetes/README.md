@@ -66,12 +66,15 @@ kubectl -n inspectio rollout status statefulset/inspectio-worker-sts
 ```bash
 kubectl -n inspectio delete job inspectio-load-test --ignore-not-found
 kubectl apply -f deploy/kubernetes/load-test-job.yaml
-kubectl -n inspectio logs -f job/inspectio-load-test
+kubectl wait --for=condition=complete job/inspectio-load-test -n inspectio --timeout=60s
+kubectl -n inspectio logs job/inspectio-load-test
 ```
 
-The Job prints JSON with **`admission_rps`**, chunk latency percentiles, and (with **`--wait-outcomes`**) **`e2e_rps`** and **`drain_sec`**.
+The Job is capped at **60s** wall clock (**`activeDeadlineSeconds`**, **`--max-total-sec`**, and **`kubectl wait --timeout=60s`**). It prints JSON with **`admission_rps`**, chunk latency percentiles, and (with **`--wait-outcomes`**) **`e2e_rps`** and **`drain_sec`**.
 
 Tune **`--sizes`**, **`--chunk-max`**, and Job resource limits to suit your cluster.
+
+**Long / N1 admit benchmarks (avoid false timeouts):** keep three limits in sync: (1) **`kubectl wait --timeout`** ≥ expected runtime, (2) Job **`activeDeadlineSeconds`** ≥ that, (3) driver **`--max-total-sec`** either **large enough** or **`0`** (disables the script’s own wall clock so admission can run until Kubernetes stops the pod). See **`deploy/kubernetes/n1-admit-bench-job.yaml`**. Do not start the next Job until the previous one finishes, or **`kubectl wait`** will fire early while work is still running.
 
 ## Performance (durability-preserving levers)
 
@@ -79,10 +82,11 @@ Rough order of impact for **in-cluster drain** and **admission** throughput:
 
 1. **Horizontal scale** — Raise **`StatefulSet`** `spec.replicas` and set **`INSPECTIO_WORKER_REPLICAS`** to the same value. Scale **`inspectio-api`** (admission + parallel FIFO sends across groups). Scale **`inspectio-notification`** if terminal HTTP becomes hot.
 2. **API admission** — **`INSPECTIO_MAX_SQS_FIFO_INFLIGHT_GROUPS`** (default **64**): higher allows more concurrent `SendMessageBatch` pipelines across distinct `MessageGroupId`s for large **`/messages/repeat`** payloads (see **`plans/SQS_FIFO_THROUGHPUT_AND_ADMISSION_PLAN.md`**).
-3. **Journal batching** — In **`configmap.yaml`**, **`INSPECTIO_JOURNAL_FLUSH_INTERVAL_MS`** and **`INSPECTIO_JOURNAL_FLUSH_MAX_LINES`**: larger windows mean **fewer S3 `PutObject`** calls per shard (slightly higher memory and crash window; still durable once flushed).
-4. **Per-shard send parallelism** — **`INSPECTIO_MAX_PARALLEL_SENDS_PER_SHARD`** (worker): raise if mock SMS and CPU allow.
-5. **Ingest journal** — **`append_ingest_template_a`** appends only; the worker **flushes each touched shard once per SQS receive batch** before **`DeleteMessage`**, so multiple ingests on the same shard share a segment when possible (§18.3).
-6. **Infra** — S3 prefix scaling, optional **high-throughput FIFO**, **ElastiCache** for Redis, right-sized **CPU/memory** on worker pods, **`podManagementPolicy: Parallel`** on **new** StatefulSets for faster rollouts.
+3. **Worker receive** — **`INSPECTIO_SQS_RECEIVE_CONCURRENCY`** (default **4**): multiple independent long-poll loops per worker pod (each opens its own SQS client) to raise dequeue + §18.3 throughput toward aggregate N1 targets.
+4. **Journal batching** — In **`configmap.yaml`**, **`INSPECTIO_JOURNAL_FLUSH_INTERVAL_MS`** and **`INSPECTIO_JOURNAL_FLUSH_MAX_LINES`**: larger windows mean **fewer S3 `PutObject`** calls per shard (slightly higher memory and crash window; still durable once flushed).
+5. **Per-shard send parallelism** — **`INSPECTIO_MAX_PARALLEL_SENDS_PER_SHARD`** (worker): raise if mock SMS and CPU allow.
+6. **Ingest journal** — **`append_ingest_template_a`** appends only; the worker **flushes each touched shard once per SQS receive batch** before **`DeleteMessage`**, so multiple ingests on the same shard share a segment when possible (§18.3).
+7. **Infra** — S3 prefix scaling, optional **high-throughput FIFO**, **ElastiCache** for Redis, right-sized **CPU/memory** on worker pods, **`podManagementPolicy: Parallel`** on **new** StatefulSets for faster rollouts.
 
 **SQS admission:** `SqsFifoIngestProducer` retries **`send_message_batch`** / **`send_message`** with exponential backoff on **throttling** and similar transient `ClientError` codes (see `sqs_fifo_producer.py`).
 

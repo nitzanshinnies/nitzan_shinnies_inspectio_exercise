@@ -30,6 +30,7 @@ import json
 import logging
 import os
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 import httpx
@@ -40,9 +41,23 @@ log = logging.getLogger(__name__)
 DEFAULT_CHUNK_MAX = 500
 DEFAULT_K8S_API = "http://inspectio-api:8000"
 DEFAULT_HTTP_TIMEOUT = 120.0
+DEFAULT_MAX_TOTAL_SEC = 60.0
 DEFAULT_OUTCOME_LIMIT = 10_000
 DEFAULT_POLL_SEC = 2.0
-DEFAULT_OUTCOME_TIMEOUT = 7200.0
+DEFAULT_OUTCOME_TIMEOUT = 60.0
+
+
+class TotalBudgetExceeded(RuntimeError):
+    """Raised when wall-clock time exceeds ``--max-total-sec``."""
+
+
+def _check_run_end(run_end: float | None) -> None:
+    if run_end is None:
+        return
+    if time.monotonic() >= run_end:
+        raise TotalBudgetExceeded(
+            "load test exceeded --max-total-sec wall clock budget"
+        )
 
 
 def _percentile_sorted(sorted_ms: list[float], p: float) -> float:
@@ -66,6 +81,8 @@ def _submit_batches(
     chunk_max: int,
     body: str,
     timeout: float,
+    *,
+    run_end: float | None,
 ) -> tuple[list[str], list[float]]:
     """Return (all message_ids, chunk_duration_seconds_list)."""
     if total < 1:
@@ -75,6 +92,8 @@ def _submit_batches(
     remaining = total
     base = api_base.rstrip("/")
     while remaining > 0:
+        if run_end is not None:
+            _check_run_end(run_end)
         chunk = min(chunk_max, remaining)
         t0 = time.perf_counter()
         r = client.post(
@@ -92,6 +111,72 @@ def _submit_batches(
         ids.extend(str(x) for x in mids)
         remaining -= chunk
     return ids, durs
+
+
+def _split_parallel_counts(total: int, parallel: int) -> list[int]:
+    """Split ``total`` into ``parallel`` positive counts (for concurrent HTTP admits)."""
+    if parallel < 1:
+        parallel = 1
+    if parallel == 1:
+        return [total]
+    parallel = min(parallel, total)
+    base = total // parallel
+    rem = total % parallel
+    return [base + (1 if i < rem else 0) for i in range(parallel)]
+
+
+def _submit_parallel_admission(
+    api_base: str,
+    total: int,
+    chunk_max: int,
+    body: str,
+    timeout: float,
+    *,
+    parallel: int,
+    run_end: float | None,
+) -> tuple[list[str], list[float], float]:
+    """Concurrent ``POST /messages/repeat`` from multiple threads (aggregate N1 driver).
+
+    Returns ``(all_ids, merged_chunk_durs, wall_sec)``. One ``httpx.Client`` per thread.
+    """
+    counts = _split_parallel_counts(total, parallel)
+    if len(counts) == 1:
+        with httpx.Client() as client:
+            t0 = time.perf_counter()
+            ids, durs = _submit_batches(
+                client,
+                api_base,
+                total,
+                chunk_max=min(chunk_max, total),
+                body=body,
+                timeout=timeout,
+                run_end=run_end,
+            )
+            return ids, durs, time.perf_counter() - t0
+
+    def _one(count: int) -> tuple[list[str], list[float]]:
+        with httpx.Client() as client:
+            return _submit_batches(
+                client,
+                api_base,
+                count,
+                chunk_max=min(chunk_max, count),
+                body=body,
+                timeout=timeout,
+                run_end=run_end,
+            )
+
+    wall0 = time.perf_counter()
+    merged_ids: list[str] = []
+    merged_durs: list[float] = []
+    with ThreadPoolExecutor(max_workers=len(counts)) as pool:
+        futures = [pool.submit(_one, c) for c in counts]
+        for fut in as_completed(futures):
+            ids, durs = fut.result()
+            merged_ids.extend(ids)
+            merged_durs.extend(durs)
+    wall = time.perf_counter() - wall0
+    return merged_ids, merged_durs, wall
 
 
 def _fetch_outcomes(
@@ -123,12 +208,25 @@ def _wait_all_terminals(
     limit: int,
     poll_sec: float,
     deadline_monotonic: float,
+    run_end: float | None,
     http_timeout: float,
-) -> tuple[set[str], float]:
-    """Poll success+failed lists until all ``needed`` ids seen. Returns (seen, elapsed_sec)."""
+) -> tuple[set[str], float, bool]:
+    """Poll success+failed lists until all ``needed`` ids seen.
+
+    Returns (seen, elapsed_sec, timed_out). ``timed_out`` is True when the loop
+    exited because ``deadline_monotonic`` or ``run_end`` was reached before
+    every id appeared.
+    """
     t0 = time.perf_counter()
     seen: set[str] = set()
-    while time.perf_counter() < deadline_monotonic:
+
+    def _loop_deadline() -> float:
+        ends = [deadline_monotonic]
+        if run_end is not None:
+            ends.append(run_end)
+        return min(ends)
+
+    while time.perf_counter() < _loop_deadline():
         for path in ("/messages/success", "/messages/failed"):
             items = _fetch_outcomes(client, api_base, path, limit, http_timeout)
             for it in items:
@@ -136,9 +234,11 @@ def _wait_all_terminals(
                 if isinstance(mid, str) and mid in needed:
                     seen.add(mid)
         if needed <= seen:
-            return seen, time.perf_counter() - t0
+            return seen, time.perf_counter() - t0, False
+        if run_end is not None:
+            _check_run_end(run_end)
         time.sleep(poll_sec)
-    return seen, time.perf_counter() - t0
+    return seen, time.perf_counter() - t0, True
 
 
 def main() -> int:
@@ -164,7 +264,15 @@ def main() -> int:
         default=int(os.environ.get("INSPECTIO_LOAD_TEST_CHUNK_MAX", DEFAULT_CHUNK_MAX)),
     )
     p.add_argument("--body", default="load-test body")
-    p.add_argument("--http-timeout-sec", type=float, default=DEFAULT_HTTP_TIMEOUT)
+    p.add_argument(
+        "--http-timeout-sec",
+        type=float,
+        default=float(
+            os.environ.get(
+                "INSPECTIO_LOAD_TEST_HTTP_TIMEOUT_SEC", str(DEFAULT_HTTP_TIMEOUT)
+            )
+        ),
+    )
     p.add_argument(
         "--wait-outcomes",
         action=argparse.BooleanOptionalAction,
@@ -177,11 +285,37 @@ def main() -> int:
         "--outcome-timeout-sec",
         type=float,
         default=DEFAULT_OUTCOME_TIMEOUT,
+        help=(
+            "Max seconds to poll for terminals after the last message is admitted "
+            "(default: 60). Exceeding this fails the run."
+        ),
+    )
+    p.add_argument(
+        "--max-total-sec",
+        type=float,
+        default=float(
+            os.environ.get("INSPECTIO_LOAD_TEST_MAX_TOTAL_SEC", DEFAULT_MAX_TOTAL_SEC)
+        ),
+        help=(
+            "Wall-clock cap from process start (default: 60). "
+            "Use 0 to disable (long N1 admit benches; rely on Kubernetes "
+            "activeDeadlineSeconds + kubectl wait instead). "
+            "When >0, align Job activeDeadlineSeconds and kubectl wait above this value."
+        ),
     )
     p.add_argument(
         "--json-summary",
         action="store_true",
         help="Print one JSON object with metrics to stdout",
+    )
+    p.add_argument(
+        "--parallel-admission",
+        type=int,
+        default=int(os.environ.get("INSPECTIO_LOAD_TEST_PARALLEL_ADMISSION", "1")),
+        help=(
+            "Concurrent HTTP clients issuing /messages/repeat (default: 1). "
+            "Use >1 to measure aggregate admit RPS across Service load-balanced API pods (N1)."
+        ),
     )
     args = p.parse_args()
 
@@ -195,104 +329,165 @@ def main() -> int:
 
     sizes = _parse_sizes(args.sizes)
     timeout = float(args.http_timeout_sec)
+    max_total = float(args.max_total_sec)
+    run_end: float | None
+    if max_total <= 0:
+        run_end = None
+        log.info("max-total-sec disabled (no driver wall clock cap)")
+    else:
+        run_end = time.monotonic() + max_total
 
     summaries: list[dict[str, Any]] = []
 
-    with httpx.Client() as client:
-        r = client.get(f"{api_base.rstrip('/')}/healthz", timeout=timeout)
-        r.raise_for_status()
-        log.info("healthz ok from %s", api_base)
+    try:
+        with httpx.Client() as client:
+            _check_run_end(run_end)
+            r = client.get(f"{api_base.rstrip('/')}/healthz", timeout=timeout)
+            r.raise_for_status()
+            log.info("healthz ok from %s", api_base)
 
-        for n in sizes:
-            log.info("phase size=%s admission start", n)
-            t0 = time.perf_counter()
-            ids, chunk_durs = _submit_batches(
-                client,
-                api_base,
-                n,
-                chunk_max=min(args.chunk_max, n),
-                body=args.body,
-                timeout=timeout,
-            )
-            admission_sec = time.perf_counter() - t0
-            chunk_ms = sorted(d * 1000.0 for d in chunk_durs)
-            needed = set(ids)
-
-            phase: dict[str, Any] = {
-                "size": n,
-                "admission_sec": round(admission_sec, 3),
-                "admission_rps": round(n / admission_sec, 2)
-                if admission_sec > 0
-                else 0.0,
-                "chunks": len(chunk_durs),
-            }
-            if chunk_ms:
-                phase["chunk_latency_ms_p50"] = round(
-                    _percentile_sorted(chunk_ms, 50), 2
+            for n in sizes:
+                _check_run_end(run_end)
+                par = max(1, int(args.parallel_admission))
+                log.info(
+                    "phase size=%s admission start (parallel_admission=%s)",
+                    n,
+                    par,
                 )
-                phase["chunk_latency_ms_p95"] = round(
-                    _percentile_sorted(chunk_ms, 95), 2
-                )
-                phase["chunk_latency_ms_p99"] = round(
-                    _percentile_sorted(chunk_ms, 99), 2
-                )
-
-            if args.wait_outcomes:
-                if n > args.outcome_limit:
-                    log.warning(
-                        "size %s > outcome-limit %s; drain may never complete. "
-                        "Raise INSPECTIO_OUTCOMES_MAX_LIMIT on API/notification or lower size.",
+                if par > 1:
+                    ids, chunk_durs, admission_sec = _submit_parallel_admission(
+                        api_base,
                         n,
-                        args.outcome_limit,
+                        chunk_max=args.chunk_max,
+                        body=args.body,
+                        timeout=timeout,
+                        parallel=par,
+                        run_end=run_end,
                     )
-                deadline = time.monotonic() + float(args.outcome_timeout_sec)
-                seen, drain_sec = _wait_all_terminals(
-                    client,
-                    api_base,
-                    needed,
-                    limit=min(args.outcome_limit, max(n, 1)),
-                    poll_sec=float(args.outcome_poll_sec),
-                    deadline_monotonic=deadline,
-                    http_timeout=timeout,
-                )
-                phase["drain_sec"] = round(drain_sec, 3)
-                phase["terminals_seen"] = len(seen)
-                phase["drain_complete"] = needed <= seen
-                if not phase["drain_complete"]:
-                    log.error(
-                        "drain incomplete: need=%s seen=%s",
-                        len(needed),
-                        len(seen & needed),
+                else:
+                    t0 = time.perf_counter()
+                    ids, chunk_durs = _submit_batches(
+                        client,
+                        api_base,
+                        n,
+                        chunk_max=min(args.chunk_max, n),
+                        body=args.body,
+                        timeout=timeout,
+                        run_end=run_end,
                     )
-                    if args.json_summary:
-                        summaries.append(phase)
-                        print(json.dumps({"ok": False, "phases": summaries}, indent=2))
-                    return 1
-                e2e = admission_sec + drain_sec
-                phase["e2e_sec"] = round(e2e, 3)
-                phase["e2e_rps"] = round(n / e2e, 2) if e2e > 0 else 0.0
-                log.info(
-                    "phase size=%s admission_rps=%s e2e_rps=%s drain_sec=%s",
-                    n,
-                    phase["admission_rps"],
-                    phase.get("e2e_rps"),
-                    phase.get("drain_sec"),
-                )
-            else:
-                log.info(
-                    "phase size=%s admission_rps=%s (no outcome wait)",
-                    n,
-                    phase["admission_rps"],
-                )
+                    admission_sec = time.perf_counter() - t0
+                chunk_ms = sorted(d * 1000.0 for d in chunk_durs)
+                needed = set(ids)
 
-            summaries.append(phase)
+                phase: dict[str, Any] = {
+                    "size": n,
+                    "max_total_sec_cap": None
+                    if run_end is None
+                    else round(max_total, 3),
+                    "parallel_admission": par,
+                    "admission_sec": round(admission_sec, 3),
+                    "admission_rps": round(n / admission_sec, 2)
+                    if admission_sec > 0
+                    else 0.0,
+                    "chunks": len(chunk_durs),
+                }
+                if chunk_ms:
+                    phase["chunk_latency_ms_p50"] = round(
+                        _percentile_sorted(chunk_ms, 50), 2
+                    )
+                    phase["chunk_latency_ms_p95"] = round(
+                        _percentile_sorted(chunk_ms, 95), 2
+                    )
+                    phase["chunk_latency_ms_p99"] = round(
+                        _percentile_sorted(chunk_ms, 99), 2
+                    )
 
-    out = {"ok": True, "api_base": api_base, "phases": summaries}
-    if args.json_summary:
-        print(json.dumps(out, indent=2))
-    else:
-        print(json.dumps(out, indent=2))
-    return 0
+                if args.wait_outcomes:
+                    if n > args.outcome_limit:
+                        log.warning(
+                            "size %s > outcome-limit %s; drain may never complete. "
+                            "Raise INSPECTIO_OUTCOMES_MAX_LIMIT on API/notification or lower size.",
+                            n,
+                            args.outcome_limit,
+                        )
+                    outcome_budget = float(args.outcome_timeout_sec)
+                    deadline = time.monotonic() + outcome_budget
+                    seen, drain_sec, timed_out = _wait_all_terminals(
+                        client,
+                        api_base,
+                        needed,
+                        limit=min(args.outcome_limit, max(n, 1)),
+                        poll_sec=float(args.outcome_poll_sec),
+                        deadline_monotonic=deadline,
+                        run_end=run_end,
+                        http_timeout=timeout,
+                    )
+                    phase["drain_sec"] = round(drain_sec, 3)
+                    phase["outcome_wait_budget_sec"] = round(outcome_budget, 3)
+                    phase["terminals_seen"] = len(seen)
+                    phase["drain_complete"] = needed <= seen
+                    if not phase["drain_complete"]:
+                        phase["outcome_wait_timed_out"] = timed_out
+                        if run_end is not None and time.monotonic() >= run_end:
+                            log.error(
+                                "hard fail: exceeded --max-total-sec wall clock "
+                                "(need=%s terminals, saw %s)",
+                                len(needed),
+                                len(seen & needed),
+                            )
+                        else:
+                            log.error(
+                                "hard fail: outcome wait exceeded %.3fs after messages were sent "
+                                "(need=%s terminals, saw %s in window)",
+                                outcome_budget,
+                                len(needed),
+                                len(seen & needed),
+                            )
+                        if args.json_summary:
+                            summaries.append(phase)
+                            print(
+                                json.dumps({"ok": False, "phases": summaries}, indent=2)
+                            )
+                        return 1
+                    e2e = admission_sec + drain_sec
+                    phase["e2e_sec"] = round(e2e, 3)
+                    phase["e2e_rps"] = round(n / e2e, 2) if e2e > 0 else 0.0
+                    log.info(
+                        "phase size=%s admission_rps=%s e2e_rps=%s drain_sec=%s",
+                        n,
+                        phase["admission_rps"],
+                        phase.get("e2e_rps"),
+                        phase.get("drain_sec"),
+                    )
+                else:
+                    log.info(
+                        "phase size=%s admission_rps=%s (no outcome wait)",
+                        n,
+                        phase["admission_rps"],
+                    )
+
+                summaries.append(phase)
+
+        out = {"ok": True, "api_base": api_base, "phases": summaries}
+        if args.json_summary:
+            print(json.dumps(out, indent=2))
+        else:
+            print(json.dumps(out, indent=2))
+        return 0
+    except TotalBudgetExceeded as e:
+        log.error("%s", e)
+        if args.json_summary:
+            print(
+                json.dumps(
+                    {
+                        "ok": False,
+                        "error": "max_total_sec_exceeded",
+                        "phases": summaries,
+                    },
+                    indent=2,
+                )
+            )
+        return 1
 
 
 if __name__ == "__main__":
