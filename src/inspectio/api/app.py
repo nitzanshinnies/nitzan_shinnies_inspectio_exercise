@@ -16,10 +16,16 @@ from inspectio.settings import Settings
 async def _lifespan(app: FastAPI):
     settings = Settings()
     app.state.settings = settings
-    app.state.ingest_producer = SqsFifoIngestProducer(settings)
-    async with httpx.AsyncClient() as client:
-        app.state.http_client = client
-        yield
+    producer = SqsFifoIngestProducer(settings)
+    app.state.ingest_producer = producer
+    await producer.start()
+    try:
+        limits = httpx.Limits(max_connections=256, max_keepalive_connections=64)
+        async with httpx.AsyncClient(limits=limits) as client:
+            app.state.http_client = client
+            yield
+    finally:
+        await producer.stop()
 
 
 app = FastAPI(

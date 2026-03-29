@@ -1,0 +1,54 @@
+# In-cluster **admit-only** N1-style run: many concurrent `POST /messages/repeat` streams.
+# Patch image to your ECR tag before apply:
+#   IMG=$(kubectl -n inspectio get deploy inspectio-api -o jsonpath='{.spec.template.spec.containers[0].image}')
+#   sed "s|image: inspectio-app:latest|image: ${IMG}|" deploy/kubernetes/load-test-high-parallel-admit-job.yaml | kubectl apply -f -
+#
+# **Scheduling:** use **small** `resources.requests.cpu` on tight clusters (e.g. 2-node EKS);
+# high requests (2–4 cores) often stay Pending with `Insufficient cpu`. Bursts use `limits` instead.
+#
+# Example wait (align with activeDeadlineSeconds):
+#   kubectl -n inspectio wait --for=condition=complete job/inspectio-load-test-10k-admit --timeout=2h
+#   kubectl -n inspectio logs job/inspectio-load-test-10k-admit
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: inspectio-load-test-10k-admit
+  namespace: inspectio
+spec:
+  ttlSecondsAfterFinished: 86400
+  backoffLimit: 0
+  activeDeadlineSeconds: 7200
+  template:
+    spec:
+      serviceAccountName: inspectio-app
+      restartPolicy: Never
+      containers:
+        - name: driver
+          image: inspectio-app:latest
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+          env:
+            - name: INSPECTIO_LOAD_TEST_API_BASE
+              value: http://inspectio-api:8000
+          args:
+            - python
+            - scripts/full_flow_load_test.py
+            - --kubernetes
+            - --sizes
+            - "100000"
+            - --chunk-max
+            - "2000"
+            - --parallel-admission
+            - "64"
+            - --http-timeout-sec
+            - "300"
+            - --max-total-sec
+            - "0"
+            - --no-wait-outcomes
+            - --json-summary

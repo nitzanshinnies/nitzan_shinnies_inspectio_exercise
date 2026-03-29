@@ -10,7 +10,7 @@ import httpx
 import redis.asyncio as redis
 
 from inspectio.domain.sharding import owned_shard_range
-from inspectio.ingest.sqs_fifo_consumer import SqsFifoBatchFetcher
+from inspectio.ingest.sqs_fifo_consumer import RawSqsMessage, SqsFifoBatchFetcher
 from inspectio.journal.replay import load_snapshot_if_present
 from inspectio.journal.writer import (
     JournalWriter,
@@ -24,6 +24,9 @@ from inspectio.worker.runtime import WorkerRuntime
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("inspectio.worker")
+logging.getLogger("aiobotocore.credentials").setLevel(logging.WARNING)
+logging.getLogger("botocore.credentials").setLevel(logging.WARNING)
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
 async def _snapshot_loop(
@@ -67,26 +70,45 @@ async def _sqs_loop(
     stop: asyncio.Event,
 ) -> None:
     fetcher = SqsFifoBatchFetcher(settings)
-    while not stop.is_set():
-        try:
-            batch = await fetcher.receive_messages(max_messages=10, wait_seconds=20)
-        except Exception as exc:
-            log.exception("sqs receive failed: %s", exc)
-            await asyncio.sleep(1.0)
-            continue
-        if not batch:
-            continue
-        for raw in batch:
+    await fetcher.start()
+    try:
+        while not stop.is_set():
             try:
-                await process_raw_sqs_message(
-                    raw,
-                    settings=settings,
-                    writer=journal,
-                    redis_client=redis_client,
-                    fetcher=fetcher,
-                )
-            except Exception:
-                log.exception("ingest handler failed")
+                batch = await fetcher.receive_messages(max_messages=10, wait_seconds=20)
+            except Exception as exc:
+                log.exception("sqs receive failed: %s", exc)
+                await asyncio.sleep(1.0)
+                continue
+            if not batch:
+                continue
+
+            async def _one(raw: RawSqsMessage) -> tuple[bool, int | None]:
+                try:
+                    return await process_raw_sqs_message(
+                        raw,
+                        settings=settings,
+                        writer=journal,
+                        redis_client=redis_client,
+                    )
+                except Exception:
+                    log.exception("ingest handler failed")
+                    return False, None
+
+            outcomes = await asyncio.gather(*(_one(r) for r in batch))
+            to_delete: list[str] = []
+            shards_to_flush: set[int] = set()
+            for raw, outcome in zip(batch, outcomes, strict=True):
+                should_delete, shard_flush = outcome
+                if should_delete:
+                    to_delete.append(raw.receipt_handle)
+                    if shard_flush is not None:
+                        shards_to_flush.add(shard_flush)
+            for sid in shards_to_flush:
+                await journal.flush_shard(sid)
+            for i in range(0, len(to_delete), 10):
+                await fetcher.delete_messages_batch(to_delete[i : i + 10])
+    finally:
+        await fetcher.stop()
 
 
 async def _run() -> None:
@@ -102,6 +124,7 @@ async def _run() -> None:
     shard_ids = list(range(start, end))
     hwm = await bootstrap_hwm_for_shards(settings, shard_ids)
     journal = JournalWriter(settings, initial_hwm=hwm)
+    await journal.start()
     runtime = WorkerRuntime(settings, journal, http_client)
     scheduler_surface.configure_runtime(runtime)
 
@@ -116,17 +139,24 @@ async def _run() -> None:
                 if snap is not None:
                     runtime.restore_snapshot_pending(snap.pending)
 
+    sqs_tasks = [
+        asyncio.create_task(_sqs_loop(settings, journal, redis_client, stop))
+        for _ in range(settings.sqs_receive_concurrency)
+    ]
     tasks = [
-        asyncio.create_task(_sqs_loop(settings, journal, redis_client, stop)),
+        *sqs_tasks,
         asyncio.create_task(
             _wakeup_loop(stop, settings.wakeup_interval_ms),
         ),
+        asyncio.create_task(runtime.terminal_retry_loop(stop)),
         asyncio.create_task(_journal_flush_loop(journal, stop)),
         asyncio.create_task(_snapshot_loop(runtime, journal, settings, stop)),
     ]
     try:
         await asyncio.gather(*tasks)
     finally:
+        await journal.flush_all()
+        await journal.stop()
         await http_client.aclose()
         await redis_client.aclose()
 

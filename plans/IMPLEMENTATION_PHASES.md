@@ -4,7 +4,7 @@ This document orders delivery for the **`inspectio`** package described in **`NE
 
 **Normative spec:** the blueprint wins on behavior; this file wins on **order** and **PR boundaries**.
 
-**SQS FIFO admission (throughput):** `plans/SQS_FIFO_THROUGHPUT_AND_ADMISSION_PLAN.md` documents FIFO batch limits (10 per `SendMessageBatch`), **`MessageGroupId`** ordering, when parallel admission is safe (across groups vs within a group), backpressure, and how to validate aggregate throughput in-cluster. Use it alongside **§17** when working on **`src/inspectio/ingest/sqs_fifo_producer.py`**.
+**SQS FIFO admission (throughput):** `plans/SQS_FIFO_THROUGHPUT_AND_ADMISSION_PLAN.md` documents FIFO batch limits (10 per `SendMessageBatch`), **`MessageGroupId`** routing, parallel admission **across** groups vs serialized pipelines **within** a group, backpressure, and how to validate aggregate throughput in-cluster. Use it alongside **§17** when working on **`src/inspectio/ingest/sqs_fifo_producer.py`**.
 
 ### `v1_obsolete` boundary (agents — **hard**)
 
@@ -24,7 +24,7 @@ Same rule appears in blueprint **§29.11** (forbidden list).
 | Tier | Phases | Ready for unattended agents? |
 |------|--------|------------------------------|
 | **A** | **P0–P2** | **High** — file paths, math, and codecs are fully specified in **§29.2** + **§6** / **§16–18**; few integration unknowns. |
-| **B** | **P3–P5** | **Medium** — must wire **async** I/O, LocalStack/moto endpoints, and **§18.3** ordering; agents should **cite blueprint sections** in PRs and add integration tests before merging. |
+| **B** | **P3–P5** | **Medium** — must wire **async** I/O, LocalStack/moto endpoints, and **§18.3** (journal durable before **DeleteMessage**); agents should **cite blueprint sections** in PRs and add integration tests before merging. |
 | **C** | **P6** | **Medium–hard** — concurrency (**§20.3.1**, **§29.9**), state machine + journal interleaving; highest bug risk; prefer **human review** or a second agent pass focused on **TC-CON-***. |
 | **D** | **P7–P8** | **Medium** — Redis list semantics, proxy error handling, snapshot/replay edge cases (**TC-REC-003**). |
 | **E** | **P9–P10** | **Environment-dependent** — needs working **Docker**, often **AWS/EKS** credentials; agents cannot “finish” P10 without a real cluster and policy allow-list. |
