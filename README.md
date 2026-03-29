@@ -15,9 +15,16 @@ Implementation targets **v3** only. **Normative docs:** **`plans/ASSIGNMENT.pdf`
 
 ## V3 SQS (phase P2)
 
-- **Standard bulk queue** (not FIFO) for **`BulkIntentV1`**: LocalStack init creates **`inspectio-v3-bulk`** (override with **`INSPECTIO_V3_BULK_QUEUE_NAME`**) and a placeholder send queue **`inspectio-v3-send-0`** (**`INSPECTIO_V3_SEND_QUEUE_NAME`**) for P3.
+- **Standard bulk queue** (not FIFO) for **`BulkIntentV1`**: LocalStack init creates **`inspectio-v3-bulk`** (override with **`INSPECTIO_V3_BULK_QUEUE_NAME`**) and **`inspectio-v3-send-0` … `send-(K-1)`** for **`K` = `INSPECTIO_V3_SEND_SHARD_COUNT`** (default **2** in compose).
 - **Environment:** **`INSPECTIO_V3_BULK_QUEUE_URL`** (required for real enqueue), **`AWS_ENDPOINT_URL`** (e.g. `http://127.0.0.1:4566` against compose LocalStack), **`AWS_DEFAULT_REGION`**, **`AWS_ACCESS_KEY_ID`** / **`AWS_SECRET_ACCESS_KEY`** (defaults **`test`/`test`** for LocalStack). Use **`build_sqs_bulk_enqueue_from_env()`** from **`inspectio.v3.settings`** or construct **`SqsBulkEnqueue`** manually.
 - **Integration test (opt-in):** with LocalStack healthy, set **`INSPECTIO_SQS_INTEGRATION=1`** and **`INSPECTIO_V3_BULK_QUEUE_URL`** to your queue URL (example: `http://127.0.0.1:4566/000000000000/inspectio-v3-bulk`), then run **`pytest tests/integration/test_v3_sqs_bulk_roundtrip.py -m integration`**. CI without Docker leaves these unset so the test is skipped.
+
+## V3 expander (phase P3)
+
+- **`inspectio.v3.expander`**: long-poll **`INSPECTIO_V3_BULK_QUEUE_URL`**, parse **`BulkIntentV1`**, emit **N × `SendUnitV1`** with **`stable_hash(messageId) % K`** routing to **`INSPECTIO_V3_SEND_QUEUE_URLS`** (comma-separated, length must equal **`INSPECTIO_V3_SEND_SHARD_COUNT`**). **`SendMessageBatch`** (chunks of 10) per shard; throttle-style batch failures retry with the same backoff helper as P2. **`DeleteMessage`** on the bulk receipt only after all publishes succeed; if publish fails, the bulk message becomes visible again after **`INSPECTIO_V3_BULK_VISIBILITY_TIMEOUT`** (visibility timeout on receive).
+- **Dedupe (single replica):** in-memory LRU of bulk **SQS `MessageId`** after successful publish; redelivery after publish skips fan-out and only deletes (multi-replica dedupe would use **Redis `SETNX`** — not implemented here).
+- **Run:** **`inspectio-v3-expander`** (console script) or **`python -m inspectio.v3.expander`** with env set.
+- **Integration (opt-in):** **`INSPECTIO_EXPANDER_INTEGRATION=1`**, LocalStack queues created, then **`pytest tests/integration/test_v3_expander_roundtrip.py -m integration`**.
 
 ## Local stack
 

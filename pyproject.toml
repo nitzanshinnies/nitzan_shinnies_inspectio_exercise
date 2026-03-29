@@ -19,6 +19,9 @@ dependencies = [
     "uvicorn[standard]>=0.27.0",
 ]
 
+[project.scripts]
+inspectio-v3-expander = "inspectio.v3.expander.main:main"
+
 [project.optional-dependencies]
 dev = ["pytest>=7.4.0", "pytest-asyncio>=0.23.0"]
 

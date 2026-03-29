@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-import hashlib
+from inspectio.v3.domain.shard_index import stable_shard_index
 
 
 def predicted_shard_index(*, batch_correlation_id: str, shard_count: int) -> int:
-    k = shard_count if shard_count >= 1 else 1
-    digest = hashlib.sha256(batch_correlation_id.encode("utf-8")).digest()
-    return int.from_bytes(digest[:8], "big") % k
+    return stable_shard_index(key=batch_correlation_id, shard_count=shard_count)
