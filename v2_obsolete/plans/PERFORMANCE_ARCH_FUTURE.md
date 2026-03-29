@@ -1,6 +1,6 @@
 # Performance — larger architectural options (do not lose)
 
-These are **not** implemented in the default greenfield path; they trade blueprint constraints, operational complexity, or correctness surface area for throughput. Revisit when **durability + performance** dominate. **Ingest message order is not a product NFR** (see **`plans/SQS_FIFO_THROUGHPUT_AND_ADMISSION_PLAN.md`**); options below still require **§17 / §29** review when they change the durable boundary or shard routing.
+These are **not** implemented in the default greenfield path; they trade blueprint constraints, operational complexity, or correctness surface area for throughput. Revisit when **durability + performance** dominate. **Ingest message order is not a product NFR** (see **`SQS_FIFO_THROUGHPUT_AND_ADMISSION_PLAN.md`**); options below still require **§17 / §29** review when they change the durable boundary or shard routing.
 
 ## 1. Ingest transport
 

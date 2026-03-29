@@ -1,4 +1,4 @@
-"""P0: pytest markers per blueprint §28.2 / IMPLEMENTATION_PHASES P0."""
+"""P0: pytest markers per archived blueprint §28.2 / v2_obsolete/plans/IMPLEMENTATION_PHASES P0."""
 
 from __future__ import annotations
 

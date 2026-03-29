@@ -2,7 +2,7 @@
 
 **Autonomous agents:** implement **§29** as the locked baseline (layout, **SQS FIFO ingest**, env, internal HTTP, journal sequences). **§29** overrides ambiguous text elsewhere. **Do not** implement by importing or copying **`v1_obsolete`** / **`inspectio_exercise`** Python code — see **§29.11**.
 
-**Implementation sequencing:** **`plans/IMPLEMENTATION_PHASES.md`** — phased PR plan (greenfield code is **not** required to live in the same change set as this blueprint).
+**Implementation sequencing:** **`IMPLEMENTATION_PHASES.md`** — phased PR plan (greenfield code is **not** required to live in the same change set as this blueprint).
 
 ## 1) Goal
 
@@ -480,7 +480,7 @@ Base path: `/` on the **API gateway** service (behind ALB/Ingress). All JSON use
 
 *Informative for humans:* a summary-style body can still satisfy the PDF if you fork the spec; agents following this blueprint **must not**.
 
-**Implementation note (*informative*):** Use **batched** `SendMessageBatch` (**SQS FIFO**, max **10** messages per call per AWS limit) and **parallel batches across distinct `MessageGroupId`s** per **`plans/SQS_FIFO_THROUGHPUT_AND_ADMISSION_PLAN.md`**; still return **one** HTTP response.
+**Implementation note (*informative*):** Use **batched** `SendMessageBatch` (**SQS FIFO**, max **10** messages per call per AWS limit) and **parallel batches across distinct `MessageGroupId`s** per **`SQS_FIFO_THROUGHPUT_AND_ADMISSION_PLAN.md`**; still return **one** HTTP response.
 
 **Errors:** Same family as §15.1; `400` if `count` out of range.
 
@@ -781,7 +781,7 @@ sequenceDiagram
 
 ## 24) Agent implementation checklist
 
-**Primary order:** **`plans/IMPLEMENTATION_PHASES.md`** (**P0–P10**). The list below is a **compressed** mirror of **§29** acceptance.
+**Primary order:** **`IMPLEMENTATION_PHASES.md`** (**P0–P10**). The list below is a **compressed** mirror of **§29** acceptance.
 
 1. [ ] **P0–P2** — Package skeleton, pure domain, ingest + journal codecs (**§29.2**, **§6**, **§16–18**).
 2. [ ] **P3–P5** — API **SQS FIFO** admission, S3 journal flush, consumer + **§18.3** delete/ack (**§15**, **§17**).
@@ -827,8 +827,8 @@ The submitted **README** must answer:
 | 1.16 | **§29.11** + **`IMPLEMENTATION_PHASES.md`**: forbid using **`v1_obsolete` / `inspectio_exercise`** as implementation source; **§28.11** cross-check no longer treats v1 proxy docs as normative |
 | 1.15 | **`IMPLEMENTATION_PHASES.md`**: verbatim **§29.2** + **§29.3** tables; each phase **§29.2 touch rows** subset copied from blueprint |
 | 1.14 | **`IMPLEMENTATION_PHASES.md`**: agent-readiness table, per-phase template (Prerequisites / Read first / Touch list / Implement / Do not / Verify), fixed **§9** crosswalk, dependency graph |
-| 1.13 | **`plans/IMPLEMENTATION_PHASES.md`**; remove in-repo Python scaffold; **§29.13–29.14** compose = infra-only until implementation PR; blueprint pointer |
-| 1.12 | **§29.13–29.14** `docker-compose.yml`, **`deploy/docker/Dockerfile`**, LocalStack init, **`plans/openapi.yaml`**; root **`pyproject.toml`**, **`src/inspectio`** scaffold, **`.dockerignore`** |
+| 1.13 | **`IMPLEMENTATION_PHASES.md`**; remove in-repo Python scaffold; **§29.13–29.14** compose = infra-only until implementation PR; blueprint pointer |
+| 1.12 | **§29.13–29.14** `docker-compose.yml`, **`deploy/docker/Dockerfile`**, LocalStack init, **`../../plans/openapi.yaml`**; root **`pyproject.toml`**, **`src/inspectio`** scaffold, **`.dockerignore`** |
 | 1.11 | **§29** agent execution contract (locked **SQS FIFO** ingest, **src/inspectio** tree, full env table, internal HTTP, journal templates, forbidden list); **§17.1/17.5**, **§22**, **§24**, **§25** import path, **§15.2** repeat response; tier-3 **§29** precedence |
 | 1.10 | **ASSIGNMENT.pdf** clause-by-clause **§2.0** sweep (G1–AC6, P1–P8, N1–N5, D1–D3, O1–O2, X1); **§2.1** condensed index; **`GET /healthz`** marked **Ext**; **§15.3** `finalTimestamp` ↔ PDF “attempt time”; **§28.11** |
 | 1.9 | Drop normative **`shouldFail`** from public/ingest contract (**§15.1**, **§4.1**, **§2.1**, **TC-API-009**, **§28.11**); tests via fakes / **§25** only; *informative* note under **§15.1** |
@@ -888,7 +888,7 @@ Fakes **must** enforce the same JSON shapes as **§17.2** and **§18.2** so test
 ### 28.5 E2E (*optional*)
 
 - Docker Compose: API → **SQS FIFO** → worker → mock SMS → S3 → notification → GET outcomes.
-- **Do not** copy **`v1_obsolete/**`** e2e tests or treat them as a contract; derive scenarios from **§28.4** and this spec. External multi-container **workflow** patterns are fine informally—**behaviour** is **this** document + **`plans/openapi.yaml`** only.
+- **Do not** copy **`v1_obsolete/**`** e2e tests or treat them as a contract; derive scenarios from **§28.4** and this spec. External multi-container **workflow** patterns are fine informally—**behaviour** is **this** document + **`../../plans/openapi.yaml`** only.
 
 ### 28.6 Performance / load tests
 
@@ -1050,7 +1050,7 @@ Each case **must** exist as a `test_*` or `@pytest.mark.parametrize` expansion w
 
 ### 28.11 Spec validation audit (*maintenance*)
 
-Full-document cross-check: **ASSIGNMENT.pdf** (consolidated spec) via **§2.0** sweep + **§29** agent locks + **`plans/openapi.yaml`** + **`IMPLEMENTATION_PHASES.md`** + **internal** consistency (rev **1.18**). *Optional:* skim **`v1_obsolete/plans/*`** only for **rejected** deltas explicitly named in **§2.3** — **not** as a second normative spec.
+Full-document cross-check: **ASSIGNMENT.pdf** (consolidated spec) via **§2.0** sweep + **§29** agent locks + **`../../plans/openapi.yaml`** + **`IMPLEMENTATION_PHASES.md`** + **internal** consistency (rev **1.18**). *Optional:* skim **`v1_obsolete/plans/*`** only for **rejected** deltas explicitly named in **§2.3** — **not** as a second normative spec.
 
 | Area | Status | Notes |
 |------|--------|--------|
@@ -1073,7 +1073,7 @@ Full-document cross-check: **ASSIGNMENT.pdf** (consolidated spec) via **§2.0** 
 | **§18.3** ingest-first delete | **Pass** (post-fix) | **`INGEST_APPLIED`** durable before **DeleteMessage**; not only post-`SEND_RESULT` text. |
 | **§2.0** PDF sweep | **Pass** | Every numbered PDF clause (G1–O2 + extensions) mapped; **healthz** = **Ext** only |
 | **§29** agent contract | **Pass** | **SQS FIFO** ingest only, **src/inspectio** layout, env table, internal HTTP, journal templates |
-| **§29.13** artifacts | **Pass** | Infra **`docker-compose.yml`**, **`plans/openapi.yaml`**, LocalStack init; app Dockerfile/compose services per **`IMPLEMENTATION_PHASES.md`** |
+| **§29.13** artifacts | **Pass** | Infra **`docker-compose.yml`**, **`../../plans/openapi.yaml`**, LocalStack init; app Dockerfile/compose services per **`IMPLEMENTATION_PHASES.md`** |
 
 Implementers: when **ASSIGNMENT.pdf** changes, re-run **§2.0** + this table and bump **§27** version.
 
@@ -1142,7 +1142,7 @@ Agents **must** define every name below in `Settings` (defaults as shown; empty 
 | `INSPECTIO_AWS_REGION` | `us-east-1` | all | AWS region |
 | `INSPECTIO_S3_BUCKET` | *(empty)* | all | Journal + snapshots |
 | `INSPECTIO_INGEST_QUEUE_URL` | *(empty)* | all | **HTTPS** URL of **FIFO** SQS queue (`*.fifo`) for **`MessageIngestedV1`** |
-| `INSPECTIO_MAX_SQS_FIFO_INFLIGHT_GROUPS` | `64` | all | Cap concurrent **send** pipelines across distinct **`MessageGroupId`** (admission); see **`plans/SQS_FIFO_THROUGHPUT_AND_ADMISSION_PLAN.md`** |
+| `INSPECTIO_MAX_SQS_FIFO_INFLIGHT_GROUPS` | `64` | all | Cap concurrent **send** pipelines across distinct **`MessageGroupId`** (admission); see **`SQS_FIFO_THROUGHPUT_AND_ADMISSION_PLAN.md`** |
 | `INSPECTIO_SQS_RECEIVE_CONCURRENCY` | `4` | 5+ | Concurrent long-poll **receive** loops **per worker process** (each uses its own SQS client) |
 | `INSPECTIO_TOTAL_SHARDS` | `1024` | all | **§16** |
 | `INSPECTIO_WORKER_REPLICAS` | `1` | 1–2 | **Locked default `1`** until multi-consumer design is validated; **§29.6** |
@@ -1239,16 +1239,16 @@ Agents **must** keep the following files aligned with **§15**, **§29.3–29.6*
 
 | Artifact | Path | Purpose |
 |----------|------|---------|
-| **Docker Compose (infra)** | **`docker-compose.yml`** (repository root) | **Now:** **`redis`**, **`localstack`**, **`mock-sms`** (build **`deploy/mock-sms/Dockerfile`** — greenfield; **do not** use **`v1_obsolete/`** for compose images per **§29.11** / **`IMPLEMENTATION_PHASES.md`**, *`v1_obsolete` boundary*); ports **6379**, **4566**, **8090→mock**. **Implementation PR:** add **`inspectio-api`**, **`inspectio-worker`**, **`inspectio-notification`** per **`plans/IMPLEMENTATION_PHASES.md`**. |
+| **Docker Compose (infra)** | **`docker-compose.yml`** (repository root) | **Now:** **`redis`**, **`localstack`**, **`mock-sms`** (build **`deploy/mock-sms/Dockerfile`** — greenfield; **do not** use **`v1_obsolete/`** for compose images per **§29.11** / **`IMPLEMENTATION_PHASES.md`**, *`v1_obsolete` boundary*); ports **6379**, **4566**, **8090→mock**. **Implementation PR:** add **`inspectio-api`**, **`inspectio-worker`**, **`inspectio-notification`** per **`IMPLEMENTATION_PHASES.md`**. |
 | **LocalStack init** | **`deploy/localstack/init/ready.d/10-inspectio-aws.sh`** | Creates S3 bucket (default **`inspectio-test-bucket`**) and **SQS FIFO** queue (default name **`inspectio-ingest.fifo`**) |
 | **App image** | **`deploy/docker/Dockerfile`** | **Added in implementation PR** — single image, compose overrides **`command`** (**§29.2**) |
-| **HTTP contracts** | **`plans/openapi.yaml`** | Request/response shapes: **public**, **internal notification**, **mock `/send`** |
+| **HTTP contracts** | **`../../plans/openapi.yaml`** | Request/response shapes: **public**, **internal notification**, **mock `/send`** |
 
 **Target compose env (when app services exist):** `AWS_ENDPOINT_URL=http://localstack:4566` (omit for real AWS), **`INSPECTIO_S3_BUCKET=inspectio-test-bucket`** (LocalStack default; override as needed), **`INSPECTIO_INGEST_QUEUE_URL`** (FIFO queue URL from LocalStack; see **`docker-compose.yml`** default), **`INSPECTIO_SMS_URL=http://mock-sms:8080`**, **`INSPECTIO_NOTIFICATION_BASE_URL=http://inspectio-notification:8081`**, **`INSPECTIO_REDIS_URL=redis://redis:6379/0`**, plus **`AWS_*`** credentials (same as AWS CLI / `.env`; see root **`.env.example`**).
 
-**Drift rule:** any change to routes or JSON fields **updates `plans/openapi.yaml` first**, then code.
+**Drift rule:** any change to routes or JSON fields **updates `../../plans/openapi.yaml` first**, then code.
 
 ### 29.14 Implementation PR boundary (*informative*)
 
-Greenfield **Python source**, **`pyproject.toml`**, **app Dockerfiles**, and **compose app services** are intentionally **out of scope** for the blueprint-only track; follow **`plans/IMPLEMENTATION_PHASES.md`** for ordered delivery.
+Greenfield **Python source**, **`pyproject.toml`**, **app Dockerfiles**, and **compose app services** are intentionally **out of scope** for the blueprint-only track; follow **`IMPLEMENTATION_PHASES.md`** for ordered delivery.
 
