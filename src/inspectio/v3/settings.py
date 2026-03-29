@@ -1,4 +1,4 @@
-"""Environment-backed settings for v3 (P2 SQS, P3 expander, P4 send worker)."""
+"""Environment-backed settings for v3 (P2–P5: SQS, expander, worker, L1)."""
 
 from __future__ import annotations
 
@@ -177,3 +177,16 @@ def _sqs_client_kwargs(
     if secret_access_key:
         kw["aws_secret_access_key"] = secret_access_key
     return kw
+
+
+class V3L1Settings(BaseSettings):
+    """L1 edge: proxy browser API traffic to L2 (P5)."""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+        populate_by_name=True,
+    )
+
+    l2_base_url: str = Field(validation_alias="INSPECTIO_L2_BASE_URL")

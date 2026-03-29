@@ -53,8 +53,6 @@ services:
         "--port",
         "8000",
       ]
-    ports:
-      - "8000:8000"
     depends_on:
       redis:
         condition: service_started
@@ -65,6 +63,27 @@ services:
       REDIS_URL: redis://redis:6379/0
       INSPECTIO_V3_BULK_QUEUE_URL: http://localstack:4566/000000000000/inspectio-v3-bulk
       INSPECTIO_V3_SEND_SHARD_COUNT: ${INSPECTIO_V3_SEND_SHARD_COUNT:-1}
+
+  inspectio-l1:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile
+    command:
+      [
+        "uvicorn",
+        "inspectio.v3.l1.serve:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8080",
+      ]
+    ports:
+      - "8080:8080"
+    depends_on:
+      inspectio-api:
+        condition: service_started
+    environment:
+      INSPECTIO_L2_BASE_URL: http://inspectio-api:8000
 
   inspectio-expander:
     build:
