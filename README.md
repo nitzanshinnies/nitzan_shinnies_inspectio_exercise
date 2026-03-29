@@ -5,6 +5,10 @@ Implementation targets **v3** only. **Normative docs:** **`plans/ASSIGNMENT.pdf`
 - **`v2_obsolete/plans/`** — archived **v2** specifications and the **V2 EKS throughput post mortem** (historical only).
 - **`v2_obsolete/archive/`** — frozen **v2 implementation**: `src/inspectio`, `tests`, `scripts`, `deploy/docker`, `deploy/mock-sms`, `deploy/kubernetes` (see **`v2_obsolete/archive/README.md`**).
 
+## V3 package (phase P0)
+
+- **`inspectio.v3`** lives under **`src/inspectio/v3/`**: queue envelopes **`BulkIntentV1`** / **`SendUnitV1`** (Pydantic, JSON aliases `schemaVersion`, `traceId`, `batchCorrelationId`, `receivedAtMs`, `attemptsCompleted` = **0** before the first `try_send`), pure **`domain/retry_schedule`** (deadlines at **0, 500, 2000, 4000, 8000, 16000** ms after `receivedAtMs`), and **`assignment_surface`** (`Message`, **`try_send` → `bool`**, void **`send`** wrapper). Verify with **`pytest -m unit`**.
+
 ## Local stack
 
 The **repository root** `docker-compose.yml` currently runs **dependencies only**: **redis** and **localstack** (S3 + SQS). The v2 app containers were removed from compose when the code was archived; see **`v2_obsolete/archive/`** for the old stack. Compose project name is **`inspectio`** (`name:` in the file). Stop it with:
