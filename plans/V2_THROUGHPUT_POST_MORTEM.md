@@ -226,6 +226,10 @@ Scaling the node group **2 → 4** (even briefly) and raising API replicas **12 
 
 SQS FIFO uses a **deduplication interval** (on the order of **minutes**) for `MessageDeduplicationId`. Bursts of **retries** or **replay tests** inside that window can **suppress** legitimate sends if keys collide by mistake. **Action:** load and chaos tests should use **fresh idempotency keys** per logical message unless explicitly testing dedupe.
 
+### 10.17 LocalStack / moto vs real AWS
+
+CI and compose often use **LocalStack** or **moto** for SQS/S3. **Throttling behavior**, **FIFO partition scaling**, **TLS overhead**, and **cross-AZ latency** differ from **real EKS + real SQS** in `us-east-1`. **Action:** treat local integration tests as **functional** gates only; do **not** extrapolate RPS numbers from emulators to production without an in-cluster AWS run.
+
 ---
 
 ## 11. Revision history
@@ -235,3 +239,4 @@ SQS FIFO uses a **deduplication interval** (on the order of **minutes**) for `Me
 | 2026-03-29 | Agent session closeout | Initial post mortem from EKS experiments and code review |
 | 2026-03-29 | Architect review pass | Added §10 gaps (dual worker, t3 credits, observability, payload shape, e2e vs admit, statistics, ingress, worker replica coupling, Redis keys, mock SMS) |
 | 2026-03-29 | Second pass | §10.11–10.16: outcomes limit, uvicorn single-process, k8s networking, SQS visibility/redelivery, cost/blast radius, FIFO dedupe window; PR #69/#70 pointers |
+| 2026-03-29 | Third pass | §10.17 LocalStack/moto vs AWS RPS fidelity |
