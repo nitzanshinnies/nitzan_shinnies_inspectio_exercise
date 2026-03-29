@@ -15,6 +15,7 @@ This document is written for **autonomous coding agents** and humans implementin
 - Durable **S3 / journal** persistence and crash recovery (**ASSIGNMENT** AC5 deferred).
 - **Kinesis**, **MSK**, or any streaming bus **not** available in the target account.
 - Changing **ASSIGNMENT** method **signatures** (`send`, `newMessage`, `wakeup`) — wrappers/adapters allowed.
+- **External mock SMS** (**mock-sms** HTTP service) — **not used** in v3 phase 1; see **§3.6**.
 
 ---
 
@@ -40,7 +41,7 @@ This document is written for **autonomous coding agents** and humans implementin
 ### L4 — Workers
 
 - **Expander / fan-out workers:** consume **bulk admit** messages; generate **per-send-unit** messages (unique **logical id** per unit); publish to **sharded send queues** using **batched** APIs (`SendMessageBatch`, ≤10 entries per call) with **parallelism across queues**.
-- **Send workers:** consume **per-send-unit** messages; invoke the **`send(Message)`** path (HTTP to **mock-sms** or provider); maintain **in-memory** retry / schedule state per **§ASSIGNMENT**; expose hooks for **L5**.
+- **Send workers:** consume **per-send-unit** messages; invoke an **in-process, void `send(Message)`** (no HTTP, no **mock-sms**); maintain **in-memory** retry / schedule state per **§ASSIGNMENT**; expose hooks for **L5**. See **§3.6**.
 
 ### L5 — Persistence (stub in v3 phase 1)
 
@@ -53,12 +54,12 @@ This document is written for **autonomous coding agents** and humans implementin
 
 ### 2.1 Meaning (locked for this plan)
 
-- **Primary metric:** **aggregate rate of successful outbound `send()` calls** (or **mock-sms** `POST /send` equivalents) over a **steady window**, not **HTTP admissions/sec** alone.
+- **Primary metric:** **aggregate rate of completed in-process `send()` invocations** (the **void** implementation returns; count **calls**, not HTTP) over a **steady window**, not **HTTP admissions/sec** alone.
 - **Burst scenario:** a **single** user operation that targets **up to 10 000 recipients** should drive **~10 000 send invocations completed** within **~1 s** **once the pipeline is saturated** and downstream allows it. Treat this as an **SLO / stretch target**; agents must **measure** and report actual **p50/p99** latencies and **achieved RPS** using the **in-cluster** harness (**§8**).
 
 ### 2.2 Implications for design
 
-- **Admission** may complete in **milliseconds** if it only enqueues **O(1)** bulk work; **send** path must run with **very high concurrency** (many worker replicas × non-blocking I/O × connection pools).
+- **Admission** may complete in **milliseconds** if it only enqueues **O(1)** bulk work; **send** path must run with **very high concurrency** (many worker replicas × async tasks / threads as appropriate). **No** outbound HTTP on **`send`** in phase 1, so **connection pools** are not the bottleneck—**CPU**, **scheduling**, and **SQS receive/delete** throughput are.
 - **Per-unit messages** in SQS imply **receive → process → delete** capacity must match **10k/s**; **batch receive** and **horizontal scaling** of **send workers** are mandatory.
 - **Response bodies:** avoid **O(N)** JSON arrays on hot paths (v2 post mortem); return **correlation / batch ids** and fetch details via **async** APIs if needed.
 
@@ -125,6 +126,13 @@ Agents MUST add **`tests/unit`** for JSON round-trip and invalid payload rejecti
 
 - **Per-`messageId` exclusion:** only one concurrent **send / state mutation** per id (**ASSIGNMENT** concurrency rule). Use **`asyncio.Lock` per id** or **actor mailbox** pattern; **unit test** reentrancy / ordering.
 
+### 3.6 `send` implementation (v3 phase 1 — **void**, no mock-sms)
+
+- **ASSIGNMENT** specifies `boolean send(Message)`. For v3 phase 1, implement **`send(message: Message) -> None`** (or equivalent **void**) **inside the send worker process** — **no** **mock-sms** container, **no** HTTP client for SMS.
+- **Adapter for scheduling logic:** the worker’s **retry / terminal** code should treat **`send` completion without exception** as **`true`** (success). If tests need **failure** paths, inject a **`Callable[[Message], bool]`** or similar **test double** — **not** a network hop.
+- **Throughput:** the **void** body may be empty or **minimal** (e.g. increment counter); this isolates **queue + scheduler + Python concurrency** cost for **10k/s** experiments.
+- **Later:** replace the in-process **`send`** body with a real provider client (**HTTP** or SDK) behind the same interface **without** changing SQS envelopes.
+
 ---
 
 ## 4) Implementation phases (mergeable PRs)
@@ -155,10 +163,10 @@ Each phase: **tests first** (where feasible), then code, then **docs** (openapi,
 - **Tests:** **unit** for sharding, batching math, idempotency; **integration** with LocalStack **producer → consumer** chain.
 - **Verify:** end-to-end **one** bulk message → **N** visible messages across shards.
 
-### Phase P4 — Send worker + mock-sms integration
+### Phase P4 — Send worker + void `send()`
 
-- **Goal:** consume **SendUnitV1**, call **mock-sms**, implement **retry schedule** and **terminal** states **in memory**; expose outcomes API backing store.
-- **Tests:** **unit** for schedule table; **integration** with **mock-sms** container; **e2e** compose: **repeat** → **all terminals** observable.
+- **Goal:** consume **SendUnitV1**, call **in-process void `send(Message)`** (§3.6), implement **retry schedule** and **terminal** states **in memory**; expose outcomes API backing store (or internal index read by L2).
+- **Tests:** **unit** for schedule table and **send** adapter (**success** vs **injected failure**); **integration** with LocalStack queues only (**no** mock-sms); **e2e** compose (API + workers + LocalStack): **repeat** → **all terminals** observable.
 - **Verify:** `pytest -m e2e` (or marked subset) + manual **curl** smoke.
 
 ### Phase P5 — L1 static + proxy
@@ -175,7 +183,7 @@ Each phase: **tests first** (where feasible), then code, then **docs** (openapi,
 
 ### Phase P7 — In-cluster performance harness
 
-- **Goal:** extend **`scripts/full_flow_load_test.py`** (or **`v3` sibling script**) to report **send RPS** (from worker metrics or mock-sms audit endpoint), not only admission. **Job** YAML with **short** **`activeDeadlineSeconds`** per **`inspectio-testing-and-performance`** rule.
+- **Goal:** extend **`scripts/full_flow_load_test.py`** (or **`v3` sibling script**) to report **send RPS** (from **worker-exposed metrics** — e.g. **Prometheus** scrape, **stats** HTTP on worker/admin port, or **log-derived** counters), not only admission. **Job** YAML with **short** **`activeDeadlineSeconds`** per **`inspectio-testing-and-performance`** rule.
 - **Tests:** **unit** for metric parsing.
 - **Verify:** **in-cluster** run only for **AWS claims**; compose for **smoke**.
 
@@ -198,7 +206,7 @@ Each phase: **tests first** (where feasible), then code, then **docs** (openapi,
 - [ ] **L1** serves UI and proxies to **L2**; clients can use **single** **`/messages/repeat?count=N`**.
 - [ ] **L2** enqueues **bulk** intent to SQS (**O(1)** HTTP work w.r.t. **N** aside from request size limits).
 - [ ] **Expander** produces **N** **SendUnitV1** messages across **sharded** queues.
-- [ ] **Send workers** achieve **mock** **`send`** for all units with **retry** semantics per **ASSIGNMENT** (in memory).
+- [ ] **Send workers** run **void `send()`** for all units with **retry** semantics per **ASSIGNMENT** (in memory; **no** mock-sms).
 - [ ] **Outcomes** APIs return recent successes/failures per **openapi**.
 - [ ] **`pytest`** **unit + integration (+ e2e where enabled)** pass locally.
 - [ ] **Load script** documents how to measure **send RPS**; **AWS** numbers only from **in-cluster** run.
@@ -232,3 +240,4 @@ Agents **must not** hard-depend on these without explicit approval:
 | Date (UTC) | Note |
 |------------|------|
 | 2026-03-29 | Initial v3 async pipeline plan for agent implementation |
+| 2026-03-29 | Drop mock-sms for phase 1; send worker uses in-process void `send()` (§3.6) |
