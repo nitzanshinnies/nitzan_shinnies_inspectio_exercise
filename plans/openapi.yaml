@@ -4,7 +4,8 @@ info:
   version: "1.0.0"
   description: |
     Canonical JSON shapes. Implementations must match these schemas.
-    Source of truth narrative: plans/ASSIGNMENT.pdf + plans/V3_ASYNC_PIPELINE_IMPLEMENTATION_PLAN.md (implement v3; evolve this file with code)
+    Source of truth narrative: plans/ASSIGNMENT.pdf + plans/V3_ASYNC_PIPELINE_IMPLEMENTATION_PLAN.md.
+    Per-phase implementation specs: plans/v3_phases/ (P0–P7). Evolve this file with code (OpenAPI-first).
 
 tags:
   - name: public-api

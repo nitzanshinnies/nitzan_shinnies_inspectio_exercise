@@ -162,6 +162,8 @@ This document is written for **autonomous coding agents** and humans implementin
 
 ## 5) Implementation phases (mergeable PRs)
 
+**Detailed, agent-ready breakdown:** **`plans/v3_phases/README.md`** (per-phase specs **P0–P7**). **Tick matrix (implementation vs this doc):** **`plans/v3_phases/VALIDATION_CHECKLIST.md`**.
+
 Each phase: **tests first** where feasible; **four-group imports**; **type hints**; **atomic** functions.
 
 | Phase | Goal | Verify |
@@ -233,3 +235,7 @@ Each phase: **tests first** where feasible; **four-group imports**; **type hints
 | 2026-03-29 | Remove v1/v2 trees from repo; normative precedence without legacy specs; agent rule **#7** |
 | 2026-03-29 | Restore **`v2_obsolete/plans/`** archive (v2 specs + post mortem); **`v1_obsolete`** remains removed |
 | 2026-03-29 | **Physical v2 archive:** **`v2_obsolete/archive/`** holds frozen **`src/inspectio`**, **`tests`**, **`scripts`**, **`deploy/docker`**, **`deploy/mock-sms`**, **`deploy/kubernetes`**; repo root is v3 scaffold + deps-only compose |
+| 2026-03-29 | **Agent phase pack:** **`plans/v3_phases/`** — implementation-ready specs for **P0–P7** |
+| 2026-03-29 | **v3_phases** tightened: shorter docs, explicit alignment to queue topology, **L5** stub, **3.1** metric wording, **no Kinesis**, P6 **EKS/ECS/EC2** |
+| 2026-03-29 | **v3_phases** validated vs master plan: P5→P6 order, **4.8** outcomes options, PDF **NFR time** + thread-safe mapping, **README** rule **6**, **7.2** send RPS |
+| 2026-03-29 | **`plans/v3_phases/VALIDATION_CHECKLIST.md`** — checkbox matrix (traceability, layers, contracts, rules, **7.2**, AC map) |
