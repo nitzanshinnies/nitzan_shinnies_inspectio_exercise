@@ -1,8 +1,8 @@
 # Inspectio exercise
 
-Implementation targets **v3** only. **Normative docs:** **`plans/ASSIGNMENT.pdf`** (local, gitignored), **`plans/openapi.yaml`**, **`plans/V3_ASYNC_PIPELINE_IMPLEMENTATION_PLAN.md`**. **Do not** copy or import removed legacy stacks (v1/v2) — see **`.cursor/rules/inspectio-implementation-no-legacy.mdc`**.
+Implementation targets **v3** only. **Normative docs:** **`plans/ASSIGNMENT.pdf`** (local, gitignored), **`plans/openapi.yaml`**, **`plans/V3_ASYNC_PIPELINE_IMPLEMENTATION_PLAN.md`**. **Do not** copy or import legacy code paths — see **`.cursor/rules/inspectio-implementation-no-legacy.mdc`**.
 
-- **`plans/V2_THROUGHPUT_POST_MORTEM.md`** — optional historical notes from an earlier EKS throughput study (not a spec for v3).
+- **`v2_obsolete/plans/`** — archived **v2** specifications and the **V2 EKS throughput post mortem** (historical only; not an implementation spec for v3): blueprint, phased delivery, SQS FIFO throughput plan, performance options, **`V2_THROUGHPUT_POST_MORTEM.md`**.
 
 ## Local stack
 

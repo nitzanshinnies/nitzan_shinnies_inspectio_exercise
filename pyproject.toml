@@ -37,6 +37,7 @@ norecursedirs = [
     "node_modules",
     "venv",
     "{arch}",
+    "v2_obsolete",
 ]
 testpaths = ["tests"]
 markers = [

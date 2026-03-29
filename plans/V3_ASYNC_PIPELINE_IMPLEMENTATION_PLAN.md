@@ -33,7 +33,7 @@ This document is written for **autonomous coding agents** and humans implementin
 2. **`plans/openapi.yaml`** — update **before** code when HTTP shapes change; description should point at **this plan**.
 3. **This plan** — v3 pipeline only. **v1/v2 code and specs are removed from the repo** — do not restore FIFO-ingest v2 as a default path.
 4. **`nitzan_shinnies_inspectio_exercise/.cursor/rules/inspectio-testing-and-performance.mdc`** and workspace **`.cursor/rules/`** — **in-cluster** load tests, **bounded** timeouts, **EKS agent executes commands**, etc.
-5. **Optional:** **`plans/V2_THROUGHPUT_POST_MORTEM.md`** — **historical** measurement notes only; **not** normative for v3 implementation.
+5. **Optional:** **`v2_obsolete/plans/V2_THROUGHPUT_POST_MORTEM.md`** — **historical** measurement notes only; **not** normative for v3 implementation.
 
 **Out of scope for initial waves (explicit)**
 
@@ -231,3 +231,4 @@ Each phase: **tests first** where feasible; **four-group imports**; **type hints
 | 2026-03-29 | Drop mock-sms; void / bool `send` adapter (**§3.6** predecessor) |
 | 2026-03-29 | Coherence pass: **ASSIGNMENT §0** traceability, **§4.7** retry table, **§4.8** outcomes, **five** layers, PDF **AC** / **README** deliverables, fix internal **§** refs |
 | 2026-03-29 | Remove v1/v2 trees from repo; normative precedence without legacy specs; agent rule **#7** |
+| 2026-03-29 | Restore **`v2_obsolete/plans/`** archive (v2 specs + post mortem); **`v1_obsolete`** remains removed |

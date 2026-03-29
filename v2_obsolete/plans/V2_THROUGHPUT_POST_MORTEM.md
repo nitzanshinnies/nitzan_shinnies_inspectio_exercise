@@ -29,7 +29,7 @@ This document records **what we built**, **how we measured it on AWS EKS**, **wh
 
 **Worker:** Long-poll `ReceiveMessage`, Redis idempotency (**§17.4**), S3 journal template A (**§18.3**), then `DeleteMessage`.
 
-**Plans:** The archived FIFO throughput plan that accompanied this work was removed with the v2 tree; this document remains as a **historical** measurement write-up. **Product NFR:** cross-message **ingest order is not required** (journal / outcomes ordering semantics were separate).
+**Plans:** See **`SQS_FIFO_THROUGHPUT_AND_ADMISSION_PLAN.md`** in this folder for batch limits, parallelism, and in-cluster validation notes that match the measured stack. **Product NFR:** cross-message **ingest order is not required** (journal / outcomes ordering semantics were separate).
 
 ---
 
