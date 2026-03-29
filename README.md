@@ -2,31 +2,27 @@
 
 Implementation targets **v3** only. **Normative docs:** **`plans/ASSIGNMENT.pdf`** (local, gitignored), **`plans/openapi.yaml`**, **`plans/V3_ASYNC_PIPELINE_IMPLEMENTATION_PLAN.md`**. **Do not** copy or import legacy code paths — see **`.cursor/rules/inspectio-implementation-no-legacy.mdc`**.
 
-- **`v2_obsolete/plans/`** — archived **v2** specifications and the **V2 EKS throughput post mortem** (historical only; not an implementation spec for v3): blueprint, phased delivery, SQS FIFO throughput plan, performance options, **`V2_THROUGHPUT_POST_MORTEM.md`**.
+- **`v2_obsolete/plans/`** — archived **v2** specifications and the **V2 EKS throughput post mortem** (historical only).
+- **`v2_obsolete/archive/`** — frozen **v2 implementation**: `src/inspectio`, `tests`, `scripts`, `deploy/docker`, `deploy/mock-sms`, `deploy/kubernetes` (see **`v2_obsolete/archive/README.md`**).
 
 ## Local stack
 
-The **repository root** `docker-compose.yml` is the supported local stack for current services. Compose project name is **`inspectio`** (`name:` in the file). Stop it with:
+The **repository root** `docker-compose.yml` currently runs **dependencies only**: **redis** and **localstack** (S3 + SQS). The v2 app containers were removed from compose when the code was archived; see **`v2_obsolete/archive/`** for the old stack. Compose project name is **`inspectio`** (`name:` in the file). Stop it with:
 
 ```bash
 docker compose down
 ```
 
-Bring it up (rebuild when `Dockerfile` / deps change):
+Bring it up:
 
 ```bash
-docker compose up -d --build
+docker compose up -d
 ```
 
-Services: **redis**, **localstack** (S3 + SQS), **mock-sms** (image **`deploy/mock-sms/Dockerfile`**), **inspectio-api**, **inspectio-worker**, **inspectio-notification** (shared **`deploy/docker/Dockerfile`**) — exact set may change as v3 lands; see **`docker-compose.yml`**.
-
-| Service        | Host URL / port |
-|----------------|-----------------|
-| API            | `http://127.0.0.1:8000` — `GET /healthz` |
-| Notification   | `http://127.0.0.1:8081` |
-| Mock SMS       | `http://127.0.0.1:8090` |
-| LocalStack     | `http://127.0.0.1:4566` |
-| Redis          | `127.0.0.1:6379` |
+| Service    | Host URL / port |
+|------------|-----------------|
+| LocalStack | `http://127.0.0.1:4566` |
+| Redis      | `127.0.0.1:6379` |
 
 ### AWS S3 and credentials
 
@@ -38,22 +34,12 @@ LocalStack’s init script (**`deploy/localstack/init/ready.d/10-inspectio-aws.s
 
 Python package: **`pip install -e ".[dev]"`** from repo root (`src/inspectio/`).
 
-### Compose smoke
-
-After a full stack recycle (`docker compose up -d --build --force-recreate`), verify admission → worker → outcomes (exact steps depend on current v3 milestone):
-
-```bash
-python3 scripts/compose_smoke.py
-```
-
-Uses **`INSPECTIO_SMOKE_API`** (default `http://127.0.0.1:8000`). Exits **0** when the message appears in **`GET /messages/success`**.
-
 ### Port conflicts
 
-If another compose stack or local services already bind **6379**, **8000**, **8081**, **8090**, or **4566**, stop them before bringing this stack up.
+If another compose stack or local services already bind **6379** or **4566**, stop them before bringing this stack up.
 
 ### AWS (EKS) and in-cluster performance
 
-For **production-shaped** deploy and **throughput** numbers, use **`deploy/kubernetes/`** and the in-cluster **`Job`** in **`deploy/kubernetes/load-test-job.yaml`** (driver: **`scripts/full_flow_load_test.py`**). Do not treat laptop **`kubectl port-forward`** as authoritative AWS performance claims. See **`deploy/kubernetes/README.md`** for IAM, images, secrets, and how to read Job logs.
+v2 Kubernetes manifests and the load-test driver are under **`v2_obsolete/archive/deploy/kubernetes/`** and **`v2_obsolete/archive/scripts/`**. **`deploy/kubernetes/README.md`** describes how v3 will replace them. Do not treat laptop **`kubectl port-forward`** as authoritative AWS performance claims once v3 Jobs exist.
 
 Local assignment PDF (gitignored): **`plans/ASSIGNMENT.pdf`**.

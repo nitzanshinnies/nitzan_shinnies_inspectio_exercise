@@ -232,3 +232,4 @@ Each phase: **tests first** where feasible; **four-group imports**; **type hints
 | 2026-03-29 | Coherence pass: **ASSIGNMENT §0** traceability, **§4.7** retry table, **§4.8** outcomes, **five** layers, PDF **AC** / **README** deliverables, fix internal **§** refs |
 | 2026-03-29 | Remove v1/v2 trees from repo; normative precedence without legacy specs; agent rule **#7** |
 | 2026-03-29 | Restore **`v2_obsolete/plans/`** archive (v2 specs + post mortem); **`v1_obsolete`** remains removed |
+| 2026-03-29 | **Physical v2 archive:** **`v2_obsolete/archive/`** holds frozen **`src/inspectio`**, **`tests`**, **`scripts`**, **`deploy/docker`**, **`deploy/mock-sms`**, **`deploy/kubernetes`**; repo root is v3 scaffold + deps-only compose |

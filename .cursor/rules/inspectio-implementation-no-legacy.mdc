@@ -7,11 +7,11 @@ alwaysApply: true
 
 **Legacy stacks v1 and v2 are removed from this repository.** They must **not** be resurrected by copy-paste, **import**, path hacks, or **comments that instruct readers to open removed trees**.
 
-When editing **`src/inspectio/`**, **`tests/`**, **`scripts/`**, **`deploy/`**, **`docker-compose.yml`**, or **`pyproject.toml`**:
+When editing **`src/inspectio/`**, **`tests/`**, **`deploy/`**, **`docker-compose.yml`**, or **`pyproject.toml`** (and **`scripts/`** when that directory exists at repo root):
 
 - **Do not** `import inspectio_exercise` or any package path that belonged to removed code.
-- **Do not** use **`v2_obsolete/`** (or removed **`v1_obsolete/`**) as an **implementation** source in **`src/`** or **`tests/`** — no imports, copy-paste, or docstrings that tell readers to implement from those trees. **`v2_obsolete/plans/`** is an **archive** of the old spec and post mortem only.
+- **Do not** use **`v2_obsolete/`** (or removed **`v1_obsolete/`**) as an **implementation** source in **`src/`** or **`tests/`** — no imports, copy-paste, or docstrings that tell readers to implement from those trees. **`v2_obsolete/plans/`** and **`v2_obsolete/archive/`** are **history only** (spec, post mortem, frozen v2 code).
 - **Normative inputs for behavior:** **`plans/ASSIGNMENT.pdf`** (local, gitignored), **`plans/openapi.yaml`**, **`plans/V3_ASYNC_PIPELINE_IMPLEMENTATION_PLAN.md`**, and workspace **`.cursor/rules/`** where applicable.
 - **Historical markdown** under **`plans/`** (e.g. throughput post mortems) is **not** a spec to implement against unless the human explicitly says so.
 
-**Docker:** **`deploy/mock-sms/Dockerfile`** remains the mock image for stacks that still use it until v3 removes it per the v3 plan.
+**Docker:** the v2 mock-SMS image lives at **`v2_obsolete/archive/deploy/mock-sms/`** until v3 reintroduces a compose service per the v3 plan.

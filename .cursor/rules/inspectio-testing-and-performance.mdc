@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Inspectio: testing and performance discipline
 
-Applies when changing **`src/inspectio/`**, **`tests/`**, **`scripts/full_flow_load_test.py`**, or **`deploy/kubernetes/load-test*.yaml`**.
+Applies when changing **`src/inspectio/`**, **`tests/`**, or (when present) **`scripts/full_flow_load_test.py`** / **`deploy/kubernetes/load-test*.yaml`**. The v2 driver and Job YAMLs are archived under **`v2_obsolete/archive/`**; reinstate parallel paths at repo root when v3 ships them.
 
 ## Automated tests (v3)
 
@@ -24,10 +24,10 @@ Applies when changing **`src/inspectio/`**, **`tests/`**, **`scripts/full_flow_l
 
 ## Timeouts (fail fast)
 
-- **Smoke / full-flow Job** (**`deploy/kubernetes/load-test-job.yaml`**): **`activeDeadlineSeconds: 60`** and driver **`--max-total-sec`** aligned; operator **`kubectl wait`** on the order of **~60s** (see workspace **`inspectio-eks-agent-executes-deploy`**).
-- **Benchmark Jobs** (**`load-test-high-parallel-admit-job.yaml`**, **`n1-admit-bench-job.yaml`**): use **bounded** **`activeDeadlineSeconds`** (on the order of **minutes**, not hours). Set **`kubectl wait --timeout=...`** to **match or slightly exceed** the Job cap so stuck runs **fail visibly** instead of holding an operator slot for **hours**.
+- **Smoke / full-flow Job** (v2 reference: **`v2_obsolete/archive/deploy/kubernetes/load-test-job.yaml`**): **`activeDeadlineSeconds: 60`** and driver **`--max-total-sec`** aligned; operator **`kubectl wait`** on the order of **~60s** (see workspace **`inspectio-eks-agent-executes-deploy`**). Apply the same discipline to v3 Job YAMLs at repo root when added.
+- **Benchmark Jobs** (**`load-test-high-parallel-admit-job.yaml`**, **`n1-admit-bench-job.yaml`** in archive): use **bounded** **`activeDeadlineSeconds`** (on the order of **minutes**, not hours). Set **`kubectl wait --timeout=...`** to **match or slightly exceed** the Job cap so stuck runs **fail visibly** instead of holding an operator slot for **hours**.
 - **10k msg/s target:** when the system is healthy, phases should complete in **seconds**; multi-hour **`kubectl wait`** defaults are **not** acceptable for routine runs. If a one-off study needs a longer cap, **document the override** in the Job YAML comment and keep it explicit.
 
 ## Driver knobs
 
-- **`scripts/full_flow_load_test.py`**: **`--max-total-sec 0`** disables the script wall clock for long admits (then the **Job** deadline is the backstop). **`--http-timeout-sec`**, **`--outcome-timeout-sec`**, and **`--outcome-limit`** must stay consistent with **`INSPECTIO_OUTCOMES_MAX_LIMIT`** when using **`--wait-outcomes`** ( **`outcome-limit` must be ≥ batch size** or polling misses terminals).
+- **Archived v2 driver** **`v2_obsolete/archive/scripts/full_flow_load_test.py`**: **`--max-total-sec 0`** disables the script wall clock for long admits (then the **Job** deadline is the backstop). **`--http-timeout-sec`**, **`--outcome-timeout-sec`**, and **`--outcome-limit`** must stay consistent with **`INSPECTIO_OUTCOMES_MAX_LIMIT`** when using **`--wait-outcomes`** ( **`outcome-limit` must be ≥ batch size** or polling misses terminals). Mirror these constraints for any v3 replacement driver.
