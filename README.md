@@ -53,4 +53,8 @@ Uses **`INSPECTIO_SMOKE_API`** (default `http://127.0.0.1:8000`). Exits **0** wh
 
 If another compose stack or local services already bind **6379**, **8000**, **8081**, **8090**, or **4566**, stop them before bringing this stack up.
 
+### AWS (EKS) and in-cluster performance (P10)
+
+For **production-shaped** deploy and **throughput / E2E RPS** numbers, use **`deploy/kubernetes/`** and the in-cluster **`Job`** in **`deploy/kubernetes/load-test-job.yaml`** (driver: **`scripts/full_flow_load_test.py`**). **§28.6:** do not treat laptop **`port-forward`** results as authoritative AWS performance claims. See **`deploy/kubernetes/README.md`** for IAM, images, secrets, and how to read Job logs.
+
 Local assignment PDF (gitignored): **`plans/ASSIGNMENT.pdf`**.

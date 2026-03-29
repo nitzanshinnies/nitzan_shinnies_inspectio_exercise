@@ -12,7 +12,7 @@ from inspectio.ingest.ingest_consumer import (
     try_claim_idempotency,
 )
 from inspectio.ingest.schema import MessageIngestedV1
-from inspectio.ingest.sqs_fifo_consumer import RawSqsMessage, SqsFifoBatchFetcher
+from inspectio.ingest.sqs_fifo_consumer import RawSqsMessage
 from inspectio.journal.writer import JournalWriter
 from inspectio import scheduler_surface
 from inspectio.settings import Settings
@@ -26,20 +26,18 @@ async def process_raw_sqs_message(
     settings: Settings,
     writer: JournalWriter,
     redis_client: redis.Redis,
-    fetcher: SqsFifoBatchFetcher,
-) -> None:
-    """Apply ingest template A, delete SQS, then schedule first send."""
+) -> tuple[bool, int | None]:
+    """Apply ingest template A and schedule first send.
+
+    Returns ``(delete_receipt, shard_to_flush)`` where ``shard_to_flush`` is set
+    when ingest journal lines were appended (caller must flush that shard before
+    SQS delete). ``None`` when there is nothing new to flush for this message.
+    """
     data = json.loads(raw.body)
     ingested = MessageIngestedV1.model_validate(data)
     rt = scheduler_surface.require_runtime()
-    if not rt.owns_shard(ingested.shard_id):
-        log.warning(
-            "skip ingest shard not owned mid=%s shard=%s range=%s",
-            ingested.message_id,
-            ingested.shard_id,
-            rt.owned_range,
-        )
-        return
+    # Shared SQS consumption: any worker may ingest any shard.
+    # Shard ownership is still used for local snapshot partitioning.
     claim = await try_claim_idempotency(
         redis_client,
         settings,
@@ -48,12 +46,10 @@ async def process_raw_sqs_message(
     )
     if claim == "collision":
         log.error("idempotency collision for key=%s", ingested.idempotency_key)
-        await fetcher.delete_message(raw.receipt_handle)
-        return
+        return True, None
     if claim == "duplicate_same":
-        await fetcher.delete_message(raw.receipt_handle)
-        return
+        return True, None
     await append_ingest_template_a(writer, ingested)
-    await fetcher.delete_message(raw.receipt_handle)
     msg = rt.bootstrap_from_ingest(ingested)
     scheduler_surface.new_message(msg)
+    return True, ingested.shard_id

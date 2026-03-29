@@ -7,8 +7,9 @@ import uuid
 from typing import Annotated
 
 import httpx
+import orjson
 from fastapi import APIRouter, HTTPException, Query, Request, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 
 from inspectio.domain.sharding import shard_for_message
 from inspectio.ingest.ingest_producer import IngestPutInput, IngestUnavailableError
@@ -108,11 +109,18 @@ async def post_messages_repeat(
             status_code=503,
             content={"error": "ingest_unavailable", "detail": str(exc)},
         )
-    return {
-        "accepted": count,
-        "messageIds": [b.message_id for b in batch],
-        "shardIds": [b.shard_id for b in batch],
-    }
+    payload = orjson.dumps(
+        {
+            "accepted": count,
+            "messageIds": [b.message_id for b in batch],
+            "shardIds": [b.shard_id for b in batch],
+        }
+    )
+    return Response(
+        content=payload,
+        media_type="application/json",
+        status_code=status.HTTP_202_ACCEPTED,
+    )
 
 
 @router.get("/messages/success")

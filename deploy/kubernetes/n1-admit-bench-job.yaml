@@ -1,0 +1,53 @@
+# Long admission-only benchmark (aggregate N1). Apply with an image that includes scripts/.
+#
+# Timeouts (keep aligned):
+# - Driver: --max-total-sec 0 disables the script wall clock (otherwise large admits abort early).
+# - Job: activeDeadlineSeconds must exceed worst-case admit duration.
+# - Operator: kubectl wait --for=condition=complete --timeout=... must be >= expected runtime.
+#
+# Example:
+#   kubectl -n inspectio delete job inspectio-n1-admit-bench --ignore-not-found
+#   # set image to your ECR tag, then:
+#   kubectl apply -f deploy/kubernetes/n1-admit-bench-job.yaml
+#   kubectl -n inspectio wait --for=condition=complete job/inspectio-n1-admit-bench --timeout=45m
+#   kubectl -n inspectio logs job/inspectio-n1-admit-bench
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: inspectio-n1-admit-bench
+  namespace: inspectio
+spec:
+  ttlSecondsAfterFinished: 3600
+  activeDeadlineSeconds: 7200
+  backoffLimit: 0
+  template:
+    spec:
+      serviceAccountName: inspectio-app
+      restartPolicy: Never
+      containers:
+        - name: driver
+          image: inspectio-app:latest
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: "2"
+              memory: 1Gi
+          env:
+            - name: INSPECTIO_LOAD_TEST_API_BASE
+              value: http://inspectio-api:8000
+          args:
+            - python
+            - scripts/full_flow_load_test.py
+            - --kubernetes
+            - --sizes
+            - "8000"
+            - --parallel-admission
+            - "40"
+            - --chunk-max
+            - "200"
+            - --http-timeout-sec
+            - "300"
+            - --max-total-sec
+            - "0"
+            - --no-wait-outcomes
+            - --json-summary

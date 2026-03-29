@@ -46,7 +46,11 @@ async def append_ingest_template_a(
     writer: JournalWriter,
     ingested: MessageIngestedV1,
 ) -> None:
-    """Append `INGEST_APPLIED` then `DISPATCH_SCHEDULED` (reason immediate)."""
+    """Append `INGEST_APPLIED` then `DISPATCH_SCHEDULED` (reason immediate).
+
+    Does **not** flush: the SQS consumer flushes affected shards once per receive
+    batch before `DeleteMessage` (§18.3 durability without one PUT per message).
+    """
     now = int(time.time() * 1000)
     bh = body_hash_for_text(ingested.payload.body)
     r1 = await writer.build_record(
@@ -69,4 +73,3 @@ async def append_ingest_template_a(
         payload={"reason": "immediate"},
     )
     await writer.append_record(r2)
-    await writer.flush_shard(ingested.shard_id)

@@ -1,6 +1,8 @@
 # SQS FIFO: throughput, admission, and NFR alignment
 
-This document is the **normative design plan** for **SQS FIFO ingest** on the API admission path. It documents batch limits, **`MessageGroupId`** semantics, safe parallelism, backpressure, and how to validate aggregate throughput in-cluster.
+This document is the **normative design plan** for **SQS FIFO ingest** on the API admission path. It documents batch limits, **`MessageGroupId`** usage (routing / AWS FIFO mechanics), parallelism, backpressure, and how to validate aggregate throughput in-cluster.
+
+**Product NFR:** **Cross-message ingest or admission order is not required.** The system does **not** promise that messages are processed or visible in the order they were submitted. **`MessageGroupId`** exists because **Amazon SQS FIFO** requires it and because we align it with **shard routing** (**§16.4**); it is **not** documented here as a user-facing ordering guarantee.
 
 **Related:** `plans/NEW_SYSTEM_IMPLEMENTATION_BLUEPRINT.md` (§1, §9 Phase 1, §10.3, §12, §15–§17, N1), `plans/IMPLEMENTATION_PHASES.md` (**P3** admission, **P5** consumer).
 
@@ -13,8 +15,8 @@ This document is the **normative design plan** for **SQS FIFO ingest** on the AP
 | Aspect | SQS FIFO `SendMessageBatch` |
 |--------|------------------------------|
 | Batch size | Up to **10** messages per call (hard limit) |
-| Ordering | Per **`MessageGroupId`** FIFO ordering |
-| Throughput | **Parallelize** `SendMessageBatch` **across** distinct **`MessageGroupId`** values; **serialize** per group when strict ordering is required |
+| AWS grouping | FIFO queues partition work by **`MessageGroupId`** (platform behavior; **not** a product ordering commitment) |
+| Throughput | **Parallelize** `SendMessageBatch` **across** distinct **`MessageGroupId`** values; **serialize** sends **within** each group in the current producer (**one pipeline per group**) to keep batching and retries simple |
 
 The implementation uses `MAX_SQS_FIFO_SEND_BATCH = 10` in `src/inspectio/ingest/sqs_fifo_producer.py` and chunks accordingly.
 
@@ -24,7 +26,7 @@ The implementation uses `MAX_SQS_FIFO_SEND_BATCH = 10` in `src/inspectio/ingest/
 
 **Critical distinction (repeat vs single-shard):**
 
-- **`POST /messages/repeat`** creates **N independent `messageId`s** (blueprint **§15.2**). **`shardId`** is **`SHA256(messageId) % TOTAL_SHARDS`** (**§16.2**). For default **`TOTAL_SHARDS = 1024`**, a large repeat spreads admits across **many** distinct shards, hence **many** distinct **`MessageGroupId`** values. So a **single** repeat request is **multi-group** unless implementation collapses groups (it should not).
+- **`POST /messages/repeat`** creates **N independent `messageId`s** (blueprint **§15.2**). **`shardId`** is **`SHA256(messageId) % TOTAL_SHARDS`** (**§16.2**). For default **`TOTAL_SHARDS = 1024`**, a large repeat spreads admits across **many** distinct shards, hence **many** distinct **`MessageGroupId`** values (**§16.4**). So a **single** repeat request is **multi-group** under current routing.
 - **`POST /messages`** with one message, or synthetic tests that force one shard, behave as **single-group** admits.
 
 So the main production gap is: **serial batch loop over a list that is already multi-group** — that **artificially serializes** work that FIFO semantics allow to run **concurrently across groups**. Fixing that (§4.2, **SQS-P1**) is the primary lever for **§9 Phase 1** acceptance (“no 60s submit timeout at **10k** batch profile”) and for **aggregate** N1.
@@ -36,11 +38,11 @@ So the main production gap is: **serial batch loop over a list that is already m
 These bound any admission strategy. **Authoritative detail:** [Amazon SQS quotas](https://docs.aws.amazon.com/general/latest/gr/sqs-service.html), [FIFO message quotas](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/quotas-messages.html), [High throughput for FIFO queues](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/high-throughput-fifo.html).
 
 1. **`SendMessageBatch`:** at most **10** entries per call for FIFO queues.
-2. **Ordering:** FIFO order is **per `MessageGroupId`**, not global.
-3. **Parallel sends:** **Concurrent** `SendMessageBatch` / `SendMessage` calls targeting the **same** `MessageGroupId` are **unsafe** if the product requires **strict ordering** of admits for that group (overlapping in-flight batches can violate per-group ordering expectations). **Concurrent** sends targeting **different** `MessageGroupId`s are **required** for throughput when the API has work for many groups in one `put_messages` invocation.
+2. **AWS FIFO mechanics:** The service associates messages with a **`MessageGroupId`** and applies its own delivery rules **per group** (see AWS docs). That is **infrastructure**, not a spec that the product must expose “in order” to clients.
+3. **Producer concurrency:** The reference producer uses **at most one concurrent send pipeline per `MessageGroupId`** (serialized batches inside that pipeline) and **parallel pipelines across groups** up to **`INSPECTIO_MAX_SQS_FIFO_INFLIGHT_GROUPS`**. Overlapping **same-group** `SendMessageBatch` calls are **out of scope** for this producer until explicitly designed (dedup, partial failure, and AWS behavior under overlap need a dedicated review). **Parallel** sends across **different** `MessageGroupId`s are **required** for throughput when one `put_messages` invocation spans many groups (e.g. large **repeat**).
 4. **Throughput (qualitative):** High-throughput FIFO uses **partitions**; AWS scales partitions when request rate approaches limits. **Per partition**, documentation references **up to ~3,000 messages per second with batching** in supported regions (see high-throughput FIFO page above). **Regional and account quotas** still apply; expect **`Throttling`** under abuse and design **backoff** + **bounded concurrency**.
 
-**Project mapping:** `MessageGroupId` comes from **`partition_key_for_shard(shard_id)`** (same routing idea as ingest). **One shard id** ⇒ **one** group for those rows. **Repeat** ⇒ many shard ids ⇒ **many** groups in one HTTP request.
+**Project mapping:** `MessageGroupId` comes from **`partition_key_for_shard(shard_id)`** (shard routing). **One shard id** ⇒ **one** group for those rows in the current design. **Repeat** ⇒ many shard ids ⇒ **many** groups in one HTTP request.
 
 ---
 
@@ -65,7 +67,7 @@ This section **locks** how **`plans/NEW_SYSTEM_IMPLEMENTATION_BLUEPRINT.md`** re
 
 Use this for **design reviews** and **SLO budgets**. Replace constants with **measured** `T_batch` from perf logs or in-cluster traces.
 
-### 4.1 Per `MessageGroupId` (serialized batches)
+### 4.1 Single `MessageGroupId` (serialized batches in the reference producer)
 
 Let **`T_batch`** = wall-clock time for one successful `SendMessageBatch` (network + AWS), **~20–80 ms** typical (region, TLS, size; measure).
 
@@ -121,13 +123,13 @@ with **`R_g`** capped per group as in §4.1 and **AWS** partition / quota limits
 
 ### 5.1 Goals
 
-1. **Correctness first:** **§17 / §18** — dedupe (`MessageDeduplicationId`), per-shard ordering as consumed by the worker, **no** parallel **same-group** sends unless explicitly approved.
+1. **Correctness first:** **§17 / §18** — dedupe (`MessageDeduplicationId`), **§18.3** delete-after-durable journal, **no** unapproved parallel **same-group** sends in the producer (implementation constraint, not an “ordering” product rule).
 2. **Admission efficiency:** **Parallelize across `MessageGroupId`s** (§4.2); bounded concurrency; **reuse** HTTP client/session where possible.
 3. **Measurable N1 and Phase 1 acceptance:** **§7** pass/fail gates, **in-cluster** for AWS throughput claims.
 
 ### 5.2 Non-goals (unless blueprint changes)
 
-1. Replacing FIFO with **standard SQS** for raw TPS at the cost of ordering (conflicts with ingest semantics unless spec changes).
+1. Replacing FIFO with **standard SQS** for raw TPS (requires **§17 / §29** ingest-boundary change and a written waiver if the repo stays FIFO-only).
 2. Claiming **N1** from **one** saturated **`MessageGroupId`** alone.
 3. **Laptop port-forward** baselines for **AWS performance claims** (workspace rules).
 
@@ -145,7 +147,7 @@ All strategies assume **idempotent** `SendMessageBatch` and existing **partial f
 ### 6.2 Bounded parallelism **across** `MessageGroupId`s (**required** for repeat)
 
 1. **Partition** inputs by **`partition_key_for_shard(shard_id)`** (or shard id).
-2. **Per group:** serialized pipeline of batches (≤10 messages each) — preserves **per-group** order.
+2. **Per group:** serialized pipeline of batches (≤10 messages each) — reference producer design; simplifies retries and partial batch handling.
 3. **Across groups:** bounded **`asyncio`** concurrency (semaphore), **`max_inflight_groups`** / global cap in **Settings**.
 
 **Pros:** Unlocks **§9 Phase 1** and **§12** for **10k**-scale repeat **without** relying on external clients to shard requests.  
@@ -155,9 +157,8 @@ All strategies assume **idempotent** `SendMessageBatch` and existing **partial f
 
 | Option | Behavior | When |
 |--------|----------|------|
-| **A. Serialized batches** | Default; strict ordering | Single-shard workloads, or last-mile batches inside one group |
-| **B. Relaxed ordering** | Only if blueprint + tests explicitly allow | Rare; journal SoT usually forbids |
-| **C. Client workload split** | Multiple requests or smaller **`count`** | **Supplemental**; **not** a substitute for **6.2** for standard repeat |
+| **A. Serialized batches** | Default in **`sqs_fifo_producer`** | Any workload where most admits fall in one **`MessageGroupId`** |
+| **B. Client workload split** | Multiple requests or smaller **`count`** | **Supplemental**; **not** a substitute for **6.2** for large multi-shard **repeat** |
 
 **Recommendation:** **6.2** + **6.3-A**; document **§4.1** for ops when **`S = 1`**.
 
@@ -193,7 +194,7 @@ Throughput is **not** admission-only. **P5** (`SqsFifoBatchFetcher`, `IngestCons
 | Gate | Criterion | Blueprint trace |
 |------|-----------|-----------------|
 | **G-PHASE1-SUBMIT** | **10k** repeat completes **without** client **disconnect** at **documented** timeout (ingress + client); **no** systematic **~60s** failure mode | **§9 Phase 1**, **§1**, **§12** |
-| **G-SQS-P1** | Multi-group admit uses **parallel batches across groups** (code + tests); **no** unbounded same-group parallelism | **§17**, this doc §6.2 |
+| **G-SQS-P1** | Multi-group admit uses **parallel batches across groups** (code + tests); **no** unbounded same-group parallelism without an explicit design pass | **§17**, this doc §6.2 |
 | **G-N1-SYSTEM** | Sustained **submit** throughput in the **tens of thousands/sec** **order of magnitude** under declared **concurrency + shard** mix, with **stable** queue depth | **N1**, **§10.3** |
 | **G-DRAIN** | Workers + journal **drain** admitted volume without **unbounded** backlog under same test | **§10.3**, **P5** |
 
@@ -207,7 +208,7 @@ Record commands, env, and results in **§26** runbook / perf appendix — not on
 
 | Phase | Content | Exit criteria |
 |-------|---------|----------------|
-| **SQS-P1** | Partition-by-group + bounded concurrent pipelines in `SqsFifoIngestProducer`; **`max_inflight_groups`** (and global cap) in **Settings** | Unit tests: multi-group ⇒ concurrent `SendMessageBatch`; single-group ⇒ **no** overlap; optional perf smoke **count=1k** faster than serial baseline |
+| **SQS-P1** | Partition-by-group + bounded concurrent pipelines in `SqsFifoIngestProducer`; **`max_inflight_groups`** (and global cap) in **Settings** | Unit tests: multi-group ⇒ concurrent `SendMessageBatch`; single-group ⇒ one pipeline at a time; optional perf smoke **count=1k** faster than serial baseline |
 | **SQS-P2** | Throttle-aware backoff; throttle metrics | Integration or LocalStack fault injection where feasible |
 | **SQS-P3** | In-cluster **2k–10k** matrix; **G-PHASE1-SUBMIT** + **G-N1-SYSTEM** evidence in runbook | Tables + logs archived; **IMPLEMENTATION_PHASES** / README pointer |
 
@@ -216,7 +217,7 @@ Record commands, env, and results in **§26** runbook / perf appendix — not on
 ## 10. Checklist before merging admission changes
 
 - [ ] **§16.2** shard distribution understood for **repeat** (multi-group).
-- [ ] **No** overlapping in-flight batches for the **same** `MessageGroupId` unless **explicitly** approved.
+- [ ] **No** overlapping in-flight batches for the **same** `MessageGroupId` unless **explicitly** designed and tested (producer default stays single pipeline per group).
 - [ ] **G-PHASE1-SUBMIT** / **G-SQS-P1** satisfied or **explicit** waiver documented.
 - [ ] Load methodology: **in-cluster** for AWS claims; stack **recycled** before load.
 - [ ] **`IMPLEMENTATION_PHASES.md` P3** row matches: chunk ≤10, `MessageGroupId` = shard partition.
@@ -230,3 +231,4 @@ Record commands, env, and results in **§26** runbook / perf appendix — not on
 | 2025-03-26 | Initial plan: FIFO limits, sequential vs cross-group parallelism, NFR validation, phased rollout |
 | 2026-03-26 | Architect pass: **§16.2** repeat **multi-group** correction; **§3** blueprint reconciliation; **§4** capacity model; **§8** pass/fail gates; **§9** SQS-P1 as **Phase 1** requirement |
 | 2026-03-26 | **SQS-only** doc: removed legacy stream comparisons; **§17** is normative |
+| 2026-03-28 | **Product NFR:** ingest/admission order not required; removed “ordering” as a user-facing requirement; reframed **`MessageGroupId`** as routing + AWS mechanics |
