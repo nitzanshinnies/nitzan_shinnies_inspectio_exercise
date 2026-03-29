@@ -50,6 +50,12 @@ Implementation targets **v3** only. **Normative docs:** **`plans/ASSIGNMENT.pdf`
 - **Run:** **`uvicorn inspectio.v3.l1.serve:app --host 0.0.0.0 --port 8080`** with **`INSPECTIO_L2_BASE_URL`** set.
 - **Tests:** **`pytest tests/integration/test_v3_l1_proxy.py -m integration`** (in-process L1→L2 ASGI chain; matches P5 “light integration” scope).
 
+## V3 Kubernetes (phase P6)
+
+- **Root manifests:** **`deploy/kubernetes/`** — namespace **`inspectio`**, Redis, **L2** Deployment (**`inspectio-api`**, **2** replicas), expander (**1** replica), worker (**1** replica default; duplicate per shard when **`K` > 1**), **L1** (**2** replicas), **ConfigMap** for queue URLs / **`K`** / Redis / **`INSPECTIO_L2_BASE_URL`**, **ServiceAccount** stub for **IRSA**, optional **Secret** pattern (**`secret-aws.example.yaml`** — do not commit real keys).
+- **Image:** single **`deploy/docker/Dockerfile`**; set container commands via Deployments (same as compose).
+- **Ops:** apply order, **`kubectl set image`**, **`rollout status`**, immutable **selector** notes, probes, multi-shard workers, optional persist queue env — see **`deploy/kubernetes/README.md`** and **`plans/v3_phases/P6_KUBERNETES.md`**.
+
 ## Local stack
 
 The **repository root** `docker-compose.yml` runs **redis**, **localstack** (S3 + SQS), **`inspectio-l1`** (published **8080** → browser entry), **`inspectio-api`** (L2 on **8000** inside the network only—no host port), **`inspectio-expander`**, and **`inspectio-worker`**. Default **`INSPECTIO_V3_SEND_SHARD_COUNT`** is **1** so a single worker covers all send traffic; raise **`K`** and add one worker per **`inspectio-v3-send-{i}`** URL. The v2 app stack remains archived under **`v2_obsolete/archive/`**. Compose project name is **`inspectio`** (`name:` in the file). Stop it with:
@@ -86,6 +92,6 @@ If another compose stack or local services already bind **6379** or **4566**, st
 
 ### AWS (EKS) and in-cluster performance
 
-v2 Kubernetes manifests and the load-test driver are under **`v2_obsolete/archive/deploy/kubernetes/`** and **`v2_obsolete/archive/scripts/`**. **`deploy/kubernetes/README.md`** describes how v3 will replace them. Do not treat laptop **`kubectl port-forward`** as authoritative AWS performance claims once v3 Jobs exist.
+v3 cluster YAML lives under **`deploy/kubernetes/`** (see **`deploy/kubernetes/README.md`**). v2 manifests and the archived load-test driver remain under **`v2_obsolete/archive/deploy/kubernetes/`** and **`v2_obsolete/archive/scripts/`**. Do not treat laptop **`kubectl port-forward`** as authoritative AWS performance claims once v3 Jobs exist (P7).
 
 Local assignment PDF (gitignored): **`plans/ASSIGNMENT.pdf`**.
