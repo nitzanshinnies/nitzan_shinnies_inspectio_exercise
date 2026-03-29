@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Header, HTTPException, Query
 from fastapi.encoders import jsonable_encoder
@@ -25,12 +25,18 @@ def build_router(deps: L2Dependencies) -> APIRouter:
         return {"status": "ok", "service": "api"}
 
     @router.get("/messages/success")
-    def messages_success() -> dict[str, list]:
-        return {"items": []}
+    async def messages_success(
+        limit: Annotated[int, Query(ge=1, le=100)] = 100,
+    ) -> dict[str, Any]:
+        items = await deps.outcomes_reader.list_success(limit=limit)
+        return {"items": items}
 
     @router.get("/messages/failed")
-    def messages_failed() -> dict[str, list]:
-        return {"items": []}
+    async def messages_failed(
+        limit: Annotated[int, Query(ge=1, le=100)] = 100,
+    ) -> dict[str, Any]:
+        items = await deps.outcomes_reader.list_failed(limit=limit)
+        return {"items": items}
 
     @router.post("/messages", status_code=202)
     async def post_messages(

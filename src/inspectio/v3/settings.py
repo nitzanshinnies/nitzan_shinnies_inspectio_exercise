@@ -1,10 +1,10 @@
-"""Environment-backed settings for v3 (P2 SQS, P3 expander)."""
+"""Environment-backed settings for v3 (P2 SQS, P3 expander, P4 send worker)."""
 
 from __future__ import annotations
 
 from typing import Self
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from inspectio.v3.sqs.bulk_producer import SqsBulkEnqueue
@@ -98,11 +98,69 @@ def sqs_client_kwargs_from_expander_settings(
     settings: V3ExpanderSettings,
 ) -> dict[str, str]:
     """Keyword args for ``aioboto3.Session().client('sqs', ...)``."""
-    kw: dict[str, str] = {"region_name": settings.aws_region}
-    if settings.aws_endpoint_url:
-        kw["endpoint_url"] = settings.aws_endpoint_url
-    if settings.aws_access_key_id:
-        kw["aws_access_key_id"] = settings.aws_access_key_id
-    if settings.aws_secret_access_key:
-        kw["aws_secret_access_key"] = settings.aws_secret_access_key
+    return _sqs_client_kwargs(
+        region_name=settings.aws_region,
+        endpoint_url=settings.aws_endpoint_url,
+        access_key_id=settings.aws_access_key_id,
+        secret_access_key=settings.aws_secret_access_key,
+    )
+
+
+class V3WorkerSettings(BaseSettings):
+    """L4 send worker: one process per ``INSPECTIO_V3_WORKER_SEND_QUEUE_URL`` (shard)."""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+        populate_by_name=True,
+    )
+
+    aws_endpoint_url: str | None = Field(
+        default=None, validation_alias="AWS_ENDPOINT_URL"
+    )
+    aws_region: str = Field(default="us-east-1", validation_alias="AWS_DEFAULT_REGION")
+    aws_access_key_id: str | None = Field(
+        default=None, validation_alias="AWS_ACCESS_KEY_ID"
+    )
+    aws_secret_access_key: str | None = Field(
+        default=None, validation_alias="AWS_SECRET_ACCESS_KEY"
+    )
+    send_queue_url: str = Field(
+        validation_alias="INSPECTIO_V3_WORKER_SEND_QUEUE_URL",
+    )
+    redis_url: str = Field(
+        validation_alias=AliasChoices("REDIS_URL", "INSPECTIO_REDIS_URL"),
+    )
+    try_send_always_succeed: bool = Field(
+        default=True,
+        validation_alias="INSPECTIO_V3_TRY_SEND_ALWAYS_SUCCEED",
+    )
+
+
+def sqs_client_kwargs_from_worker_settings(
+    settings: V3WorkerSettings,
+) -> dict[str, str]:
+    return _sqs_client_kwargs(
+        region_name=settings.aws_region,
+        endpoint_url=settings.aws_endpoint_url,
+        access_key_id=settings.aws_access_key_id,
+        secret_access_key=settings.aws_secret_access_key,
+    )
+
+
+def _sqs_client_kwargs(
+    *,
+    region_name: str,
+    endpoint_url: str | None,
+    access_key_id: str | None,
+    secret_access_key: str | None,
+) -> dict[str, str]:
+    kw: dict[str, str] = {"region_name": region_name}
+    if endpoint_url:
+        kw["endpoint_url"] = endpoint_url
+    if access_key_id:
+        kw["aws_access_key_id"] = access_key_id
+    if secret_access_key:
+        kw["aws_secret_access_key"] = secret_access_key
     return kw

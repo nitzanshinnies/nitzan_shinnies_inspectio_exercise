@@ -11,11 +11,11 @@ Implementation targets **v3** only. **Normative docs:** **`plans/ASSIGNMENT.pdf`
 
 ## V3 L2 (phase P1)
 
-- **`inspectio.v3.l2`**: FastAPI app from **`create_l2_app`** — **`POST /messages`** and **`POST /messages/repeat?count=`** each enqueue **one** **`BulkIntentV1`** (single path uses **`count=1`**). **`Idempotency-Key`** with in-process TTL (no second enqueue on replay; **409** if the key is reused with a different payload). Repeat responses use the **summary** shape in **`plans/openapi.yaml`** (`batchCorrelationId`, `count`, `accepted`). **`GET /messages/success|failed`** return **`{"items": []}`** until P4 + shared outcomes store. Inject **`clock_ms`** and a **`ListBulkEnqueue`** or **`SqsBulkEnqueue`**; **`BulkEnqueuePort.enqueue`** is **async** (P2 **`aioboto3`**).
+- **`inspectio.v3.l2`**: FastAPI app from **`create_l2_app`** or **`create_l2_app_from_env()`** (**`inspectio.v3.l2.serve:app`**) — **`POST /messages`** and **`POST /messages/repeat?count=`** each enqueue **one** **`BulkIntentV1`** (single path uses **`count=1`**). **`Idempotency-Key`** with in-process TTL (no second enqueue on replay; **409** if the key is reused with a different payload). Repeat responses use the **summary** shape in **`plans/openapi.yaml`** (`batchCorrelationId`, `count`, `accepted`). **`GET /messages/success|failed`** read **`OutcomesReadPort`** (Redis when **`REDIS_URL`** / **`INSPECTIO_REDIS_URL`** is set in compose; otherwise empty **`items`**). Inject **`clock_ms`** and a **`ListBulkEnqueue`** or **`SqsBulkEnqueue`**; **`BulkEnqueuePort.enqueue`** is **async** (P2 **`aioboto3`**).
 
 ## V3 SQS (phase P2)
 
-- **Standard bulk queue** (not FIFO) for **`BulkIntentV1`**: LocalStack init creates **`inspectio-v3-bulk`** (override with **`INSPECTIO_V3_BULK_QUEUE_NAME`**) and **`inspectio-v3-send-0` … `send-(K-1)`** for **`K` = `INSPECTIO_V3_SEND_SHARD_COUNT`** (default **2** in compose).
+- **Standard bulk queue** (not FIFO) for **`BulkIntentV1`**: LocalStack init creates **`inspectio-v3-bulk`** (override with **`INSPECTIO_V3_BULK_QUEUE_NAME`**) and **`inspectio-v3-send-0` … `send-(K-1)`** for **`K` = `INSPECTIO_V3_SEND_SHARD_COUNT`** (default **1** in compose).
 - **Environment:** **`INSPECTIO_V3_BULK_QUEUE_URL`** (required for real enqueue), **`AWS_ENDPOINT_URL`** (e.g. `http://127.0.0.1:4566` against compose LocalStack), **`AWS_DEFAULT_REGION`**, **`AWS_ACCESS_KEY_ID`** / **`AWS_SECRET_ACCESS_KEY`** (defaults **`test`/`test`** for LocalStack). Use **`build_sqs_bulk_enqueue_from_env()`** from **`inspectio.v3.settings`** or construct **`SqsBulkEnqueue`** manually.
 - **Integration test (opt-in):** with LocalStack healthy, set **`INSPECTIO_SQS_INTEGRATION=1`** and **`INSPECTIO_V3_BULK_QUEUE_URL`** to your queue URL (example: `http://127.0.0.1:4566/000000000000/inspectio-v3-bulk`), then run **`pytest tests/integration/test_v3_sqs_bulk_roundtrip.py -m integration`**. CI without Docker leaves these unset so the test is skipped.
 
@@ -26,9 +26,25 @@ Implementation targets **v3** only. **Normative docs:** **`plans/ASSIGNMENT.pdf`
 - **Run:** **`inspectio-v3-expander`** (console script) or **`python -m inspectio.v3.expander`** with env set.
 - **Integration (opt-in):** **`INSPECTIO_EXPANDER_INTEGRATION=1`**, LocalStack queues created, then **`pytest tests/integration/test_v3_expander_roundtrip.py -m integration`**.
 
+## V3 send worker + outcomes (phase P4)
+
+- **`inspectio.v3.worker`**: long-poll **`ReceiveMessage`** on **one** send shard queue (**`INSPECTIO_V3_WORKER_SEND_QUEUE_URL`**), plus a **`~500 ms`** **`asyncio.sleep`** wakeup that scans due **`try_send`** attempts. **One OS process per send queue** (or run multiple processes with different URLs for **`K > 1`**). **`try_send`** defaults to always **`True`** (**`INSPECTIO_V3_TRY_SEND_ALWAYS_SUCCEED`**, default **`true`**); set to **`false`** to force retry/backoff and eventual **failed** terminal after six failures.
+- **Per-`messageId`:** **`asyncio.Lock`** + in-memory active/terminal dedupe so duplicate SQS deliveries do not double-apply side effects; extra receipts are **deleted** after dedupe.
+- **Outcomes:** **`RedisOutcomesStore`** (**`LPUSH` + `LTRIM`** to 100 items per list) shared by **L2** and workers; **`GET /messages/success|failed`** returns newest-first JSON aligned with **`plans/openapi.yaml`** outcome fields.
+- **Run:** **`inspectio-v3-worker`** or **`python -m inspectio.v3.worker`**. Requires **`REDIS_URL`** / **`INSPECTIO_REDIS_URL`** and AWS/SQS env consistent with LocalStack.
+- **Integration (opt-in):** **`INSPECTIO_REDIS_INTEGRATION=1`** and **`REDIS_URL`** → **`pytest tests/integration/test_v3_redis_outcomes.py -m integration`**.
+- **E2E (opt-in):** With **`docker compose up -d`** (api, expander, worker, redis, localstack), **recycle the stack** before the run (see workspace testing rules), then **`INSPECTIO_P4_E2E=1 pytest tests/e2e/test_v3_p4_compose.py -m e2e`**. Override base URL with **`INSPECTIO_P4_E2E_BASE`** if needed.
+
+### Deliverables note (master §6, AC5)
+
+- **Structures / sync:** L2 admits **`BulkIntentV1`** to SQS; expander fans out **`SendUnitV1`** to sharded send queues; worker applies absolute deadlines from **`domain/retry_schedule`**, records terminals to Redis, and **deletes** the send-queue message after a terminal outcome.
+- **Complexity:** admission **O(1)** per HTTP request; expander **O(N)** in **`count`** for one bulk message; worker **O(1)** per due wakeup per active id (scan of actives).
+- **Gaps (AC5):** no **S3** journal or crash recovery for in-flight units—redelivery relies on SQS visibility and worker idempotency/dedupe by **`messageId`** only; multi-replica expander dedupe is still single-process LRU (see P3 README).
+- **Planned S3 (later wave):** durable append-only journal for bulk and/or send units, replay and operator inspection—schema TBD in **`plans/V3_ASYNC_PIPELINE_IMPLEMENTATION_PLAN.md`** / OpenAPI evolution.
+
 ## Local stack
 
-The **repository root** `docker-compose.yml` currently runs **dependencies only**: **redis** and **localstack** (S3 + SQS). The v2 app containers were removed from compose when the code was archived; see **`v2_obsolete/archive/`** for the old stack. Compose project name is **`inspectio`** (`name:` in the file). Stop it with:
+The **repository root** `docker-compose.yml` runs **redis**, **localstack** (S3 + SQS), and v3 app services **`inspectio-api`** (L2 on port **8000**), **`inspectio-expander`**, and **`inspectio-worker`**. Default **`INSPECTIO_V3_SEND_SHARD_COUNT`** is **1** so a single worker covers all send traffic; raise **`K`** and add one worker per **`inspectio-v3-send-{i}`** URL. The v2 app stack remains archived under **`v2_obsolete/archive/`**. Compose project name is **`inspectio`** (`name:` in the file). Stop it with:
 
 ```bash
 docker compose down
@@ -40,10 +56,11 @@ Bring it up:
 docker compose up -d
 ```
 
-| Service    | Host URL / port |
-|------------|-----------------|
-| LocalStack | `http://127.0.0.1:4566` |
-| Redis      | `127.0.0.1:6379` |
+| Service           | Host URL / port        |
+|-------------------|------------------------|
+| LocalStack        | `http://127.0.0.1:4566` |
+| Redis             | `127.0.0.1:6379`       |
+| L2 API (compose)  | `http://127.0.0.1:8000` |
 
 ### AWS S3 and credentials
 

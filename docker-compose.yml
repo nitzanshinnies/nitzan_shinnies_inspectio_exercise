@@ -30,7 +30,7 @@ services:
       INSPECTIO_S3_BUCKET: ${INSPECTIO_S3_BUCKET:-${S3_BUCKET:-inspectio-test-bucket}}
       INSPECTIO_INGEST_QUEUE_NAME: ${INSPECTIO_INGEST_QUEUE_NAME:-inspectio-ingest.fifo}
       INSPECTIO_V3_BULK_QUEUE_NAME: ${INSPECTIO_V3_BULK_QUEUE_NAME:-inspectio-v3-bulk}
-      INSPECTIO_V3_SEND_SHARD_COUNT: ${INSPECTIO_V3_SEND_SHARD_COUNT:-2}
+      INSPECTIO_V3_SEND_SHARD_COUNT: ${INSPECTIO_V3_SEND_SHARD_COUNT:-1}
     volumes:
       - ./deploy/localstack/init/ready.d:/etc/localstack/init/ready.d:ro
     healthcheck:
@@ -39,3 +39,61 @@ services:
       timeout: 3s
       retries: 10
       start_period: 15s
+
+  inspectio-api:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile
+    command:
+      [
+        "uvicorn",
+        "inspectio.v3.l2.serve:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000",
+      ]
+    ports:
+      - "8000:8000"
+    depends_on:
+      redis:
+        condition: service_started
+      localstack:
+        condition: service_healthy
+    environment:
+      <<: *aws_apps
+      REDIS_URL: redis://redis:6379/0
+      INSPECTIO_V3_BULK_QUEUE_URL: http://localstack:4566/000000000000/inspectio-v3-bulk
+      INSPECTIO_V3_SEND_SHARD_COUNT: ${INSPECTIO_V3_SEND_SHARD_COUNT:-1}
+
+  inspectio-expander:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile
+    command: ["inspectio-v3-expander"]
+    depends_on:
+      localstack:
+        condition: service_healthy
+    environment:
+      <<: *aws_apps
+      INSPECTIO_V3_BULK_QUEUE_URL: http://localstack:4566/000000000000/inspectio-v3-bulk
+      INSPECTIO_V3_SEND_SHARD_COUNT: ${INSPECTIO_V3_SEND_SHARD_COUNT:-1}
+      INSPECTIO_V3_SEND_QUEUE_URLS: http://localstack:4566/000000000000/inspectio-v3-send-0
+      INSPECTIO_V3_EXPANDER_WAIT_SECONDS: ${INSPECTIO_V3_EXPANDER_WAIT_SECONDS:-20}
+      INSPECTIO_V3_BULK_VISIBILITY_TIMEOUT: ${INSPECTIO_V3_BULK_VISIBILITY_TIMEOUT:-120}
+
+  inspectio-worker:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile
+    command: ["inspectio-v3-worker"]
+    depends_on:
+      redis:
+        condition: service_started
+      localstack:
+        condition: service_healthy
+    environment:
+      <<: *aws_apps
+      REDIS_URL: redis://redis:6379/0
+      INSPECTIO_V3_WORKER_SEND_QUEUE_URL: http://localstack:4566/000000000000/inspectio-v3-send-0
+      INSPECTIO_V3_TRY_SEND_ALWAYS_SUCCEED: ${INSPECTIO_V3_TRY_SEND_ALWAYS_SUCCEED:-true}
