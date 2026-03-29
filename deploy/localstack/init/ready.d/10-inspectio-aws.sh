@@ -15,4 +15,8 @@ aws sqs create-queue \
   --queue-name "${queue_name}" \
   --attributes "FifoQueue=true,ContentBasedDeduplication=false" \
   2>/dev/null || true
-echo "inspectio localstack init: bucket=${bucket} sqs_fifo_queue=${queue_name}"
+v3_bulk_name="${INSPECTIO_V3_BULK_QUEUE_NAME:-inspectio-v3-bulk}"
+aws sqs create-queue --queue-name "${v3_bulk_name}" 2>/dev/null || true
+v3_send_name="${INSPECTIO_V3_SEND_QUEUE_NAME:-inspectio-v3-send-0}"
+aws sqs create-queue --queue-name "${v3_send_name}" 2>/dev/null || true
+echo "inspectio localstack init: bucket=${bucket} sqs_fifo_queue=${queue_name} v3_bulk_standard=${v3_bulk_name} v3_send_placeholder=${v3_send_name}"

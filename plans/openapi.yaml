@@ -1,18 +1,21 @@
 openapi: 3.0.3
 info:
-  title: Inspectio HTTP contracts (public §15 + internal §29.6)
+  title: Inspectio HTTP contracts (public API + internal services)
   version: "1.0.0"
   description: |
     Canonical JSON shapes. Implementations must match these schemas.
-    Source of truth narrative: plans/NEW_SYSTEM_IMPLEMENTATION_BLUEPRINT.md
+    Source of truth narrative: plans/ASSIGNMENT.pdf + plans/V3_ASYNC_PIPELINE_IMPLEMENTATION_PLAN.md.
+    Per-phase implementation specs: plans/v3_phases/ (P0–P7). Evolve this file with code (OpenAPI-first).
+    v3 L2: single and repeat admission enqueue one BulkIntentV1; repeat returns a summary (no per-id arrays).
+    Idempotency is in-process TTL until multi-replica Redis dedupe (plans/v3_phases/P1).
 
 tags:
   - name: public-api
-    description: External API (§15) — port INSPECTIO_API_PORT default 8000
+    description: External API — port INSPECTIO_API_PORT default 8000
   - name: notification-internal
-    description: Notification service (§29.6) — port INSPECTIO_NOTIFICATION_PORT default 8081
+    description: Optional legacy/internal outcomes paths; v3 L2 may serve GET /messages/* directly until deprecated.
   - name: mock-sms
-    description: Mock provider (§19) — host port mapped to 8090 in docker-compose.yml
+    description: Optional mock provider (not used in v3 phase-1 void-send path); host port 8090 when enabled
 
 servers:
   - url: http://127.0.0.1:8000
@@ -26,7 +29,22 @@ paths:
   /messages:
     post:
       tags: [public-api]
-      summary: Admit single message (202)
+      summary: Admit single message as BulkIntentV1 with count=1 (202)
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          schema:
+            type: string
+            minLength: 1
+          description: Duplicate within TTL returns the same batchCorrelationId without a second enqueue (in-process only until Redis).
+        - name: X-Trace-Id
+          in: header
+          required: false
+          schema:
+            type: string
+            minLength: 1
+          description: Optional trace id; server generates one if omitted.
       requestBody:
         required: true
         content:
@@ -35,13 +53,15 @@ paths:
               $ref: "#/components/schemas/PostMessageRequest"
       responses:
         "202":
-          description: Accepted after durable ingest append
+          description: Accepted for async enqueue (v3; not durable journal yet)
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/PostMessageAccepted"
         "400":
           description: Validation error
+        "409":
+          description: Idempotency-Key reused with a different payload
         "429":
           description: Throttled
         "503":
@@ -54,7 +74,7 @@ paths:
   /messages/repeat:
     post:
       tags: [public-api]
-      summary: Admit N messages with same body (202)
+      summary: Admit N logical recipients with one body via one BulkIntentV1 (202)
       parameters:
         - name: count
           in: query
@@ -62,6 +82,18 @@ paths:
           schema:
             type: integer
             minimum: 1
+        - name: Idempotency-Key
+          in: header
+          required: false
+          schema:
+            type: string
+            minLength: 1
+        - name: X-Trace-Id
+          in: header
+          required: false
+          schema:
+            type: string
+            minLength: 1
       requestBody:
         required: true
         content:
@@ -70,13 +102,15 @@ paths:
               $ref: "#/components/schemas/PostMessageRequest"
       responses:
         "202":
-          description: Accepted
+          description: Accepted; summary response (O(1) JSON size w.r.t. N per v3 plan 3.2)
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/PostMessagesRepeatAccepted"
         "400":
           description: Invalid count or body
+        "409":
+          description: Idempotency-Key reused with different count or body
 
   /messages/success:
     get:
@@ -185,7 +219,7 @@ paths:
   /send:
     post:
       tags: [mock-sms]
-      summary: Mock SMS dispatch (§19)
+      summary: Mock SMS dispatch
       servers:
         - url: http://127.0.0.1:8090
       requestBody:
@@ -218,35 +252,35 @@ components:
 
     PostMessageAccepted:
       type: object
-      required: [messageId, shardId]
+      required: [messageId, shardId, batchCorrelationId]
       properties:
         messageId:
           type: string
           format: uuid
-          description: UUID v4 lowercase
+          description: Admission id for this request (v3; aligns with bulk correlation for count=1)
+        batchCorrelationId:
+          type: string
+          format: uuid
+          description: BulkIntentV1.batchCorrelationId for expander idempotency and tracing
         shardId:
           type: integer
           minimum: 0
-        ingestSequence:
-          type: string
-          nullable: true
-          description: Opaque stream sequence if available
+          description: Predicted send shard hash(batchCorrelationId) % K (K from INSPECTIO_V3_SEND_SHARD_COUNT, default 1)
 
     PostMessagesRepeatAccepted:
       type: object
-      required: [accepted, messageIds, shardIds]
+      required: [accepted, batchCorrelationId, count]
       properties:
         accepted:
           type: integer
-        messageIds:
-          type: array
-          items:
-            type: string
-            format: uuid
-        shardIds:
-          type: array
-          items:
-            type: integer
+          description: Recipients admitted (equals count on success)
+        batchCorrelationId:
+          type: string
+          format: uuid
+        count:
+          type: integer
+          minimum: 1
+          description: Same as query count
 
     OutcomeItem:
       type: object

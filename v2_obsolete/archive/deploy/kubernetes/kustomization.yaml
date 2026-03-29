@@ -1,0 +1,14 @@
+# Base install (excludes one-shot load-test Job — apply separately).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: inspectio
+resources:
+  - namespace.yaml
+  - serviceaccount.yaml
+  - configmap.yaml
+  - redis.yaml
+  - mock-sms.yaml
+  - inspectio-notification.yaml
+  - inspectio-api.yaml
+  - inspectio-worker-headless.yaml
+  - inspectio-worker-sts.yaml
