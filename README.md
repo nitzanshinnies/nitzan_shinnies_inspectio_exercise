@@ -56,6 +56,14 @@ Implementation targets **v3** only. **Normative docs:** **`plans/ASSIGNMENT.pdf`
 - **Image:** single **`deploy/docker/Dockerfile`**; set container commands via Deployments (same as compose).
 - **Ops:** apply order, **`kubectl set image`**, **`rollout status`**, immutable **selector** notes, probes, multi-shard workers, optional persist queue env — see **`deploy/kubernetes/README.md`** and **`plans/v3_phases/P6_KUBERNETES.md`**.
 
+## V3 load harness (phase P7)
+
+- **Driver:** **`scripts/v3_load_test.py`** — **`httpx`**, **`POST /messages/repeat`**, optional poll **`GET /messages/success`**; **`--max-total-sec 0`** disables the driver wall clock (use Job **`activeDeadlineSeconds`** + **`kubectl wait`**), **`--parallel-admission`**, **`--no-wait-successes`** for admit-only benches.
+- **Image:** **`deploy/docker/Dockerfile`** copies **`scripts/`** (same image tag as workloads / Jobs).
+- **Jobs:** **`deploy/kubernetes/load-test-job.yaml`** (~**60s** smoke), **`load-test-job-benchmark.yaml`** (minute-scale). **AWS throughput** claims require **in-cluster** runs — not laptop **port-forward** (workspace **`inspectio-full-flow-load-test-aws-in-cluster`**).
+- **Outcomes:** v3 repeat returns a **summary**; visibility wait uses **`min(N, limit)`** rows (**≤ 100**). For **N > 100**, use **worker** logs/metrics for **3.1** send completes — see **`deploy/kubernetes/README.md`** and driver JSON fields.
+- **Tests:** **`pytest tests/unit/test_v3_load_harness_stats.py -m unit`**.
+
 ## Local stack
 
 The **repository root** `docker-compose.yml` runs **redis**, **localstack** (S3 + SQS), **`inspectio-l1`** (published **8080** → browser entry), **`inspectio-api`** (L2 on **8000** inside the network only—no host port), **`inspectio-expander`**, and **`inspectio-worker`**. Default **`INSPECTIO_V3_SEND_SHARD_COUNT`** is **1** so a single worker covers all send traffic; raise **`K`** and add one worker per **`inspectio-v3-send-{i}`** URL. The v2 app stack remains archived under **`v2_obsolete/archive/`**. Compose project name is **`inspectio`** (`name:` in the file). Stop it with:

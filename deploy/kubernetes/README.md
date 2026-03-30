@@ -57,6 +57,26 @@ Duplicate **`inspectio-worker.yaml`** per shard (e.g. `inspectio-worker-1.yaml`)
 
 **`Service/inspectio-l1`** is **ClusterIP**. Front it with your ingress / NLB / API Gateway; browsers should talk to **L1** only (see P5).
 
+## Load test Jobs (P7)
+
+Driver: **`scripts/v3_load_test.py`** (installed in the image via **`deploy/docker/Dockerfile`**). Uses **`httpx`** against **`INSPECTIO_LOAD_TEST_API_BASE`** (defaults to in-cluster **`http://inspectio-l1:8080`**).
+
+- **Smoke** — **`load-test-job.yaml`**: **`activeDeadlineSeconds: 60`**, **`--sizes "10"`**, waits for ≥10 rows in **`GET /messages/success`** (within API **`limit` ≤ 100**). Wait for completion:
+
+  ```bash
+  kubectl apply -f deploy/kubernetes/load-test-job.yaml
+  kubectl -n inspectio wait --for=condition=complete job/inspectio-v3-load-test --timeout=65s
+  kubectl -n inspectio logs job/inspectio-v3-load-test
+  ```
+
+- **Benchmark (admission)** — **`load-test-job-benchmark.yaml`**: **`activeDeadlineSeconds: 600`**, **`--sizes "10000"`**, **`--no-wait-successes`**, **`--max-total-sec 0`** (wall clock bounded by Job only). **`kubectl wait --timeout=620s`** per workspace rules.
+
+**Throughput claims (master 3.1 / 3.2):** report **admission RPS** from the driver JSON. **Completed `try_send` / send-side RPS** is not fully observable via **`GET /messages/success`** when **N > 100** (Redis ring cap). For large **N**, use **worker** pod logs (e.g. **`send_ok`** lines) or metrics — see **`plans/v3_phases/P7_LOAD_HARNESS.md`**.
+
+**Recycle** Deployments / roll the stack before benchmark runs (workspace **`restart-containers-before-inspectio-tests`** / EKS rollouts).
+
+Delete prior Jobs before re-run: **`kubectl -n inspectio delete job inspectio-v3-load-test --ignore-not-found`**.
+
 ## Optional persist stub (L4/L5 wire)
 
 To enqueue **`MessageTerminalV1`**-shaped JSON to an extra SQS queue after Redis outcomes, add to the ConfigMap:
