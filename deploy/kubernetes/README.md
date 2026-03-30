@@ -73,6 +73,8 @@ Driver: **`scripts/v3_load_test.py`** (installed in the image via **`deploy/dock
 
 - **Benchmark (admission)** — **`load-test-job-benchmark.yaml`**: **`activeDeadlineSeconds: 600`**, **`--sizes "10000"`**, **`--no-wait-successes`**, **`--max-total-sec 0`** (wall clock bounded by Job only). **`kubectl wait --timeout=620s`** per workspace rules.
 
+- **Sustained repeat (no outcome poll)** — **`load-test-job-sustain.yaml`**: runs **`scripts/v3_sustained_admit.py`** with high **`--batch`** (default **500**) to push **offered msg/s** with fewer HTTP calls. Override **`--concurrency`** / **`--batch`** in the manifest after setting the image tag. Tune expander with **`INSPECTIO_V3_EXPANDER_PUBLISH_CONCURRENCY`** and **`INSPECTIO_V3_EXPANDER_BULK_RECEIVE_MAX`** (ConfigMap) if the bulk→send fan-out lags admission.
+
 **Throughput claims (master 3.1 / 3.2):** report **admission RPS** from the driver JSON. **Completed `try_send` / send-side RPS** is not fully observable via **`GET /messages/success`** when **N > 100** (Redis ring cap). For large **N**, use **worker** pod logs (e.g. **`send_ok`** lines) or metrics — see **`plans/v3_phases/P7_LOAD_HARNESS.md`**.
 
 **Recycle** Deployments / roll the stack before benchmark runs (workspace **`restart-containers-before-inspectio-tests`** / EKS rollouts).

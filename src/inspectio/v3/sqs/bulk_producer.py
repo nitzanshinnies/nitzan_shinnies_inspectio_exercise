@@ -6,6 +6,7 @@ import asyncio
 import json
 import random
 from collections.abc import Awaitable, Callable
+from typing import Any
 
 import aioboto3
 from botocore.exceptions import ClientError
@@ -16,7 +17,11 @@ from inspectio.v3.sqs.backoff import compute_backoff_delay_ms
 
 
 class SqsBulkEnqueue:
-    """One SendMessage per bulk; shared Session reference per instance (P2)."""
+    """One SendMessage per bulk; shared Session reference per instance (P2).
+
+    When ``bound_client`` is set (L2 app lifespan), ``enqueue`` reuses that client
+    instead of opening a new context per request — required for high admission RPS.
+    """
 
     def __init__(
         self,
@@ -30,6 +35,7 @@ class SqsBulkEnqueue:
         sleeper: Callable[[float], Awaitable[None]] | None = None,
         rng: random.Random | None = None,
         session: aioboto3.Session | None = None,
+        bound_client: Any | None = None,
     ) -> None:
         self._queue_url = queue_url
         self._region_name = region_name
@@ -40,11 +46,16 @@ class SqsBulkEnqueue:
         self._sleeper: Callable[[float], Awaitable[None]] = sleeper or asyncio.sleep
         self._rng = rng or random.Random()
         self._session = session or aioboto3.Session()
+        self._bound_client = bound_client
 
     async def enqueue(self, bulk: BulkIntentV1) -> None:
         payload = json.dumps(
             bulk.model_dump(mode="json", by_alias=True, exclude_none=True),
         )
+        if self._bound_client is not None:
+            await self._send_payload_with_retries(self._bound_client, payload)
+            return
+
         client_kw: dict[str, str] = {"region_name": self._region_name}
         if self._endpoint_url:
             client_kw["endpoint_url"] = self._endpoint_url
@@ -54,18 +65,18 @@ class SqsBulkEnqueue:
             client_kw["aws_secret_access_key"] = self._secret_key
 
         async with self._session.client("sqs", **client_kw) as client:
-            for attempt in range(self._max_attempts):
-                try:
-                    await client.send_message(
-                        QueueUrl=self._queue_url,
-                        MessageBody=payload,
-                    )
-                    return
-                except ClientError as exc:
-                    if (
-                        not is_aws_throttle_error(exc)
-                        or attempt + 1 >= self._max_attempts
-                    ):
-                        raise
-                    delay_ms = compute_backoff_delay_ms(attempt, rng=self._rng)
-                    await self._sleeper(delay_ms / 1000.0)
+            await self._send_payload_with_retries(client, payload)
+
+    async def _send_payload_with_retries(self, client: Any, payload: str) -> None:
+        for attempt in range(self._max_attempts):
+            try:
+                await client.send_message(
+                    QueueUrl=self._queue_url,
+                    MessageBody=payload,
+                )
+                return
+            except ClientError as exc:
+                if not is_aws_throttle_error(exc) or attempt + 1 >= self._max_attempts:
+                    raise
+                delay_ms = compute_backoff_delay_ms(attempt, rng=self._rng)
+                await self._sleeper(delay_ms / 1000.0)

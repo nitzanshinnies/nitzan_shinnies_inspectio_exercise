@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import random
 from collections.abc import Awaitable, Callable
@@ -27,6 +28,7 @@ async def expand_one_bulk_message(
     sleeper: Callable[[float], Awaitable[None]],
     rng: random.Random,
     max_publish_attempts: int = 6,
+    publish_concurrency: int = 48,
 ) -> None:
     """Parse bulk, publish units to send shards, then delete bulk message.
 
@@ -42,14 +44,15 @@ async def expand_one_bulk_message(
 
     bulk = BulkIntentV1.model_validate_json(raw_body)
     units = bulk_to_send_units(bulk, shard_count=len(send_queue_urls))
-    for u in units:
-        _log.info(
-            "expander_unit trace=%s batch=%s messageId=%s shard=%s",
-            bulk.trace_id,
-            bulk.batch_correlation_id,
-            u.message_id,
-            u.shard,
-        )
+    if _log.isEnabledFor(logging.DEBUG):
+        for u in units:
+            _log.debug(
+                "expander_unit trace=%s batch=%s messageId=%s shard=%s",
+                bulk.trace_id,
+                bulk.batch_correlation_id,
+                u.message_id,
+                u.shard,
+            )
 
     await publish_send_units_to_shards(
         client,
@@ -59,6 +62,7 @@ async def expand_one_bulk_message(
         sleeper=sleeper,
         rng=rng,
         metrics=metrics,
+        publish_concurrency=publish_concurrency,
     )
     dedupe.mark_expanded(mid)
     await client.delete_message(QueueUrl=bulk_queue_url, ReceiptHandle=receipt)
@@ -76,26 +80,34 @@ async def receive_and_expand_once(
     sleeper: Callable[[float], Awaitable[None]],
     rng: random.Random,
     max_publish_attempts: int = 6,
+    publish_concurrency: int = 48,
+    bulk_receive_max: int = 10,
 ) -> bool:
-    """Long-poll once; expand at most one bulk. Returns True if a message was handled."""
+    """Long-poll once; expand up to ``bulk_receive_max`` bulks in parallel."""
     resp = await client.receive_message(
         QueueUrl=bulk_queue_url,
-        MaxNumberOfMessages=1,
+        MaxNumberOfMessages=bulk_receive_max,
         WaitTimeSeconds=wait_seconds,
         VisibilityTimeout=visibility_timeout_seconds,
     )
     msgs = resp.get("Messages", [])
     if not msgs:
         return False
-    await expand_one_bulk_message(
-        client,
-        message=msgs[0],
-        bulk_queue_url=bulk_queue_url,
-        dedupe=dedupe,
-        send_queue_urls=send_queue_urls,
-        metrics=metrics,
-        sleeper=sleeper,
-        rng=rng,
-        max_publish_attempts=max_publish_attempts,
+    await asyncio.gather(
+        *[
+            expand_one_bulk_message(
+                client,
+                message=m,
+                bulk_queue_url=bulk_queue_url,
+                dedupe=dedupe,
+                send_queue_urls=send_queue_urls,
+                metrics=metrics,
+                sleeper=sleeper,
+                rng=rng,
+                max_publish_attempts=max_publish_attempts,
+                publish_concurrency=publish_concurrency,
+            )
+            for m in msgs
+        ],
     )
     return True

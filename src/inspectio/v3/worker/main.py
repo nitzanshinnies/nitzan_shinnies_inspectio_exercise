@@ -86,12 +86,17 @@ async def amain() -> None:
                     MaxNumberOfMessages=10,
                     WaitTimeSeconds=20,
                 )
-                for msg in resp.get("Messages", []):
-                    await scheduler.ingest_send_unit_sqs_message(msg)
+                msgs = resp.get("Messages", [])
+                if msgs:
+                    await asyncio.gather(
+                        *[scheduler.ingest_send_unit_sqs_message(m) for m in msgs],
+                    )
+
+        wake_every = float(settings.worker_wakeup_sec)
 
         async def wakeup_loop() -> None:
             while True:
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(wake_every)
                 await scheduler.wakeup_scan_due()
 
         _log.info("worker started queue=%s", q)

@@ -132,11 +132,20 @@ def test_outcomes_get_stubs_empty_items(
 
 
 @pytest.mark.unit
-def test_repeat_count_zero_returns_400(
+def test_repeat_count_zero_returns_validation_error(
     client_and_queue: tuple[TestClient, Any, Any],
 ) -> None:
     client, _, _ = client_and_queue
     response = client.post("/messages/repeat?count=0", json={"body": "x"})
+    assert response.status_code == 400
+
+
+@pytest.mark.unit
+def test_repeat_count_above_max_returns_validation_error(
+    client_and_queue: tuple[TestClient, Any, Any],
+) -> None:
+    client, _, _ = client_and_queue
+    response = client.post("/messages/repeat?count=100001", json={"body": "x"})
     assert response.status_code == 400
 
 

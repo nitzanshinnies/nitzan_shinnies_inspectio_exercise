@@ -86,7 +86,7 @@ def create_l1_app(*, l2_client: httpx.AsyncClient | None = None) -> FastAPI:
         timeout = httpx.Timeout(settings.l2_http_timeout_sec)
         limits = httpx.Limits(
             max_connections=settings.l2_max_connections,
-            max_keepalive_connections=min(256, settings.l2_max_connections),
+            max_keepalive_connections=min(1024, settings.l2_max_connections),
         )
         async with httpx.AsyncClient(
             base_url=base,

@@ -73,6 +73,18 @@ class V3ExpanderSettings(BaseSettings):
     bulk_visibility_timeout_seconds: int = Field(
         default=120, ge=1, validation_alias="INSPECTIO_V3_BULK_VISIBILITY_TIMEOUT"
     )
+    expander_publish_concurrency: int = Field(
+        default=48,
+        ge=1,
+        le=256,
+        validation_alias="INSPECTIO_V3_EXPANDER_PUBLISH_CONCURRENCY",
+    )
+    expander_bulk_receive_max: int = Field(
+        default=10,
+        ge=1,
+        le=10,
+        validation_alias="INSPECTIO_V3_EXPANDER_BULK_RECEIVE_MAX",
+    )
 
     @field_validator("send_queue_urls", mode="before")
     @classmethod
@@ -140,6 +152,12 @@ class V3WorkerSettings(BaseSettings):
         default=None,
         validation_alias="INSPECTIO_V3_PERSIST_QUEUE_URL",
     )
+    worker_wakeup_sec: float = Field(
+        default=0.05,
+        ge=0.01,
+        le=2.0,
+        validation_alias="INSPECTIO_V3_WORKER_WAKEUP_SEC",
+    )
 
     @field_validator("persist_queue_url", mode="before")
     @classmethod
@@ -196,8 +214,8 @@ class V3L1Settings(BaseSettings):
         validation_alias="INSPECTIO_L1_L2_TIMEOUT_SEC",
     )
     l2_max_connections: int = Field(
-        default=512,
+        default=2048,
         ge=32,
-        le=2048,
+        le=4096,
         validation_alias="INSPECTIO_L1_L2_MAX_CONNECTIONS",
     )

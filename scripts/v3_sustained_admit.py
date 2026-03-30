@@ -28,7 +28,6 @@ async def _sender(
             f"{base}/messages/repeat",
             params={"count": batch},
             json={"body": body},
-            timeout=120.0,
         )
         r.raise_for_status()
         data = r.json()
@@ -43,7 +42,13 @@ async def _run(args: argparse.Namespace) -> None:
     base = args.api_base.rstrip("/")
     stop_at = time.monotonic() + float(args.duration_sec)
     body = f"{args.body_prefix}-{time.time_ns()}"
-    async with httpx.AsyncClient() as client:
+    conc = max(1, int(args.concurrency))
+    limits = httpx.Limits(
+        max_connections=max(conc + 8, 32),
+        max_keepalive_connections=max(conc + 8, 32),
+    )
+    timeout = httpx.Timeout(120.0)
+    async with httpx.AsyncClient(limits=limits, timeout=timeout) as client:
         r = await client.get(f"{base}/healthz", timeout=30.0)
         r.raise_for_status()
         tasks = [
@@ -72,7 +77,12 @@ def main() -> int:
     )
     p.add_argument("--duration-sec", type=float, default=45.0)
     p.add_argument("--concurrency", type=int, default=120)
-    p.add_argument("--batch", type=int, default=80)
+    p.add_argument(
+        "--batch",
+        type=int,
+        default=200,
+        help="repeat count per request (larger → fewer HTTP calls for same msg/s)",
+    )
     p.add_argument("--body-prefix", default="sustain")
     args = p.parse_args()
     asyncio.run(_run(args))
