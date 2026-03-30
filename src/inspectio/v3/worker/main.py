@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 import time
 from typing import Any
 
@@ -37,7 +38,9 @@ def _try_send_factory(settings: V3WorkerSettings):
 
 
 async def amain() -> None:
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s %(message)s")
+    _lvl_name = os.environ.get("INSPECTIO_V3_WORKER_LOG_LEVEL", "INFO").upper()
+    _lvl = getattr(logging, _lvl_name, logging.INFO)
+    logging.basicConfig(level=_lvl, format="%(levelname)s %(name)s %(message)s")
     settings = V3WorkerSettings()
     outcomes = RedisOutcomesStore.from_url(settings.redis_url)
     metrics = SendWorkerMetrics()

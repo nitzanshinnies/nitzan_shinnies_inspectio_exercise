@@ -13,7 +13,7 @@ See **`plans/v3_phases/P6_KUBERNETES.md`**, workspace rule **`inspectio-eks-agen
 
 ## Apply order
 
-1. Edit **`configmap.yaml`**: replace `REPLACE_WITH_SQS_*` placeholders; align **`INSPECTIO_V3_SEND_SHARD_COUNT`** with the number of comma-separated send URLs.
+1. Edit **`configmap.yaml`**: replace `REPLACE_WITH_SQS_*` placeholders; align **`INSPECTIO_V3_SEND_SHARD_COUNT`** with the number of send URLs. **`INSPECTIO_V3_SEND_QUEUE_URLS`** must be a **JSON array** string (e.g. `'["https://sqs.../shard-0","https://.../shard-1"]'`) so **`V3ExpanderSettings`** can parse it from Kubernetes env.
 2. Edit **`serviceaccount.yaml`**: set the real **IRSA** role ARN (or drop the annotation if the node role suffices).
 3. (Optional) Create **`inspectio-v3-secrets`** for static AWS keys — see **`secret-aws.example.yaml`**. Deployments use **`optional: true`** so IRSA-only clusters do not require this Secret.
 4. Apply:
@@ -42,6 +42,8 @@ kubectl -n inspectio rollout status deployment/inspectio-l1 --timeout=120s
 ## Multi-shard workers (`K` > 1)
 
 Duplicate **`inspectio-worker.yaml`** per shard (e.g. `inspectio-worker-1.yaml`) with a **unique** `metadata.name` and **`INSPECTIO_V3_WORKER_SEND_QUEUE_URL`** for that shard’s queue. Keep **`INSPECTIO_V3_SEND_QUEUE_URLS`** and **`INSPECTIO_V3_SEND_SHARD_COUNT`** consistent on the expander ConfigMap.
+
+**K = 4 template:** **`inspectio-worker-shards-k4.yaml`** defines **`inspectio-worker-shard-0` … `shard-3`**, each overriding **`INSPECTIO_V3_WORKER_SEND_QUEUE_URL`**. Set **`INSPECTIO_V3_SEND_SHARD_COUNT: "4"`** and a **four-element JSON array** for **`INSPECTIO_V3_SEND_QUEUE_URLS`**, then **`kubectl -n inspectio delete deployment inspectio-worker --ignore-not-found`** and apply the shard file (replace **`REPLACE_*`** queue URLs and image). Scale each shard Deployment to split consumer capacity across queues.
 
 ## `kubectl apply -k` pitfalls
 

@@ -190,3 +190,14 @@ class V3L1Settings(BaseSettings):
     )
 
     l2_base_url: str = Field(validation_alias="INSPECTIO_L2_BASE_URL")
+    l2_http_timeout_sec: float = Field(
+        default=120.0,
+        ge=5.0,
+        validation_alias="INSPECTIO_L1_L2_TIMEOUT_SEC",
+    )
+    l2_max_connections: int = Field(
+        default=512,
+        ge=32,
+        le=2048,
+        validation_alias="INSPECTIO_L1_L2_MAX_CONNECTIONS",
+    )
