@@ -1,0 +1,43 @@
+# Smoke: admit + wait for successes visible in GET /messages/success (N ≤ 100).
+# Apply after stack healthy. Logs: kubectl -n inspectio logs job/inspectio-v3-load-test -f
+# Wait ~60s: kubectl wait --for=condition=complete job/inspectio-v3-load-test -n inspectio --timeout=65s
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: inspectio-v3-load-test
+  namespace: inspectio
+  labels:
+    app.kubernetes.io/part-of: inspectio-v3
+spec:
+  activeDeadlineSeconds: 60
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 86400
+  template:
+    spec:
+      serviceAccountName: inspectio-app
+      restartPolicy: Never
+      containers:
+        - name: driver
+          image: inspectio-v3:latest
+          imagePullPolicy: Always
+          env:
+            - name: INSPECTIO_LOAD_TEST_API_BASE
+              value: http://inspectio-l1:8080
+          args:
+            - python
+            - scripts/v3_load_test.py
+            - --kubernetes
+            - --sizes
+            - "10"
+            - --chunk-max
+            - "10"
+            - --http-timeout-sec
+            - "30"
+            - --max-total-sec
+            - "55"
+            - --outcome-timeout-sec
+            - "45"
+            - --outcome-poll-sec
+            - "0.5"
+            - --wait-successes
+            - --json-summary
