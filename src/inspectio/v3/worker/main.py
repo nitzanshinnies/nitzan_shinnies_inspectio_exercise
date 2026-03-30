@@ -99,8 +99,10 @@ async def amain() -> None:
                 await asyncio.sleep(wake_every)
                 await scheduler.wakeup_scan_due()
 
-        _log.info("worker started queue=%s", q)
-        await asyncio.gather(receive_loop(), wakeup_loop())
+        pollers = max(1, int(settings.worker_receive_pollers))
+        receive_tasks = [asyncio.create_task(receive_loop()) for _ in range(pollers)]
+        _log.info("worker started queue=%s pollers=%s", q, pollers)
+        await asyncio.gather(*receive_tasks, wakeup_loop())
 
 
 def main() -> None:

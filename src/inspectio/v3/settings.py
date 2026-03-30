@@ -158,6 +158,12 @@ class V3WorkerSettings(BaseSettings):
         le=2.0,
         validation_alias="INSPECTIO_V3_WORKER_WAKEUP_SEC",
     )
+    worker_receive_pollers: int = Field(
+        default=2,
+        ge=1,
+        le=8,
+        validation_alias="INSPECTIO_V3_WORKER_RECEIVE_POLLERS",
+    )
 
     @field_validator("persist_queue_url", mode="before")
     @classmethod
