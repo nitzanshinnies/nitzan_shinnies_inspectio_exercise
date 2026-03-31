@@ -21,6 +21,7 @@ dependencies = [
 
 [project.scripts]
 inspectio-v3-expander = "inspectio.v3.expander.main:main"
+inspectio-v3-persistence-writer = "inspectio.v3.persistence_writer.main:main"
 inspectio-v3-worker = "inspectio.v3.worker.main:main"
 
 [project.optional-dependencies]

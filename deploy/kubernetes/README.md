@@ -1,6 +1,6 @@
 # Inspectio v3 — Kubernetes (EKS)
 
-Manifests for **namespace `inspectio`**: Redis (dev/in-cluster), **L2** (`inspectio-api`, ≥2 replicas), **expander**, **send worker(s)**, **L1** edge (same container image as L2, different command). **LocalStack is not used here** — point `INSPECTIO_V3_*_QUEUE_URL` values at **real AWS SQS** standard queues.
+Manifests for **namespace `inspectio`**: Redis (dev/in-cluster), **L2** (`inspectio-api`, ≥2 replicas), **expander**, **send worker(s)**, **persistence-writer**, **L1** edge (same container image as L2, different command). **LocalStack is not used here** — point `INSPECTIO_V3_*_QUEUE_URL` values at **real AWS SQS** standard queues.
 
 See **`plans/v3_phases/P6_KUBERNETES.md`**, workspace rule **`inspectio-eks-agent-executes-deploy`**, and **`plans/V3_ASYNC_PIPELINE_IMPLEMENTATION_PLAN.md`**.
 
@@ -33,6 +33,7 @@ kubectl -n inspectio set image deployment/inspectio-api api=ACCOUNT.dkr.ecr.REGI
 kubectl -n inspectio set image deployment/inspectio-expander expander=...
 kubectl -n inspectio set image deployment/inspectio-worker worker=...
 kubectl -n inspectio set image deployment/inspectio-l1 l1=...
+kubectl -n inspectio set image deployment/inspectio-persistence-writer persistence-writer=...
 kubectl -n inspectio rollout status deployment/inspectio-api --timeout=120s
 kubectl -n inspectio rollout status deployment/inspectio-l1 --timeout=120s
 ```
@@ -53,7 +54,7 @@ Duplicate **`inspectio-worker.yaml`** per shard (e.g. `inspectio-worker-1.yaml`)
 ## Probes
 
 - **L2** (`inspectio-api`) and **L1**: HTTP **`GET /healthz`**.
-- **Expander** and **worker**: no HTTP server — **no probes** in these manifests (acceptable for batch/long-poll workers; add **exec**/**TCP** probes later if desired).
+- **Expander**, **worker**, and **persistence-writer**: no HTTP server — **no probes** in these manifests (acceptable for batch/long-poll workers; add **exec**/**TCP** probes later if desired).
 
 ## Exposing L1
 
@@ -139,3 +140,21 @@ The API/worker emitter path now supports queue-based durability handoff:
 - **`INSPECTIO_V3_PERSIST_TRANSPORT_BACKOFF_JITTER`**
 - **`INSPECTIO_V3_PERSIST_TRANSPORT_MAX_INFLIGHT`** (backpressure cap)
 - **`INSPECTIO_V3_PERSIST_TRANSPORT_BATCH_MAX_EVENTS`** (1..10)
+
+## P12.3 writer envs
+
+Writer Deployment (`inspectio-persistence-writer`) consumes `INSPECTIO_V3_PERSIST_TRANSPORT_QUEUE_URL`
+and writes compressed segments + checkpoint objects to S3:
+
+- **`INSPECTIO_V3_PERSISTENCE_S3_BUCKET`** (required)
+- **`INSPECTIO_V3_PERSISTENCE_S3_PREFIX`** (default `state`)
+- **`INSPECTIO_V3_WRITER_RECEIVE_WAIT_SECONDS`**
+- **`INSPECTIO_V3_WRITER_RECEIVE_MAX_EVENTS`**
+- **`INSPECTIO_V3_WRITER_FLUSH_MAX_EVENTS`**
+- **`INSPECTIO_V3_WRITER_FLUSH_INTERVAL_MS`**
+- **`INSPECTIO_V3_WRITER_DEDUPE_EVENT_ID_CAP`**
+- **`INSPECTIO_V3_WRITER_WRITE_MAX_ATTEMPTS`**
+- **`INSPECTIO_V3_WRITER_WRITE_BACKOFF_BASE_MS`**
+- **`INSPECTIO_V3_WRITER_WRITE_BACKOFF_MAX_MS`**
+- **`INSPECTIO_V3_WRITER_WRITE_BACKOFF_JITTER`**
+- **`INSPECTIO_V3_WRITER_IDLE_SLEEP_SEC`**
