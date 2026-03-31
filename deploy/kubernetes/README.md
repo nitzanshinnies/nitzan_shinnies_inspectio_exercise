@@ -158,3 +158,13 @@ and writes compressed segments + checkpoint objects to S3:
 - **`INSPECTIO_V3_WRITER_WRITE_BACKOFF_MAX_MS`**
 - **`INSPECTIO_V3_WRITER_WRITE_BACKOFF_JITTER`**
 - **`INSPECTIO_V3_WRITER_IDLE_SLEEP_SEC`**
+
+## P12.4 worker recovery envs
+
+Recovery bootstrap is opt-in on workers and rehydrates in-memory pending state from
+persisted segments/checkpoints before receive loops start:
+
+- **`INSPECTIO_V3_WORKER_RECOVERY_ENABLED`** (`true|false`, default `false`)
+- **`INSPECTIO_V3_WORKER_RECOVERY_SHARD`** (shard index this worker owns)
+- **`INSPECTIO_V3_PERSISTENCE_S3_BUCKET`** (already used by writer; required when recovery enabled)
+- **`INSPECTIO_V3_PERSISTENCE_S3_PREFIX`** (default `state`)

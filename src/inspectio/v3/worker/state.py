@@ -13,5 +13,5 @@ class ActiveSendUnit:
     batch_correlation_id: str
     trace_id: str
     shard: int
-    receipt_handle: str
+    receipt_handle: str | None
     completed_try_sends: int = 0
