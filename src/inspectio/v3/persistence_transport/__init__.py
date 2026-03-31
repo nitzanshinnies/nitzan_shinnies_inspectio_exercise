@@ -9,6 +9,9 @@ from inspectio.v3.persistence_transport.protocol import (
     PersistenceTransportConsumer,
     PersistenceTransportProducer,
 )
+from inspectio.v3.persistence_transport.sqs_consumer import (
+    SqsPersistenceTransportConsumer,
+)
 from inspectio.v3.persistence_transport.sqs_producer import (
     DurabilityMode,
     SqsPersistenceTransportProducer,
@@ -21,5 +24,6 @@ __all__ = [
     "PersistenceTransportMetrics",
     "PersistenceTransportProducer",
     "PersistenceTransportPublishError",
+    "SqsPersistenceTransportConsumer",
     "SqsPersistenceTransportProducer",
 ]

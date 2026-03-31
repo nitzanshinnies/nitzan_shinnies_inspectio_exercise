@@ -304,3 +304,98 @@ class V3PersistenceSettings(BaseSettings):
         if isinstance(value, str) and not value.strip():
             return None
         return str(value).strip()
+
+
+class V3PersistenceWriterSettings(BaseSettings):
+    """Persistence writer process settings (P12.3)."""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+        populate_by_name=True,
+    )
+
+    aws_endpoint_url: str | None = Field(
+        default=None,
+        validation_alias="AWS_ENDPOINT_URL",
+    )
+    aws_region: str = Field(default="us-east-1", validation_alias="AWS_DEFAULT_REGION")
+    aws_access_key_id: str | None = Field(
+        default=None,
+        validation_alias="AWS_ACCESS_KEY_ID",
+    )
+    aws_secret_access_key: str | None = Field(
+        default=None,
+        validation_alias="AWS_SECRET_ACCESS_KEY",
+    )
+    persist_transport_queue_url: str = Field(
+        validation_alias="INSPECTIO_V3_PERSIST_TRANSPORT_QUEUE_URL",
+    )
+    persistence_s3_bucket: str = Field(
+        validation_alias="INSPECTIO_V3_PERSISTENCE_S3_BUCKET",
+    )
+    persistence_s3_prefix: str = Field(
+        default="state",
+        validation_alias="INSPECTIO_V3_PERSISTENCE_S3_PREFIX",
+    )
+    writer_receive_wait_seconds: int = Field(
+        default=20,
+        ge=0,
+        le=20,
+        validation_alias="INSPECTIO_V3_WRITER_RECEIVE_WAIT_SECONDS",
+    )
+    writer_receive_max_events: int = Field(
+        default=10,
+        ge=1,
+        le=10,
+        validation_alias="INSPECTIO_V3_WRITER_RECEIVE_MAX_EVENTS",
+    )
+    writer_flush_max_events: int = Field(
+        default=500,
+        ge=1,
+        le=50_000,
+        validation_alias="INSPECTIO_V3_WRITER_FLUSH_MAX_EVENTS",
+    )
+    writer_flush_interval_ms: int = Field(
+        default=1_000,
+        ge=1,
+        le=60_000,
+        validation_alias="INSPECTIO_V3_WRITER_FLUSH_INTERVAL_MS",
+    )
+    writer_dedupe_event_id_cap: int = Field(
+        default=200_000,
+        ge=64,
+        le=1_000_000,
+        validation_alias="INSPECTIO_V3_WRITER_DEDUPE_EVENT_ID_CAP",
+    )
+    writer_write_max_attempts: int = Field(
+        default=4,
+        ge=1,
+        le=10,
+        validation_alias="INSPECTIO_V3_WRITER_WRITE_MAX_ATTEMPTS",
+    )
+    writer_write_backoff_base_ms: int = Field(
+        default=50,
+        ge=1,
+        le=5_000,
+        validation_alias="INSPECTIO_V3_WRITER_WRITE_BACKOFF_BASE_MS",
+    )
+    writer_write_backoff_max_ms: int = Field(
+        default=2_000,
+        ge=1,
+        le=30_000,
+        validation_alias="INSPECTIO_V3_WRITER_WRITE_BACKOFF_MAX_MS",
+    )
+    writer_write_backoff_jitter: float = Field(
+        default=0.2,
+        ge=0.0,
+        le=1.0,
+        validation_alias="INSPECTIO_V3_WRITER_WRITE_BACKOFF_JITTER",
+    )
+    writer_idle_sleep_sec: float = Field(
+        default=0.2,
+        ge=0.01,
+        le=5.0,
+        validation_alias="INSPECTIO_V3_WRITER_IDLE_SLEEP_SEC",
+    )

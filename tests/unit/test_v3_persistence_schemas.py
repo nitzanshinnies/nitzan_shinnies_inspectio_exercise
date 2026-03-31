@@ -99,3 +99,19 @@ def test_checkpoint_requires_next_seq_minus_last_seq_one() -> None:
     payload_bad["nextSegmentSeq"] = 12
     with pytest.raises(ValidationError):
         PersistenceCheckpointV1.model_validate(payload_bad)
+
+
+@pytest.mark.unit
+def test_checkpoint_backward_compat_without_committed_source_fields() -> None:
+    payload = {
+        "schemaVersion": 1,
+        "shard": 0,
+        "lastSegmentSeq": 7,
+        "nextSegmentSeq": 8,
+        "lastEventIndex": 4,
+        "updatedAtMs": 222,
+        "segmentObjectKey": "state/events/0/7.ndjson.gz",
+    }
+    cp = PersistenceCheckpointV1.model_validate(payload)
+    assert cp.committed_source_segment_seq == -1
+    assert cp.committed_source_event_index == -1

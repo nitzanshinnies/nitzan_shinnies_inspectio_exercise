@@ -8,4 +8,5 @@ resources:
   - inspectio-api.yaml
   - inspectio-expander.yaml
   - inspectio-worker.yaml
+  - inspectio-persistence-writer.yaml
   - inspectio-l1.yaml

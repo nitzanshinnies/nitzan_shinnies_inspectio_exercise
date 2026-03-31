@@ -180,11 +180,11 @@ Implement durable batched writer consuming persistence events and writing S3 seg
 
 ### Tasks
 
-- Build shard-local buffers with size/time flush triggers.
-- Write compressed segment objects with monotonic shard sequence.
-- Persist checkpoint atomically after successful segment write.
-- Add idempotent write semantics for replayed transport messages.
-- Add writer metrics:
+- [x] Build shard-local buffers with size/time flush triggers.
+- [x] Write compressed segment objects with monotonic shard sequence.
+- [x] Persist checkpoint atomically after successful segment write.
+- [x] Add idempotent write semantics for replayed transport messages.
+- [x] Add writer metrics:
   - events buffered/flushed
   - flush duration
   - S3 errors/retries
@@ -198,10 +198,10 @@ Implement durable batched writer consuming persistence events and writing S3 seg
 
 ### Acceptance criteria
 
-- Writer flushes are batched; no object-per-message pattern exists.
-- Checkpoint monotonicity and idempotency are verified by tests.
-- Writer must restart without duplicate logical state.
-- Segment-before-checkpoint durability contract is tested with crash injection.
+- [x] Writer flushes are batched; no object-per-message pattern exists.
+- [x] Checkpoint monotonicity and idempotency are verified by tests.
+- [x] Writer must restart without duplicate logical state.
+- [x] Segment-before-checkpoint durability contract is tested with crash injection.
 
 ---
 
