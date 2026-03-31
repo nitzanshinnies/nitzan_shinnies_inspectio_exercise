@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Inspectio v3 demo</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: system-ui, sans-serif;
+        line-height: 1.4;
+      }
+      body {
+        max-width: 36rem;
+        margin: 2rem auto;
+        padding: 0 1rem;
+      }
+      section {
+        margin-bottom: 2rem;
+        padding: 1rem;
+        border: 1px solid color-mix(in srgb, CanvasText 20%, transparent);
+        border-radius: 0.5rem;
+      }
+      input[type="text"],
+      input[type="number"] {
+        width: 100%;
+        box-sizing: border-box;
+        margin: 0.25rem 0 0.5rem;
+        padding: 0.35rem 0.5rem;
+      }
+      button {
+        padding: 0.4rem 0.75rem;
+        cursor: pointer;
+      }
+      pre {
+        background: color-mix(in srgb, CanvasText 6%, transparent);
+        padding: 0.75rem;
+        overflow: auto;
+        border-radius: 0.35rem;
+        font-size: 0.85rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Inspectio v3</h1>
+    <p>
+      All API calls use this origin (L1). Repeat uses a
+      <strong>single</strong> <code>fetch</code> to
+      <code>POST /messages/repeat?count=N</code>.
+    </p>
+
+    <section>
+      <h2>Send once</h2>
+      <label for="body1">Body</label>
+      <input id="body1" type="text" value="hello" autocomplete="off" />
+      <button id="btnSend" type="button">POST /messages</button>
+    </section>
+
+    <section>
+      <h2>Repeat N</h2>
+      <label for="body2">Body</label>
+      <input id="body2" type="text" value="bulk" autocomplete="off" />
+      <label for="count">Count</label>
+      <input id="count" type="number" min="1" value="3" />
+      <button id="btnRepeat" type="button">POST /messages/repeat</button>
+    </section>
+
+    <h2>Response</h2>
+    <pre id="out">(no request yet)</pre>
+
+    <script>
+      const out = document.getElementById("out");
+      function show(data) {
+        out.textContent =
+          typeof data === "string" ? data : JSON.stringify(data, null, 2);
+      }
+      document.getElementById("btnSend").onclick = async () => {
+        const body = document.getElementById("body1").value;
+        const r = await fetch("/messages", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ body }),
+        });
+        let json = null;
+        try {
+          json = await r.json();
+        } catch (_) {}
+        show({ status: r.status, body: json });
+      };
+      document.getElementById("btnRepeat").onclick = async () => {
+        const body = document.getElementById("body2").value;
+        const count = document.getElementById("count").value;
+        const q = new URLSearchParams({ count: String(count) });
+        const r = await fetch("/messages/repeat?" + q.toString(), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ body }),
+        });
+        let json = null;
+        try {
+          json = await r.json();
+        } catch (_) {}
+        show({ status: r.status, body: json });
+      };
+    </script>
+  </body>
+</html>

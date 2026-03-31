@@ -1,0 +1,33 @@
+# One Deployment per send shard in production: duplicate this manifest and set
+# INSPECTIO_V3_WORKER_SEND_QUEUE_URL to the matching shard queue when K > 1.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inspectio-worker
+  namespace: inspectio
+  labels:
+    app.kubernetes.io/name: inspectio-worker
+    app.kubernetes.io/part-of: inspectio-v3
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: inspectio-worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: inspectio-worker
+        app.kubernetes.io/part-of: inspectio-v3
+    spec:
+      serviceAccountName: inspectio-app
+      containers:
+        - name: worker
+          image: inspectio-v3:latest
+          imagePullPolicy: IfNotPresent
+          command: ["inspectio-v3-worker"]
+          envFrom:
+            - configMapRef:
+                name: inspectio-v3-config
+            - secretRef:
+                name: inspectio-v3-secrets
+                optional: true
