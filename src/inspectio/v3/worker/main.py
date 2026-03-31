@@ -14,7 +14,9 @@ import aioboto3
 from inspectio.v3.assignment_surface import Message
 from inspectio.v3.outcomes.null_store import NullOutcomesWriter
 from inspectio.v3.outcomes.redis_store import RedisOutcomesStore
+from inspectio.v3.persistence_emitter.noop import NoopPersistenceEventEmitter
 from inspectio.v3.settings import (
+    V3PersistenceSettings,
     V3WorkerSettings,
     sqs_client_kwargs_from_worker_settings,
 )
@@ -43,11 +45,15 @@ async def amain() -> None:
     _lvl = getattr(logging, _lvl_name, logging.INFO)
     logging.basicConfig(level=_lvl, format="%(levelname)s %(name)s %(message)s")
     settings = V3WorkerSettings()
+    persistence_settings = V3PersistenceSettings()
     outcomes = (
         RedisOutcomesStore.from_url(settings.redis_url)
         if settings.worker_record_outcomes
         else NullOutcomesWriter()
     )
+    # P12.1 baseline: no-op emitter keeps behavior unchanged; env toggles reserved for P12.2.
+    _ = persistence_settings.persistence_emit_enabled
+    persistence_emitter = NoopPersistenceEventEmitter()
     metrics = SendWorkerMetrics()
     session = aioboto3.Session()
     kw = sqs_client_kwargs_from_worker_settings(settings)
@@ -81,6 +87,7 @@ async def amain() -> None:
             outcomes=outcomes,
             delete_sqs_message=delete_rh,
             metrics=metrics,
+            persistence_emitter=persistence_emitter,
             persist_terminal_stub=persist_terminal_stub,
         )
 
