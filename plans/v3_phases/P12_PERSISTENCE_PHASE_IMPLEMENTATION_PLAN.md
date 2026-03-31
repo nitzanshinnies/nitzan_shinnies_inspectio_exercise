@@ -335,7 +335,7 @@ Demonstrate persistence-enabled mode retains the required throughput envelope de
 - [ ] Batched S3 segment writer + checkpoints
 - [x] Deterministic replay recovery
 - [x] Outcomes isolation from durability path
-- [ ] Fault-injection correctness tests
+- [x] Fault-injection correctness tests
 - [ ] Throughput comparison report (persist off vs on)
 - [ ] Decision Record resolved and committed
 - [ ] Core Invariants validated in automated tests
