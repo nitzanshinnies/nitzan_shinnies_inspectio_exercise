@@ -168,3 +168,54 @@ persisted segments/checkpoints before receive loops start:
 - **`INSPECTIO_V3_WORKER_RECOVERY_SHARD`** (shard index this worker owns)
 - **`INSPECTIO_V3_PERSISTENCE_S3_BUCKET`** (already used by writer; required when recovery enabled)
 - **`INSPECTIO_V3_PERSISTENCE_S3_PREFIX`** (default `state`)
+
+## P12.7 throughput gate runbook (persist off vs on)
+
+For assignment throughput gates, run both profiles in-cluster with identical workload shape:
+
+1. **Persistence off baseline**
+   - set `INSPECTIO_V3_PERSIST_EMIT_ENABLED=false`
+   - deploy/restart workloads
+   - run benchmark Job and save JSON logs to `persist-off.json`
+2. **Persistence on profile**
+   - set `INSPECTIO_V3_PERSIST_EMIT_ENABLED=true` and run writer deployment
+   - deploy/restart workloads
+   - run same benchmark Job and save JSON logs to `persist-on.json`
+3. Collect CloudWatch peak delete throughput across all send queues (msgs/sec),
+   writer lag metric sample, and error rates for both runs.
+4. Build gate report:
+
+```bash
+python scripts/v3_persistence_throughput_report.py \
+  --persist-off-json persist-off.json \
+  --persist-on-json persist-on.json \
+  --persist-off-delete-rps 12000 \
+  --persist-on-delete-rps 9800 \
+  --persist-off-writer-lag-ms 0 \
+  --persist-on-writer-lag-ms 350 \
+  --persist-off-flush-latency-ms 0 \
+  --persist-on-flush-latency-ms 400 \
+  --writer-lag-cap-ms 30000 \
+  --flush-latency-cap-ms 5000 \
+  --persist-off-error-rate 0.001 \
+  --persist-on-error-rate 0.002 \
+  --persist-off-window "2026-03-31T13:37:55Z..2026-03-31T13:42:55Z" \
+  --persist-on-window "2026-03-31T13:39:20Z..2026-03-31T13:44:20Z" \
+  --image-tag "194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:<tag>" \
+  --configmap-sha256 "<sha256>" \
+  --profile-equivalence "same image/replicas/shards/job shape; persistence toggle only" \
+  --stability-off "stable: no crash loops observed" \
+  --stability-on "stable: no crash loops observed" \
+  --crash-loop-off false \
+  --crash-loop-on false \
+  --cloudwatch-evidence "AWS/SQS NumberOfMessagesDeleted + persist transport lag query"
+```
+
+The script writes `plans/v3_phases/P12_7_THROUGHPUT_REPORT.md` and classifies gates:
+
+- `target_pass`
+- `hard_pass_target_miss`
+- `hard_fail_completion`
+- `hard_fail_stability`
+- `hard_fail_admission`
+- `invalid_missing_metrics`
