@@ -13,7 +13,7 @@ See **`plans/v3_phases/P6_KUBERNETES.md`**, workspace rule **`inspectio-eks-agen
 
 ## Apply order
 
-1. Edit **`configmap.yaml`**: replace `REPLACE_WITH_SQS_*` placeholders; align **`INSPECTIO_V3_SEND_SHARD_COUNT`** with the number of send URLs. **`INSPECTIO_V3_SEND_QUEUE_URLS`** must be a **JSON array** string (e.g. `'["https://sqs.../shard-0","https://.../shard-1"]'`) so **`V3ExpanderSettings`** can parse it from Kubernetes env.
+1. Edit **`configmap.yaml`**: replace `REPLACE_WITH_SQS_*` placeholders; align **`INSPECTIO_V3_SEND_SHARD_COUNT`** with the number of send URLs. **`INSPECTIO_V3_SEND_QUEUE_URLS`** must be a **JSON array** string (e.g. `'["https://sqs.../shard-0","https://.../shard-1"]'`) so **`V3ExpanderSettings`** can parse it from Kubernetes env. For P12.2 transport handoff, set **`INSPECTIO_V3_PERSIST_EMIT_ENABLED=true`** and fill **`INSPECTIO_V3_PERSIST_TRANSPORT_QUEUE_URL`** (optionally **`..._DLQ_URL`**).
 2. Edit **`serviceaccount.yaml`**: set the real **IRSA** role ARN (or drop the annotation if the node role suffices).
 3. (Optional) Create **`inspectio-v3-secrets`** for static AWS keys — see **`secret-aws.example.yaml`**. Deployments use **`optional: true`** so IRSA-only clusters do not require this Secret.
 4. Apply:
@@ -124,3 +124,18 @@ INSPECTIO_V3_PERSIST_QUEUE_URL: "https://sqs.REGION.amazonaws.com/ACCOUNT/persis
 ```
 
 Unset or omit to disable.
+
+## P12.2 persistence transport envs
+
+The API/worker emitter path now supports queue-based durability handoff:
+
+- **`INSPECTIO_V3_PERSIST_EMIT_ENABLED`**: enable transport-backed emitter.
+- **`INSPECTIO_V3_PERSIST_DURABILITY_MODE`**: `best_effort` (default) or `strict`.
+- **`INSPECTIO_V3_PERSIST_TRANSPORT_QUEUE_URL`**: primary queue URL (required when enabled).
+- **`INSPECTIO_V3_PERSIST_TRANSPORT_DLQ_URL`**: optional fallback queue on publish exhaustion.
+- **`INSPECTIO_V3_PERSIST_TRANSPORT_MAX_ATTEMPTS`**
+- **`INSPECTIO_V3_PERSIST_TRANSPORT_BACKOFF_BASE_MS`**
+- **`INSPECTIO_V3_PERSIST_TRANSPORT_BACKOFF_MAX_MS`**
+- **`INSPECTIO_V3_PERSIST_TRANSPORT_BACKOFF_JITTER`**
+- **`INSPECTIO_V3_PERSIST_TRANSPORT_MAX_INFLIGHT`** (backpressure cap)
+- **`INSPECTIO_V3_PERSIST_TRANSPORT_BATCH_MAX_EVENTS`** (1..10)

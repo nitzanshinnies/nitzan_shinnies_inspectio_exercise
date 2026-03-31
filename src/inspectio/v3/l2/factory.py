@@ -14,6 +14,10 @@ from inspectio.v3.l2.app import create_l2_app
 from inspectio.v3.outcomes.null_store import NullOutcomesReader
 from inspectio.v3.outcomes.redis_store import RedisOutcomesStore
 from inspectio.v3.persistence_emitter.noop import NoopPersistenceEventEmitter
+from inspectio.v3.persistence_emitter.transport import TransportPersistenceEventEmitter
+from inspectio.v3.persistence_transport.sqs_producer import (
+    SqsPersistenceTransportProducer,
+)
 from inspectio.v3.schemas.bulk_intent import BulkIntentV1
 from inspectio.v3.settings import V3PersistenceSettings, V3SqsSettings
 from inspectio.v3.sqs.bulk_producer import SqsBulkEnqueue
@@ -31,18 +35,32 @@ class _EnqueueRelay:
         await self.impl.enqueue(bulk)
 
 
+class _PersistenceEmitterRelay:
+    """Bound after lifespan starts; defaults to no-op before binding."""
+
+    def __init__(self) -> None:
+        self.impl = NoopPersistenceEventEmitter()
+
+    async def emit_enqueued(self, **kwargs: object) -> None:
+        await self.impl.emit_enqueued(**kwargs)
+
+    async def emit_attempt_result(self, **kwargs: object) -> None:
+        await self.impl.emit_attempt_result(**kwargs)
+
+    async def emit_terminal(self, **kwargs: object) -> None:
+        await self.impl.emit_terminal(**kwargs)
+
+
 def create_l2_app_from_env() -> FastAPI:
     """SQS bulk enqueue + optional Redis outcomes (else empty GET lists)."""
     relay = _EnqueueRelay()
+    emitter_relay = _PersistenceEmitterRelay()
     shard_count = int(os.environ.get("INSPECTIO_V3_SEND_SHARD_COUNT", "1"))
     redis_url = os.environ.get("INSPECTIO_REDIS_URL") or os.environ.get("REDIS_URL")
     persistence_settings = V3PersistenceSettings()
     outcomes_reader = (
         RedisOutcomesStore.from_url(redis_url) if redis_url else NullOutcomesReader()
     )
-    # P12.1 baseline: no-op emitter is always safe; flag is a rollout switch for later phases.
-    _ = persistence_settings.persistence_emit_enabled
-    persistence_emitter = NoopPersistenceEventEmitter()
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
@@ -65,6 +83,26 @@ def create_l2_app_from_env() -> FastAPI:
                 session=session,
                 bound_client=client,
             )
+            if (
+                persistence_settings.persistence_emit_enabled
+                and persistence_settings.persist_transport_queue_url
+            ):
+                producer = SqsPersistenceTransportProducer(
+                    queue_url=persistence_settings.persist_transport_queue_url,
+                    dlq_queue_url=persistence_settings.persist_transport_dlq_url,
+                    client=client,
+                    durability_mode=persistence_settings.persistence_durability_mode,
+                    max_attempts=persistence_settings.persist_transport_max_attempts,
+                    backoff_base_ms=persistence_settings.persist_transport_backoff_base_ms,
+                    backoff_max_ms=persistence_settings.persist_transport_backoff_max_ms,
+                    backoff_jitter_fraction=persistence_settings.persist_transport_backoff_jitter_fraction,
+                    max_inflight_events=persistence_settings.persist_transport_max_inflight_events,
+                    max_batch_events=persistence_settings.persist_transport_batch_max_events,
+                )
+                emitter_relay.impl = TransportPersistenceEventEmitter(
+                    producer=producer,
+                    clock_ms=lambda: int(time.time() * 1000),
+                )
             yield
 
     return create_l2_app(
@@ -72,6 +110,6 @@ def create_l2_app_from_env() -> FastAPI:
         clock_ms=lambda: int(time.time() * 1000),
         shard_count=shard_count,
         outcomes_reader=outcomes_reader,
-        persistence_emitter=persistence_emitter,
+        persistence_emitter=emitter_relay,
         lifespan=lifespan,
     )

@@ -15,6 +15,10 @@ from inspectio.v3.assignment_surface import Message
 from inspectio.v3.outcomes.null_store import NullOutcomesWriter
 from inspectio.v3.outcomes.redis_store import RedisOutcomesStore
 from inspectio.v3.persistence_emitter.noop import NoopPersistenceEventEmitter
+from inspectio.v3.persistence_emitter.transport import TransportPersistenceEventEmitter
+from inspectio.v3.persistence_transport.sqs_producer import (
+    SqsPersistenceTransportProducer,
+)
 from inspectio.v3.settings import (
     V3PersistenceSettings,
     V3WorkerSettings,
@@ -51,8 +55,6 @@ async def amain() -> None:
         if settings.worker_record_outcomes
         else NullOutcomesWriter()
     )
-    # P12.1 baseline: no-op emitter keeps behavior unchanged; env toggles reserved for P12.2.
-    _ = persistence_settings.persistence_emit_enabled
     persistence_emitter = NoopPersistenceEventEmitter()
     metrics = SendWorkerMetrics()
     session = aioboto3.Session()
@@ -66,6 +68,26 @@ async def amain() -> None:
     async with session.client("sqs", **kw) as client:
         q = settings.send_queue_url
         persist_url = settings.persist_queue_url
+        if (
+            persistence_settings.persistence_emit_enabled
+            and persistence_settings.persist_transport_queue_url
+        ):
+            producer = SqsPersistenceTransportProducer(
+                queue_url=persistence_settings.persist_transport_queue_url,
+                dlq_queue_url=persistence_settings.persist_transport_dlq_url,
+                client=client,
+                durability_mode=persistence_settings.persistence_durability_mode,
+                max_attempts=persistence_settings.persist_transport_max_attempts,
+                backoff_base_ms=persistence_settings.persist_transport_backoff_base_ms,
+                backoff_max_ms=persistence_settings.persist_transport_backoff_max_ms,
+                backoff_jitter_fraction=persistence_settings.persist_transport_backoff_jitter_fraction,
+                max_inflight_events=persistence_settings.persist_transport_max_inflight_events,
+                max_batch_events=persistence_settings.persist_transport_batch_max_events,
+            )
+            persistence_emitter = TransportPersistenceEventEmitter(
+                producer=producer,
+                clock_ms=clock_ms,
+            )
 
         async def delete_rh(rh: str) -> None:
             await client.delete_message(QueueUrl=q, ReceiptHandle=rh)

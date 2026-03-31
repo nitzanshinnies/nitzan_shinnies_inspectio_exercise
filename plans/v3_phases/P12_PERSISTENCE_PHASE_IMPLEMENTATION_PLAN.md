@@ -153,10 +153,10 @@ Move durability handoff to asynchronous transport (queue-based), not direct S3.
 
 ### Tasks
 
-- Add transport producer/consumer contracts.
-- Implement producer in emitter path with bounded retry + jitter.
-- Add DLQ/error policy for producer failures.
-- Add config flags for transport URL, retries, batch controls.
+- [x] Add transport producer/consumer contracts.
+- [x] Implement producer in emitter path with bounded retry + jitter.
+- [x] Add DLQ/error policy for producer failures.
+- [x] Add config flags for transport URL, retries, batch controls.
 
 ### Expected file touch points
 
@@ -166,9 +166,9 @@ Move durability handoff to asynchronous transport (queue-based), not direct S3.
 
 ### Acceptance criteria
 
-- Integration test proves enqueue/attempt/terminal events are handed off under load.
-- Producer failures do not crash worker or API processes.
-- Backpressure behavior is explicit and tested (lag growth trigger and handling).
+- [x] Integration test proves enqueue/attempt/terminal events are handed off under load.
+- [x] Producer failures do not crash worker or API processes.
+- [x] Backpressure behavior is explicit and tested (lag growth trigger and handling).
 
 ---
 
