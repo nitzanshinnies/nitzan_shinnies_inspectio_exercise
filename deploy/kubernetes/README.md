@@ -13,7 +13,7 @@ See **`plans/v3_phases/P6_KUBERNETES.md`**, workspace rule **`inspectio-eks-agen
 
 ## Apply order
 
-1. Edit **`configmap.yaml`**: replace `REPLACE_WITH_SQS_*` placeholders; align **`INSPECTIO_V3_SEND_SHARD_COUNT`** with the number of send URLs. **`INSPECTIO_V3_SEND_QUEUE_URLS`** must be a **JSON array** string (e.g. `'["https://sqs.../shard-0","https://.../shard-1"]'`) so **`V3ExpanderSettings`** can parse it from Kubernetes env. For P12.2 transport handoff, set **`INSPECTIO_V3_PERSIST_EMIT_ENABLED=true`** and fill **`INSPECTIO_V3_PERSIST_TRANSPORT_QUEUE_URL`** (optionally **`..._DLQ_URL`**).
+1. Edit **`configmap.yaml`**: replace `REPLACE_WITH_SQS_*` placeholders; align **`INSPECTIO_V3_SEND_SHARD_COUNT`** with the number of send URLs. **`INSPECTIO_V3_SEND_QUEUE_URLS`** must be a **JSON array** string (e.g. `'["https://sqs.../shard-0","https://.../shard-1"]'`) so **`V3ExpanderSettings`** can parse it from Kubernetes env. For P12.2/P12.8 transport handoff, set **`INSPECTIO_V3_PERSIST_EMIT_ENABLED=true`** and either fill single queue envs (**`..._QUEUE_URL`**, optional **`..._DLQ_URL`**) or shard list envs (**`..._SHARD_COUNT`** + **`..._QUEUE_URLS`** + optional **`..._DLQ_URLS`**).
 2. Edit **`serviceaccount.yaml`**: set the real **IRSA** role ARN (or drop the annotation if the node role suffices).
 3. (Optional) Create **`inspectio-v3-secrets`** for static AWS keys — see **`secret-aws.example.yaml`**. Deployments use **`optional: true`** so IRSA-only clusters do not require this Secret.
 4. Apply:
@@ -126,7 +126,7 @@ INSPECTIO_V3_PERSIST_QUEUE_URL: "https://sqs.REGION.amazonaws.com/ACCOUNT/persis
 
 Unset or omit to disable.
 
-## P12.2 persistence transport envs
+## P12.2 / P12.8 persistence transport envs
 
 The API/worker emitter path now supports queue-based durability handoff:
 
@@ -134,6 +134,9 @@ The API/worker emitter path now supports queue-based durability handoff:
 - **`INSPECTIO_V3_PERSIST_DURABILITY_MODE`**: `best_effort` (default) or `strict`.
 - **`INSPECTIO_V3_PERSIST_TRANSPORT_QUEUE_URL`**: primary queue URL (required when enabled).
 - **`INSPECTIO_V3_PERSIST_TRANSPORT_DLQ_URL`**: optional fallback queue on publish exhaustion.
+- **`INSPECTIO_V3_PERSIST_TRANSPORT_SHARD_COUNT`**: shard count for sharded routing mode.
+- **`INSPECTIO_V3_PERSIST_TRANSPORT_QUEUE_URLS`**: JSON array/CSV of queue URLs; length must equal shard count.
+- **`INSPECTIO_V3_PERSIST_TRANSPORT_DLQ_URLS`**: optional JSON array/CSV of DLQ URLs; empty or same length as shard count.
 - **`INSPECTIO_V3_PERSIST_TRANSPORT_MAX_ATTEMPTS`**
 - **`INSPECTIO_V3_PERSIST_TRANSPORT_BACKOFF_BASE_MS`**
 - **`INSPECTIO_V3_PERSIST_TRANSPORT_BACKOFF_MAX_MS`**
@@ -141,13 +144,13 @@ The API/worker emitter path now supports queue-based durability handoff:
 - **`INSPECTIO_V3_PERSIST_TRANSPORT_MAX_INFLIGHT`** (backpressure cap)
 - **`INSPECTIO_V3_PERSIST_TRANSPORT_BATCH_MAX_EVENTS`** (1..10)
 
-## P12.3 writer envs
+## P12.3 / P12.8 writer envs
 
-Writer Deployment (`inspectio-persistence-writer`) consumes `INSPECTIO_V3_PERSIST_TRANSPORT_QUEUE_URL`
-and writes compressed segments + checkpoint objects to S3:
+Writer consumes one persistence transport shard queue and writes compressed segments + checkpoint objects to S3:
 
 - **`INSPECTIO_V3_PERSISTENCE_S3_BUCKET`** (required)
 - **`INSPECTIO_V3_PERSISTENCE_S3_PREFIX`** (default `state`)
+- **`INSPECTIO_V3_WRITER_SHARD_ID`** (required for sharded mode, in range `[0, SHARD_COUNT-1]`)
 - **`INSPECTIO_V3_WRITER_RECEIVE_WAIT_SECONDS`**
 - **`INSPECTIO_V3_WRITER_RECEIVE_MAX_EVENTS`**
 - **`INSPECTIO_V3_WRITER_FLUSH_MAX_EVENTS`**
@@ -158,6 +161,9 @@ and writes compressed segments + checkpoint objects to S3:
 - **`INSPECTIO_V3_WRITER_WRITE_BACKOFF_MAX_MS`**
 - **`INSPECTIO_V3_WRITER_WRITE_BACKOFF_JITTER`**
 - **`INSPECTIO_V3_WRITER_IDLE_SLEEP_SEC`**
+
+For **K=4** shard-aligned writer deployments, use **`inspectio-persistence-writer-shards-k4.yaml`** and
+delete the singleton writer Deployment before applying it.
 
 ## P12.4 worker recovery envs
 

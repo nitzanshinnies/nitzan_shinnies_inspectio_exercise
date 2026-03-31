@@ -79,6 +79,7 @@ P12.4 Recovery replay and runtime bootstrap
 P12.5 Read-model hardening and failure isolation
 P12.6 Correctness and fault-injection verification
 P12.7 Throughput validation and regression gates
+P12.8 Sharded persistence transport and writer scaling
 ```
 
 Each phase is mergeable and must ship with tests.
@@ -318,6 +319,30 @@ Demonstrate persistence-enabled mode retains the required throughput envelope de
 
 ---
 
+## P12.8 — Sharded Persistence Transport and Writer Scaling
+
+### Goal
+
+Remove the centralized persistence bottleneck by aligning persistence transport + writer ownership
+with send-path shard parallelism.
+
+### Tasks
+
+- [x] Add shard-aware persistence transport settings + strict startup validation.
+- [x] Route emitted events to shard-mapped transport producers by `event.shard`.
+- [x] Bind writer process queue ownership using `INSPECTIO_V3_WRITER_SHARD_ID`.
+- [x] Add Kubernetes writer-per-shard template and env wiring documentation.
+- [x] Add unit/integration tests for shard routing and shard binding guards.
+
+### Acceptance criteria
+
+- [x] Persistence transport routing is shard-aligned with no cross-shard queue leakage.
+- [x] Writer shard id validation fails fast for out-of-range or mismatched queue maps.
+- [x] Existing checkpoint and replay behavior remains shard-local and deterministic.
+- [x] New P12.8 tests pass with existing persistence correctness suites.
+
+---
+
 ## Agent Execution Rules
 
 1. One phase per PR unless phase is explicitly tiny.
@@ -337,6 +362,7 @@ Demonstrate persistence-enabled mode retains the required throughput envelope de
 - [x] Outcomes isolation from durability path
 - [x] Fault-injection correctness tests
 - [x] Throughput comparison report (persist off vs on)
+- [x] Shard-aligned persistence routing/writer scaling
 - [ ] Decision Record resolved and committed
 - [ ] Core Invariants validated in automated tests
 

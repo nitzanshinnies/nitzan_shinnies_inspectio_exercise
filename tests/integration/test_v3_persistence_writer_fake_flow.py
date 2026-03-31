@@ -147,3 +147,41 @@ async def test_writer_restart_redelivery_idempotent() -> None:
     assert dict(store.jsons["state/checkpoints/0/latest.json"]) == cp_before
     assert dict(store.bytes) == bytes_before
     assert writer_b.metrics.events_dropped_committed_watermark == 2
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_multi_writer_concurrent_flow_keeps_checkpoints_independent() -> None:
+    store = _MemStore()
+    writer_0 = BufferedPersistenceWriter(
+        store=store,
+        clock_ms=lambda: 1_700_000_300_000,
+        flush_max_events=4,
+        flush_interval_ms=10_000,
+        dedupe_event_id_cap=10_000,
+        write_max_attempts=2,
+        backoff_base_ms=1,
+        backoff_max_ms=1,
+        backoff_jitter_fraction=0.0,
+    )
+    writer_1 = BufferedPersistenceWriter(
+        store=store,
+        clock_ms=lambda: 1_700_000_300_000,
+        flush_max_events=4,
+        flush_interval_ms=10_000,
+        dedupe_event_id_cap=10_000,
+        write_max_attempts=2,
+        backoff_base_ms=1,
+        backoff_max_ms=1,
+        backoff_jitter_fraction=0.0,
+    )
+
+    await writer_0.ingest_events([_event("w0-1", shard=0), _event("w0-2", shard=0)])
+    await writer_1.ingest_events([_event("w1-1", shard=1), _event("w1-2", shard=1)])
+    acked_0 = await writer_0.flush_due(force=True)
+    acked_1 = await writer_1.flush_due(force=True)
+
+    assert {event.event_id for event in acked_0} == {"w0-1", "w0-2"}
+    assert {event.event_id for event in acked_1} == {"w1-1", "w1-2"}
+    assert store.jsons["state/checkpoints/0/latest.json"]["shard"] == 0
+    assert store.jsons["state/checkpoints/1/latest.json"]["shard"] == 1

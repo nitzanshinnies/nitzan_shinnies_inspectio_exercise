@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Literal, Self
 
 from pydantic import AliasChoices, Field, field_validator, model_validator
@@ -283,6 +284,19 @@ class V3PersistenceSettings(BaseSettings):
         default=None,
         validation_alias="INSPECTIO_V3_PERSIST_TRANSPORT_DLQ_URL",
     )
+    persist_transport_shard_count: int = Field(
+        default=1,
+        ge=1,
+        validation_alias="INSPECTIO_V3_PERSIST_TRANSPORT_SHARD_COUNT",
+    )
+    persist_transport_queue_urls: list[str] = Field(
+        default_factory=list,
+        validation_alias="INSPECTIO_V3_PERSIST_TRANSPORT_QUEUE_URLS",
+    )
+    persist_transport_dlq_urls: list[str] = Field(
+        default_factory=list,
+        validation_alias="INSPECTIO_V3_PERSIST_TRANSPORT_DLQ_URLS",
+    )
     persist_transport_max_attempts: int = Field(
         default=4,
         ge=1,
@@ -331,6 +345,58 @@ class V3PersistenceSettings(BaseSettings):
             return None
         return str(value).strip()
 
+    @field_validator(
+        "persist_transport_queue_urls", "persist_transport_dlq_urls", mode="before"
+    )
+    @classmethod
+    def _url_list_from_csv_or_json(cls, value: object) -> list[str]:
+        if value is None:
+            return []
+        if isinstance(value, list):
+            return [str(item).strip() for item in value if str(item).strip()]
+        if isinstance(value, str):
+            if not value.strip():
+                return []
+            if value.lstrip().startswith("["):
+                decoded = json.loads(value)
+                if not isinstance(decoded, list):
+                    raise TypeError(value)
+                return [str(item).strip() for item in decoded if str(item).strip()]
+            return [item.strip() for item in value.split(",") if item.strip()]
+        raise TypeError(value)
+
+    @model_validator(mode="after")
+    def _validate_sharded_transport(self) -> Self:
+        if self.persist_transport_queue_urls:
+            if (
+                len(self.persist_transport_queue_urls)
+                != self.persist_transport_shard_count
+            ):
+                msg = (
+                    "INSPECTIO_V3_PERSIST_TRANSPORT_QUEUE_URLS length must equal "
+                    f"INSPECTIO_V3_PERSIST_TRANSPORT_SHARD_COUNT ({self.persist_transport_shard_count}), "
+                    f"got {len(self.persist_transport_queue_urls)}"
+                )
+                raise ValueError(msg)
+            if (
+                self.persist_transport_dlq_urls
+                and len(self.persist_transport_dlq_urls)
+                != self.persist_transport_shard_count
+            ):
+                msg = (
+                    "INSPECTIO_V3_PERSIST_TRANSPORT_DLQ_URLS length must equal "
+                    f"INSPECTIO_V3_PERSIST_TRANSPORT_SHARD_COUNT ({self.persist_transport_shard_count}), "
+                    f"got {len(self.persist_transport_dlq_urls)}"
+                )
+                raise ValueError(msg)
+        elif self.persist_transport_queue_url is None and self.persistence_emit_enabled:
+            raise ValueError(
+                "INSPECTIO_V3_PERSIST_TRANSPORT_QUEUE_URL or "
+                "INSPECTIO_V3_PERSIST_TRANSPORT_QUEUE_URLS is required when "
+                "INSPECTIO_V3_PERSIST_EMIT_ENABLED=true"
+            )
+        return self
+
 
 class V3PersistenceWriterSettings(BaseSettings):
     """Persistence writer process settings (P12.3)."""
@@ -355,8 +421,23 @@ class V3PersistenceWriterSettings(BaseSettings):
         default=None,
         validation_alias="AWS_SECRET_ACCESS_KEY",
     )
-    persist_transport_queue_url: str = Field(
+    persist_transport_queue_url: str | None = Field(
+        default=None,
         validation_alias="INSPECTIO_V3_PERSIST_TRANSPORT_QUEUE_URL",
+    )
+    persist_transport_shard_count: int = Field(
+        default=1,
+        ge=1,
+        validation_alias="INSPECTIO_V3_PERSIST_TRANSPORT_SHARD_COUNT",
+    )
+    persist_transport_queue_urls: list[str] = Field(
+        default_factory=list,
+        validation_alias="INSPECTIO_V3_PERSIST_TRANSPORT_QUEUE_URLS",
+    )
+    writer_shard_id: int = Field(
+        default=0,
+        ge=0,
+        validation_alias="INSPECTIO_V3_WRITER_SHARD_ID",
     )
     persistence_s3_bucket: str = Field(
         validation_alias="INSPECTIO_V3_PERSISTENCE_S3_BUCKET",
@@ -425,3 +506,63 @@ class V3PersistenceWriterSettings(BaseSettings):
         le=5.0,
         validation_alias="INSPECTIO_V3_WRITER_IDLE_SLEEP_SEC",
     )
+
+    @field_validator("persist_transport_queue_url", mode="before")
+    @classmethod
+    def _writer_empty_url_as_none(cls, value: object) -> str | None:
+        if value is None:
+            return None
+        if isinstance(value, str) and not value.strip():
+            return None
+        return str(value).strip()
+
+    @field_validator("persist_transport_queue_urls", mode="before")
+    @classmethod
+    def _writer_url_list_from_csv_or_json(cls, value: object) -> list[str]:
+        if value is None:
+            return []
+        if isinstance(value, list):
+            return [str(item).strip() for item in value if str(item).strip()]
+        if isinstance(value, str):
+            if not value.strip():
+                return []
+            if value.lstrip().startswith("["):
+                decoded = json.loads(value)
+                if not isinstance(decoded, list):
+                    raise TypeError(value)
+                return [str(item).strip() for item in decoded if str(item).strip()]
+            return [item.strip() for item in value.split(",") if item.strip()]
+        raise TypeError(value)
+
+    @model_validator(mode="after")
+    def _validate_writer_shard_binding(self) -> Self:
+        if self.persist_transport_queue_urls:
+            if (
+                len(self.persist_transport_queue_urls)
+                != self.persist_transport_shard_count
+            ):
+                msg = (
+                    "INSPECTIO_V3_PERSIST_TRANSPORT_QUEUE_URLS length must equal "
+                    f"INSPECTIO_V3_PERSIST_TRANSPORT_SHARD_COUNT ({self.persist_transport_shard_count}), "
+                    f"got {len(self.persist_transport_queue_urls)}"
+                )
+                raise ValueError(msg)
+            if self.writer_shard_id >= self.persist_transport_shard_count:
+                msg = (
+                    "INSPECTIO_V3_WRITER_SHARD_ID must be in range [0, "
+                    f"{self.persist_transport_shard_count - 1}], got {self.writer_shard_id}"
+                )
+                raise ValueError(msg)
+        elif self.persist_transport_queue_url is None:
+            raise ValueError(
+                "INSPECTIO_V3_PERSIST_TRANSPORT_QUEUE_URL or "
+                "INSPECTIO_V3_PERSIST_TRANSPORT_QUEUE_URLS is required for writer"
+            )
+        return self
+
+    def resolved_transport_queue_url(self) -> str:
+        if self.persist_transport_queue_urls:
+            return self.persist_transport_queue_urls[self.writer_shard_id]
+        if self.persist_transport_queue_url is None:
+            raise ValueError("missing persistence transport queue URL")
+        return self.persist_transport_queue_url

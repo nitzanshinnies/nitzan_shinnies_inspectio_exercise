@@ -17,6 +17,9 @@ from inspectio.v3.outcomes.redis_store import RedisOutcomesStore
 from inspectio.v3.persistence_emitter.noop import NoopPersistenceEventEmitter
 from inspectio.v3.persistence_emitter.transport import TransportPersistenceEventEmitter
 from inspectio.v3.persistence_recovery.bootstrap import PersistenceRecoveryBootstrap
+from inspectio.v3.persistence_transport.sharded_router import (
+    ShardedPersistenceTransportProducer,
+)
 from inspectio.v3.persistence_transport.sqs_producer import (
     SqsPersistenceTransportProducer,
 )
@@ -97,22 +100,45 @@ async def amain() -> None:
     async with session.client("sqs", **kw) as client:
         q = settings.send_queue_url
         persist_url = settings.persist_queue_url
-        if (
-            persistence_settings.persistence_emit_enabled
-            and persistence_settings.persist_transport_queue_url
-        ):
-            producer = SqsPersistenceTransportProducer(
-                queue_url=persistence_settings.persist_transport_queue_url,
-                dlq_queue_url=persistence_settings.persist_transport_dlq_url,
-                client=client,
-                durability_mode=persistence_settings.persistence_durability_mode,
-                max_attempts=persistence_settings.persist_transport_max_attempts,
-                backoff_base_ms=persistence_settings.persist_transport_backoff_base_ms,
-                backoff_max_ms=persistence_settings.persist_transport_backoff_max_ms,
-                backoff_jitter_fraction=persistence_settings.persist_transport_backoff_jitter_fraction,
-                max_inflight_events=persistence_settings.persist_transport_max_inflight_events,
-                max_batch_events=persistence_settings.persist_transport_batch_max_events,
-            )
+        if persistence_settings.persistence_emit_enabled:
+            if persistence_settings.persist_transport_queue_urls:
+                producers_by_shard: dict[int, SqsPersistenceTransportProducer] = {}
+                for shard_id, queue_url in enumerate(
+                    persistence_settings.persist_transport_queue_urls
+                ):
+                    dlq_url = None
+                    if persistence_settings.persist_transport_dlq_urls:
+                        dlq_url = persistence_settings.persist_transport_dlq_urls[
+                            shard_id
+                        ]
+                    producers_by_shard[shard_id] = SqsPersistenceTransportProducer(
+                        queue_url=queue_url,
+                        dlq_queue_url=dlq_url,
+                        client=client,
+                        durability_mode=persistence_settings.persistence_durability_mode,
+                        max_attempts=persistence_settings.persist_transport_max_attempts,
+                        backoff_base_ms=persistence_settings.persist_transport_backoff_base_ms,
+                        backoff_max_ms=persistence_settings.persist_transport_backoff_max_ms,
+                        backoff_jitter_fraction=persistence_settings.persist_transport_backoff_jitter_fraction,
+                        max_inflight_events=persistence_settings.persist_transport_max_inflight_events,
+                        max_batch_events=persistence_settings.persist_transport_batch_max_events,
+                    )
+                producer = ShardedPersistenceTransportProducer(
+                    producers_by_shard=producers_by_shard
+                )
+            else:
+                producer = SqsPersistenceTransportProducer(
+                    queue_url=str(persistence_settings.persist_transport_queue_url),
+                    dlq_queue_url=persistence_settings.persist_transport_dlq_url,
+                    client=client,
+                    durability_mode=persistence_settings.persistence_durability_mode,
+                    max_attempts=persistence_settings.persist_transport_max_attempts,
+                    backoff_base_ms=persistence_settings.persist_transport_backoff_base_ms,
+                    backoff_max_ms=persistence_settings.persist_transport_backoff_max_ms,
+                    backoff_jitter_fraction=persistence_settings.persist_transport_backoff_jitter_fraction,
+                    max_inflight_events=persistence_settings.persist_transport_max_inflight_events,
+                    max_batch_events=persistence_settings.persist_transport_batch_max_events,
+                )
             persistence_emitter = TransportPersistenceEventEmitter(
                 producer=producer,
                 clock_ms=clock_ms,

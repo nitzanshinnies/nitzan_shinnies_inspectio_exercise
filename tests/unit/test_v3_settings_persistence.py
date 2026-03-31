@@ -35,3 +35,25 @@ def test_persistence_settings_accepts_strict_mode() -> None:
 def test_persistence_settings_rejects_invalid_mode() -> None:
     with pytest.raises(ValidationError):
         V3PersistenceSettings(persistence_durability_mode="invalid")
+
+
+@pytest.mark.unit
+def test_persistence_settings_accepts_sharded_queue_urls() -> None:
+    settings = V3PersistenceSettings(
+        persistence_emit_enabled=True,
+        persist_transport_shard_count=2,
+        persist_transport_queue_urls=["https://sqs/persist-0", "https://sqs/persist-1"],
+        persist_transport_dlq_urls=["https://sqs/dlq-0", "https://sqs/dlq-1"],
+    )
+    assert settings.persist_transport_shard_count == 2
+    assert settings.persist_transport_queue_urls[1] == "https://sqs/persist-1"
+
+
+@pytest.mark.unit
+def test_persistence_settings_rejects_shard_count_mismatch() -> None:
+    with pytest.raises(ValidationError, match="QUEUE_URLS length must equal"):
+        V3PersistenceSettings(
+            persistence_emit_enabled=True,
+            persist_transport_shard_count=2,
+            persist_transport_queue_urls=["https://sqs/persist-0"],
+        )
