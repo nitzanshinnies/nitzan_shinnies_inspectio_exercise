@@ -7,3 +7,5 @@ class SendWorkerMetrics:
     def __init__(self) -> None:
         self.send_ok: int = 0
         self.send_fail: int = 0
+        self.outcomes_write_errors: int = 0
+        self.outcomes_write_submitted: int = 0

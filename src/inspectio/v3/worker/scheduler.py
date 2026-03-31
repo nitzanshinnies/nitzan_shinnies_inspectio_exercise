@@ -48,6 +48,7 @@ class SendScheduler:
         self._active: dict[str, ActiveSendUnit] = {}
         self._terminal_message_ids: set[str] = set()
         self._locks: dict[str, asyncio.Lock] = {}
+        self._outcomes_tasks: set[asyncio.Task[None]] = set()
 
     def _lock(self, message_id: str) -> asyncio.Lock:
         if message_id not in self._locks:
@@ -75,6 +76,12 @@ class SendScheduler:
                 receipt_handle=None,
                 completed_try_sends=pending.attempt_count,
             )
+
+    async def flush_async_writes(self) -> None:
+        """Drain in-flight best-effort outcomes writes (tests/shutdown)."""
+        if not self._outcomes_tasks:
+            return
+        await asyncio.gather(*self._outcomes_tasks, return_exceptions=True)
 
     async def _emit_persist_stub(
         self,
@@ -104,6 +111,60 @@ class SendScheduler:
             "shard": shard,
         }
         await stub(payload)
+
+    def _schedule_outcomes_write(
+        self,
+        *,
+        message_id: str,
+        attempt_count: int,
+        final_timestamp_ms: int,
+        reason: str | None,
+    ) -> None:
+        task = asyncio.create_task(
+            self._record_outcome_best_effort(
+                message_id=message_id,
+                attempt_count=attempt_count,
+                final_timestamp_ms=final_timestamp_ms,
+                reason=reason,
+            )
+        )
+        self._outcomes_tasks.add(task)
+        self._metrics.outcomes_write_submitted += 1
+        task.add_done_callback(self._on_outcomes_write_done)
+
+    def _on_outcomes_write_done(self, task: asyncio.Task[None]) -> None:
+        self._outcomes_tasks.discard(task)
+        if task.cancelled():
+            self._metrics.outcomes_write_errors += 1
+            _log.warning("outcomes write task cancelled")
+            return
+        exc = task.exception()
+        if exc is None:
+            return
+        self._metrics.outcomes_write_errors += 1
+        _log.warning("outcomes write failed: %s", exc)
+
+    async def _record_outcome_best_effort(
+        self,
+        *,
+        message_id: str,
+        attempt_count: int,
+        final_timestamp_ms: int,
+        reason: str | None,
+    ) -> None:
+        if reason is None:
+            await self._outcomes.record_success(
+                message_id=message_id,
+                attempt_count=attempt_count,
+                final_timestamp_ms=final_timestamp_ms,
+            )
+            return
+        await self._outcomes.record_failed(
+            message_id=message_id,
+            attempt_count=attempt_count,
+            final_timestamp_ms=final_timestamp_ms,
+            reason=reason,
+        )
 
     async def ingest_send_unit_sqs_message(self, sqs_message: dict[str, str]) -> None:
         """Parse body; dedupe duplicate SQS deliveries by ``messageId``."""
@@ -184,11 +245,6 @@ class SendScheduler:
                         status="success",
                         next_due_at_ms=None,
                     )
-                    await self._outcomes.record_success(
-                        message_id=mid,
-                        attempt_count=ac,
-                        final_timestamp_ms=ts,
-                    )
                     await self._persistence_emitter.emit_terminal(
                         trace_id=trace_id,
                         batch_correlation_id=batch_correlation_id,
@@ -215,6 +271,12 @@ class SendScheduler:
                     self._terminal_message_ids.add(mid)
                     del self._active[mid]
                     self._metrics.send_ok += 1
+                    self._schedule_outcomes_write(
+                        message_id=mid,
+                        attempt_count=ac,
+                        final_timestamp_ms=ts,
+                        reason=None,
+                    )
                     _log.debug(
                         "send_ok messageId=%s traceId=%s batchCorrelationId=%s "
                         "attempts=%s shard=%s",
@@ -239,12 +301,6 @@ class SendScheduler:
                         attempt_ok=False,
                         status="failed",
                         next_due_at_ms=None,
-                    )
-                    await self._outcomes.record_failed(
-                        message_id=mid,
-                        attempt_count=6,
-                        final_timestamp_ms=ts,
-                        reason="max_try_send_failures",
                     )
                     await self._persistence_emitter.emit_terminal(
                         trace_id=trace_id,
@@ -272,6 +328,12 @@ class SendScheduler:
                     self._terminal_message_ids.add(mid)
                     del self._active[mid]
                     self._metrics.send_fail += 1
+                    self._schedule_outcomes_write(
+                        message_id=mid,
+                        attempt_count=6,
+                        final_timestamp_ms=ts,
+                        reason="max_try_send_failures",
+                    )
                     _log.debug(
                         "send_fail messageId=%s traceId=%s batchCorrelationId=%s shard=%s",
                         mid,

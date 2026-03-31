@@ -64,7 +64,7 @@ Implementation targets **v3** only. **Normative docs:** **`plans/ASSIGNMENT.pdf`
 - **Outcomes:** v3 repeat returns a **summary**; visibility wait uses **`min(N, limit)`** rows (**≤ 100**). For **N > 100**, use **worker** logs/metrics for **3.1** send completes — see **`deploy/kubernetes/README.md`** and driver JSON fields.
 - **Tests:** **`pytest tests/unit/test_v3_load_harness_stats.py -m unit`**.
 
-## V3 persistence contracts + transport/writer/recovery path (phases P12.0-P12.4)
+## V3 persistence contracts + transport/writer/recovery path (phases P12.0-P12.5)
 
 - **Contracts (P12.0):**
   - **`PersistenceEventV1`** envelope schema (strict validation)
@@ -93,6 +93,11 @@ Implementation targets **v3** only. **Normative docs:** **`plans/ASSIGNMENT.pdf`
   - startup logs include replay segment/event counts and skipped pending records missing payload
   - worker env switches: **`INSPECTIO_V3_WORKER_RECOVERY_ENABLED`** and
     **`INSPECTIO_V3_WORKER_RECOVERY_SHARD`**
+- **Read-model isolation (P12.5):**
+  - worker terminal flow schedules outcomes writes as best-effort async tasks, isolated from
+    persistence terminal emission and SQS delete path
+  - degraded outcomes backend increments worker counters (`outcomes_write_submitted`,
+    `outcomes_write_errors`) and logs warnings without failing scheduler progress
 - **Tests:** strict schema validation, replay-order determinism, fake transport replay path:
   - **`tests/unit/test_v3_persistence_schemas.py`**
   - **`tests/unit/test_v3_persistence_replay_order.py`**
@@ -103,6 +108,8 @@ Implementation targets **v3** only. **Normative docs:** **`plans/ASSIGNMENT.pdf`
   - **`tests/unit/test_v3_persistence_writer.py`**
   - **`tests/integration/test_v3_persistence_writer_fake_flow.py`**
   - **`tests/unit/test_v3_persistence_recovery_bootstrap.py`**
+  - **`tests/integration/test_v3_recovery_bootstrap_runtime.py`**
+  - **`tests/unit/test_v3_send_scheduler.py`**
   - **`tests/unit/test_v3_settings_persistence_writer.py`**
 - **Decision lock:** **`plans/v3_phases/P12_DECISION_RECORD.md`**.
 - **Load harness extension point:** **`scripts/v3_load_test.py --persistence-mode {off,on}`**
