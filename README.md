@@ -64,7 +64,7 @@ Implementation targets **v3** only. **Normative docs:** **`plans/ASSIGNMENT.pdf`
 - **Outcomes:** v3 repeat returns a **summary**; visibility wait uses **`min(N, limit)`** rows (**≤ 100**). For **N > 100**, use **worker** logs/metrics for **3.1** send completes — see **`deploy/kubernetes/README.md`** and driver JSON fields.
 - **Tests:** **`pytest tests/unit/test_v3_load_harness_stats.py -m unit`**.
 
-## V3 persistence contracts + transport/writer path (phases P12.0/P12.1/P12.2/P12.3)
+## V3 persistence contracts + transport/writer/recovery path (phases P12.0-P12.4)
 
 - **Contracts (P12.0):**
   - **`PersistenceEventV1`** envelope schema (strict validation)
@@ -87,6 +87,12 @@ Implementation targets **v3** only. **Normative docs:** **`plans/ASSIGNMENT.pdf`
   - compressed NDJSON segment objects in S3 + checkpoint updates (`segment-before-checkpoint`)
   - restart-safe checkpoint load + event-id dedupe buffer + writer metrics
   - writer process entrypoint: **`inspectio-v3-persistence-writer`**
+- **Recovery bootstrap (P12.4):**
+  - **`inspectio.v3.persistence_recovery.bootstrap`** rebuilds pending + terminal exclusion state
+    from persisted segments on worker startup
+  - startup logs include replay segment/event counts and skipped pending records missing payload
+  - worker env switches: **`INSPECTIO_V3_WORKER_RECOVERY_ENABLED`** and
+    **`INSPECTIO_V3_WORKER_RECOVERY_SHARD`**
 - **Tests:** strict schema validation, replay-order determinism, fake transport replay path:
   - **`tests/unit/test_v3_persistence_schemas.py`**
   - **`tests/unit/test_v3_persistence_replay_order.py`**
@@ -96,10 +102,11 @@ Implementation targets **v3** only. **Normative docs:** **`plans/ASSIGNMENT.pdf`
   - **`tests/integration/test_v3_persistence_transport_handoff.py`**
   - **`tests/unit/test_v3_persistence_writer.py`**
   - **`tests/integration/test_v3_persistence_writer_fake_flow.py`**
+  - **`tests/unit/test_v3_persistence_recovery_bootstrap.py`**
   - **`tests/unit/test_v3_settings_persistence_writer.py`**
 - **Decision lock:** **`plans/v3_phases/P12_DECISION_RECORD.md`**.
 - **Load harness extension point:** **`scripts/v3_load_test.py --persistence-mode {off,on}`**
-  currently labels benchmark profile only (recovery bootstrap arrives in P12.4).
+  currently labels benchmark profile only.
 
 ## Local stack
 

@@ -168,10 +168,36 @@ class V3WorkerSettings(BaseSettings):
         default=True,
         validation_alias="INSPECTIO_V3_WORKER_RECORD_OUTCOMES",
     )
+    worker_recovery_enabled: bool = Field(
+        default=False,
+        validation_alias="INSPECTIO_V3_WORKER_RECOVERY_ENABLED",
+    )
+    worker_recovery_shard: int = Field(
+        default=0,
+        ge=0,
+        validation_alias="INSPECTIO_V3_WORKER_RECOVERY_SHARD",
+    )
+    worker_recovery_s3_bucket: str | None = Field(
+        default=None,
+        validation_alias="INSPECTIO_V3_PERSISTENCE_S3_BUCKET",
+    )
+    worker_recovery_s3_prefix: str = Field(
+        default="state",
+        validation_alias="INSPECTIO_V3_PERSISTENCE_S3_PREFIX",
+    )
 
     @field_validator("persist_queue_url", mode="before")
     @classmethod
     def _persist_url_empty_as_none(cls, value: object) -> str | None:
+        if value is None:
+            return None
+        if isinstance(value, str) and not value.strip():
+            return None
+        return str(value).strip()
+
+    @field_validator("worker_recovery_s3_bucket", mode="before")
+    @classmethod
+    def _empty_bucket_as_none(cls, value: object) -> str | None:
         if value is None:
             return None
         if isinstance(value, str) and not value.strip():

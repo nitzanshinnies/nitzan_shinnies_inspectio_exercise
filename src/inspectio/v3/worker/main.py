@@ -16,9 +16,11 @@ from inspectio.v3.outcomes.null_store import NullOutcomesWriter
 from inspectio.v3.outcomes.redis_store import RedisOutcomesStore
 from inspectio.v3.persistence_emitter.noop import NoopPersistenceEventEmitter
 from inspectio.v3.persistence_emitter.transport import TransportPersistenceEventEmitter
+from inspectio.v3.persistence_recovery.bootstrap import PersistenceRecoveryBootstrap
 from inspectio.v3.persistence_transport.sqs_producer import (
     SqsPersistenceTransportProducer,
 )
+from inspectio.v3.persistence_writer.s3_store import S3PersistenceObjectStore
 from inspectio.v3.settings import (
     V3PersistenceSettings,
     V3WorkerSettings,
@@ -64,6 +66,33 @@ async def amain() -> None:
         return int(time.time() * 1000)
 
     try_send = _try_send_factory(settings)
+    recovered_pending = []
+    recovered_terminal_ids: set[str] = set()
+
+    if settings.worker_recovery_enabled and settings.worker_recovery_s3_bucket:
+        async with session.client("s3", **kw) as s3_client:
+            bootstrap = PersistenceRecoveryBootstrap(
+                object_store=S3PersistenceObjectStore(
+                    client=s3_client,
+                    bucket=settings.worker_recovery_s3_bucket,
+                    prefix=settings.worker_recovery_s3_prefix,
+                ),
+                shard_ids=[settings.worker_recovery_shard],
+            )
+            snapshot = await bootstrap.recover()
+            recovered_pending = snapshot.pending_units
+            recovered_terminal_ids = snapshot.terminal_message_ids
+            _log.info(
+                "recovery loaded pending=%s terminal=%s segments=%s events=%s skippedByCheckpoint=%s skippedMissingBody=%s skippedInvalidTiming=%s shard=%s",
+                len(snapshot.pending_units),
+                len(snapshot.terminal_message_ids),
+                snapshot.loaded_segments,
+                snapshot.loaded_events,
+                snapshot.skipped_events_checkpoint_watermark,
+                snapshot.skipped_pending_missing_body,
+                snapshot.skipped_pending_invalid_timing,
+                settings.worker_recovery_shard,
+            )
 
     async with session.client("sqs", **kw) as client:
         q = settings.send_queue_url
@@ -112,6 +141,10 @@ async def amain() -> None:
             persistence_emitter=persistence_emitter,
             persist_terminal_stub=persist_terminal_stub,
         )
+        if recovered_terminal_ids:
+            scheduler.seed_recovered_terminal_ids(recovered_terminal_ids)
+        if recovered_pending:
+            scheduler.seed_recovered_pending(recovered_pending)
 
         async def receive_loop() -> None:
             while True:

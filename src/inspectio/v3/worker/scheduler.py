@@ -13,6 +13,7 @@ from inspectio.v3.domain.retry_schedule import attempt_deadline_ms
 from inspectio.v3.outcomes.protocol import OutcomesWritePort
 from inspectio.v3.persistence_emitter.noop import NoopPersistenceEventEmitter
 from inspectio.v3.persistence_emitter.protocol import PersistenceEventEmitter
+from inspectio.v3.persistence_recovery.bootstrap import RecoveryPendingSendUnit
 from inspectio.v3.schemas.send_unit import SendUnitV1
 from inspectio.v3.worker.metrics import SendWorkerMetrics
 from inspectio.v3.worker.state import ActiveSendUnit
@@ -52,6 +53,28 @@ class SendScheduler:
         if message_id not in self._locks:
             self._locks[message_id] = asyncio.Lock()
         return self._locks[message_id]
+
+    def seed_recovered_terminal_ids(self, message_ids: set[str]) -> None:
+        self._terminal_message_ids |= message_ids
+
+    def seed_recovered_pending(
+        self, pending_units: list[RecoveryPendingSendUnit]
+    ) -> None:
+        for pending in pending_units:
+            if pending.message_id in self._terminal_message_ids:
+                continue
+            if pending.message_id in self._active:
+                continue
+            self._active[pending.message_id] = ActiveSendUnit(
+                message_id=pending.message_id,
+                body=pending.body,
+                received_at_ms=pending.received_at_ms,
+                batch_correlation_id=pending.batch_correlation_id,
+                trace_id=pending.trace_id,
+                shard=pending.shard,
+                receipt_handle=None,
+                completed_try_sends=pending.attempt_count,
+            )
 
     async def _emit_persist_stub(
         self,
@@ -154,6 +177,7 @@ class SendScheduler:
                         batch_correlation_id=batch_correlation_id,
                         message_id=mid,
                         shard=sh,
+                        body=w.body,
                         received_at_ms=w.received_at_ms,
                         attempt_count=ac,
                         attempt_ok=True,
@@ -170,6 +194,7 @@ class SendScheduler:
                         batch_correlation_id=batch_correlation_id,
                         message_id=mid,
                         shard=sh,
+                        body=w.body,
                         received_at_ms=w.received_at_ms,
                         attempt_count=ac,
                         status="success",
@@ -208,6 +233,7 @@ class SendScheduler:
                         batch_correlation_id=batch_correlation_id,
                         message_id=mid,
                         shard=sh,
+                        body=w.body,
                         received_at_ms=w.received_at_ms,
                         attempt_count=6,
                         attempt_ok=False,
@@ -225,6 +251,7 @@ class SendScheduler:
                         batch_correlation_id=batch_correlation_id,
                         message_id=mid,
                         shard=sh,
+                        body=w.body,
                         received_at_ms=w.received_at_ms,
                         attempt_count=6,
                         status="failed",
@@ -260,6 +287,7 @@ class SendScheduler:
                         batch_correlation_id=w.batch_correlation_id,
                         message_id=mid,
                         shard=w.shard,
+                        body=w.body,
                         received_at_ms=w.received_at_ms,
                         attempt_count=ac,
                         attempt_ok=False,

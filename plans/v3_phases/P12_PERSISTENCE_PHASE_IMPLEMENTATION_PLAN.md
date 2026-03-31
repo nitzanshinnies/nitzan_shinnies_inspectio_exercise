@@ -333,7 +333,7 @@ Demonstrate persistence-enabled mode retains the required throughput envelope de
 - [ ] Persistence event schemas and contracts
 - [ ] Async persistence transport handoff
 - [ ] Batched S3 segment writer + checkpoints
-- [ ] Deterministic replay recovery
+- [x] Deterministic replay recovery
 - [ ] Outcomes isolation from durability path
 - [ ] Fault-injection correctness tests
 - [ ] Throughput comparison report (persist off vs on)
