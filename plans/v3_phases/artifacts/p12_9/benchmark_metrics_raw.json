@@ -1,0 +1,2251 @@
+{
+  "runs": [
+    {
+      "profile": "off",
+      "run_id": "r1",
+      "job_window_utc": "2026-03-31T20:29:10Z..2026-03-31T20:33:22Z",
+      "query_window_utc": "2026-03-31T20:28:10Z..2026-03-31T20:35:22Z",
+      "query_window_seconds": 432.0,
+      "delete_total": 2094800.0,
+      "combined_avg_rps": 4849.074074074074,
+      "combined_peak_rps": 8939.983333333334,
+      "combined_by_timestamp": {
+        "2026-03-31T20:28:00Z": 0.0,
+        "2026-03-31T20:29:00Z": 373507.0,
+        "2026-03-31T20:30:00Z": 498334.0,
+        "2026-03-31T20:31:00Z": 536399.0,
+        "2026-03-31T20:32:00Z": 511290.0,
+        "2026-03-31T20:33:00Z": 175270.0,
+        "2026-03-31T20:34:00Z": 0.0
+      },
+      "persist_lag_max_seconds": 11.0,
+      "send_delete_by_queue": {
+        "inspectio-v3-send-0": {
+          "sum": 261878.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:28:00Z",
+              "sum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:29:00Z",
+              "sum": 46653.0
+            },
+            {
+              "timestamp": "2026-03-31T20:30:00Z",
+              "sum": 62481.0
+            },
+            {
+              "timestamp": "2026-03-31T20:31:00Z",
+              "sum": 67222.0
+            },
+            {
+              "timestamp": "2026-03-31T20:32:00Z",
+              "sum": 63665.0
+            },
+            {
+              "timestamp": "2026-03-31T20:33:00Z",
+              "sum": 21857.0
+            },
+            {
+              "timestamp": "2026-03-31T20:34:00Z",
+              "sum": 0.0
+            }
+          ]
+        },
+        "inspectio-v3-send-1": {
+          "sum": 261951.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:28:00Z",
+              "sum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:29:00Z",
+              "sum": 46663.0
+            },
+            {
+              "timestamp": "2026-03-31T20:30:00Z",
+              "sum": 62078.0
+            },
+            {
+              "timestamp": "2026-03-31T20:31:00Z",
+              "sum": 67316.0
+            },
+            {
+              "timestamp": "2026-03-31T20:32:00Z",
+              "sum": 63875.0
+            },
+            {
+              "timestamp": "2026-03-31T20:33:00Z",
+              "sum": 22019.0
+            },
+            {
+              "timestamp": "2026-03-31T20:34:00Z",
+              "sum": 0.0
+            }
+          ]
+        },
+        "inspectio-v3-send-2": {
+          "sum": 261147.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:28:00Z",
+              "sum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:29:00Z",
+              "sum": 46568.0
+            },
+            {
+              "timestamp": "2026-03-31T20:30:00Z",
+              "sum": 62159.0
+            },
+            {
+              "timestamp": "2026-03-31T20:31:00Z",
+              "sum": 66920.0
+            },
+            {
+              "timestamp": "2026-03-31T20:32:00Z",
+              "sum": 63717.0
+            },
+            {
+              "timestamp": "2026-03-31T20:33:00Z",
+              "sum": 21783.0
+            },
+            {
+              "timestamp": "2026-03-31T20:34:00Z",
+              "sum": 0.0
+            }
+          ]
+        },
+        "inspectio-v3-send-3": {
+          "sum": 261553.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:28:00Z",
+              "sum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:29:00Z",
+              "sum": 46960.0
+            },
+            {
+              "timestamp": "2026-03-31T20:30:00Z",
+              "sum": 62143.0
+            },
+            {
+              "timestamp": "2026-03-31T20:31:00Z",
+              "sum": 66549.0
+            },
+            {
+              "timestamp": "2026-03-31T20:32:00Z",
+              "sum": 64100.0
+            },
+            {
+              "timestamp": "2026-03-31T20:33:00Z",
+              "sum": 21801.0
+            },
+            {
+              "timestamp": "2026-03-31T20:34:00Z",
+              "sum": 0.0
+            }
+          ]
+        },
+        "inspectio-v3-send-4": {
+          "sum": 261975.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:28:00Z",
+              "sum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:29:00Z",
+              "sum": 46321.0
+            },
+            {
+              "timestamp": "2026-03-31T20:30:00Z",
+              "sum": 62224.0
+            },
+            {
+              "timestamp": "2026-03-31T20:31:00Z",
+              "sum": 67356.0
+            },
+            {
+              "timestamp": "2026-03-31T20:32:00Z",
+              "sum": 63884.0
+            },
+            {
+              "timestamp": "2026-03-31T20:33:00Z",
+              "sum": 22190.0
+            },
+            {
+              "timestamp": "2026-03-31T20:34:00Z",
+              "sum": 0.0
+            }
+          ]
+        },
+        "inspectio-v3-send-5": {
+          "sum": 261923.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:28:00Z",
+              "sum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:29:00Z",
+              "sum": 46698.0
+            },
+            {
+              "timestamp": "2026-03-31T20:30:00Z",
+              "sum": 62597.0
+            },
+            {
+              "timestamp": "2026-03-31T20:31:00Z",
+              "sum": 66779.0
+            },
+            {
+              "timestamp": "2026-03-31T20:32:00Z",
+              "sum": 64007.0
+            },
+            {
+              "timestamp": "2026-03-31T20:33:00Z",
+              "sum": 21842.0
+            },
+            {
+              "timestamp": "2026-03-31T20:34:00Z",
+              "sum": 0.0
+            }
+          ]
+        },
+        "inspectio-v3-send-6": {
+          "sum": 262005.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:28:00Z",
+              "sum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:29:00Z",
+              "sum": 46925.0
+            },
+            {
+              "timestamp": "2026-03-31T20:30:00Z",
+              "sum": 62144.0
+            },
+            {
+              "timestamp": "2026-03-31T20:31:00Z",
+              "sum": 67129.0
+            },
+            {
+              "timestamp": "2026-03-31T20:32:00Z",
+              "sum": 63925.0
+            },
+            {
+              "timestamp": "2026-03-31T20:33:00Z",
+              "sum": 21882.0
+            },
+            {
+              "timestamp": "2026-03-31T20:34:00Z",
+              "sum": 0.0
+            }
+          ]
+        },
+        "inspectio-v3-send-7": {
+          "sum": 262368.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:28:00Z",
+              "sum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:29:00Z",
+              "sum": 46719.0
+            },
+            {
+              "timestamp": "2026-03-31T20:30:00Z",
+              "sum": 62508.0
+            },
+            {
+              "timestamp": "2026-03-31T20:31:00Z",
+              "sum": 67128.0
+            },
+            {
+              "timestamp": "2026-03-31T20:32:00Z",
+              "sum": 64117.0
+            },
+            {
+              "timestamp": "2026-03-31T20:33:00Z",
+              "sum": 21896.0
+            },
+            {
+              "timestamp": "2026-03-31T20:34:00Z",
+              "sum": 0.0
+            }
+          ]
+        }
+      },
+      "persist_lag_by_queue": {
+        "inspectio-v3-persist-transport-0": {
+          "max_seconds": 0.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:28:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:29:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:30:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:31:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:32:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:33:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:34:00Z",
+              "maximum": 0.0
+            }
+          ]
+        },
+        "inspectio-v3-persist-transport-1": {
+          "max_seconds": 0.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:28:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:29:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:30:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:31:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:32:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:33:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:34:00Z",
+              "maximum": 0.0
+            }
+          ]
+        },
+        "inspectio-v3-persist-transport-2": {
+          "max_seconds": 0.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:28:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:29:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:30:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:31:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:32:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:33:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:34:00Z",
+              "maximum": 0.0
+            }
+          ]
+        },
+        "inspectio-v3-persist-transport-3": {
+          "max_seconds": 0.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:28:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:29:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:30:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:31:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:32:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:33:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:34:00Z",
+              "maximum": 0.0
+            }
+          ]
+        },
+        "inspectio-v3-persist-transport-4": {
+          "max_seconds": 0.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:28:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:29:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:30:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:31:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:32:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:33:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:34:00Z",
+              "maximum": 0.0
+            }
+          ]
+        },
+        "inspectio-v3-persist-transport-5": {
+          "max_seconds": 0.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:28:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:29:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:30:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:31:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:32:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:33:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:34:00Z",
+              "maximum": 0.0
+            }
+          ]
+        },
+        "inspectio-v3-persist-transport-6": {
+          "max_seconds": 11.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:28:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:29:00Z",
+              "maximum": 11.0
+            },
+            {
+              "timestamp": "2026-03-31T20:30:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:31:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:32:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:33:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:34:00Z",
+              "maximum": 0.0
+            }
+          ]
+        },
+        "inspectio-v3-persist-transport-7": {
+          "max_seconds": 0.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:28:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:29:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:30:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:31:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:32:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:33:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:34:00Z",
+              "maximum": 0.0
+            }
+          ]
+        }
+      },
+      "normalized_delete_rps": 4849.074074074074,
+      "active_period_count": 5
+    },
+    {
+      "profile": "on",
+      "run_id": "r1",
+      "job_window_utc": "2026-03-31T20:38:11Z..2026-03-31T20:42:24Z",
+      "query_window_utc": "2026-03-31T20:37:11Z..2026-03-31T20:44:24Z",
+      "query_window_seconds": 433.0,
+      "delete_total": 1276600.0,
+      "combined_avg_rps": 2948.2678983833716,
+      "combined_peak_rps": 4591.45,
+      "combined_by_timestamp": {
+        "2026-03-31T20:37:00Z": 0.0,
+        "2026-03-31T20:38:00Z": 186134.0,
+        "2026-03-31T20:39:00Z": 274923.0,
+        "2026-03-31T20:40:00Z": 274833.0,
+        "2026-03-31T20:41:00Z": 275487.0,
+        "2026-03-31T20:42:00Z": 265223.0,
+        "2026-03-31T20:43:00Z": 0.0
+      },
+      "persist_lag_max_seconds": 300.0,
+      "send_delete_by_queue": {
+        "inspectio-v3-send-0": {
+          "sum": 159501.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:37:00Z",
+              "sum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:38:00Z",
+              "sum": 23277.0
+            },
+            {
+              "timestamp": "2026-03-31T20:39:00Z",
+              "sum": 34405.0
+            },
+            {
+              "timestamp": "2026-03-31T20:40:00Z",
+              "sum": 34445.0
+            },
+            {
+              "timestamp": "2026-03-31T20:41:00Z",
+              "sum": 34391.0
+            },
+            {
+              "timestamp": "2026-03-31T20:42:00Z",
+              "sum": 32983.0
+            },
+            {
+              "timestamp": "2026-03-31T20:43:00Z",
+              "sum": 0.0
+            }
+          ]
+        },
+        "inspectio-v3-send-1": {
+          "sum": 160111.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:37:00Z",
+              "sum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:38:00Z",
+              "sum": 23805.0
+            },
+            {
+              "timestamp": "2026-03-31T20:39:00Z",
+              "sum": 35174.0
+            },
+            {
+              "timestamp": "2026-03-31T20:40:00Z",
+              "sum": 35186.0
+            },
+            {
+              "timestamp": "2026-03-31T20:41:00Z",
+              "sum": 35325.0
+            },
+            {
+              "timestamp": "2026-03-31T20:42:00Z",
+              "sum": 30621.0
+            },
+            {
+              "timestamp": "2026-03-31T20:43:00Z",
+              "sum": 0.0
+            }
+          ]
+        },
+        "inspectio-v3-send-2": {
+          "sum": 158778.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:37:00Z",
+              "sum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:38:00Z",
+              "sum": 23201.0
+            },
+            {
+              "timestamp": "2026-03-31T20:39:00Z",
+              "sum": 34308.0
+            },
+            {
+              "timestamp": "2026-03-31T20:40:00Z",
+              "sum": 34019.0
+            },
+            {
+              "timestamp": "2026-03-31T20:41:00Z",
+              "sum": 34297.0
+            },
+            {
+              "timestamp": "2026-03-31T20:42:00Z",
+              "sum": 32953.0
+            },
+            {
+              "timestamp": "2026-03-31T20:43:00Z",
+              "sum": 0.0
+            }
+          ]
+        },
+        "inspectio-v3-send-3": {
+          "sum": 159621.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:37:00Z",
+              "sum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:38:00Z",
+              "sum": 23192.0
+            },
+            {
+              "timestamp": "2026-03-31T20:39:00Z",
+              "sum": 34100.0
+            },
+            {
+              "timestamp": "2026-03-31T20:40:00Z",
+              "sum": 34353.0
+            },
+            {
+              "timestamp": "2026-03-31T20:41:00Z",
+              "sum": 34273.0
+            },
+            {
+              "timestamp": "2026-03-31T20:42:00Z",
+              "sum": 33703.0
+            },
+            {
+              "timestamp": "2026-03-31T20:43:00Z",
+              "sum": 0.0
+            }
+          ]
+        },
+        "inspectio-v3-send-4": {
+          "sum": 159329.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:37:00Z",
+              "sum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:38:00Z",
+              "sum": 23115.0
+            },
+            {
+              "timestamp": "2026-03-31T20:39:00Z",
+              "sum": 34285.0
+            },
+            {
+              "timestamp": "2026-03-31T20:40:00Z",
+              "sum": 34226.0
+            },
+            {
+              "timestamp": "2026-03-31T20:41:00Z",
+              "sum": 34511.0
+            },
+            {
+              "timestamp": "2026-03-31T20:42:00Z",
+              "sum": 33192.0
+            },
+            {
+              "timestamp": "2026-03-31T20:43:00Z",
+              "sum": 0.0
+            }
+          ]
+        },
+        "inspectio-v3-send-5": {
+          "sum": 159938.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:37:00Z",
+              "sum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:38:00Z",
+              "sum": 23277.0
+            },
+            {
+              "timestamp": "2026-03-31T20:39:00Z",
+              "sum": 34449.0
+            },
+            {
+              "timestamp": "2026-03-31T20:40:00Z",
+              "sum": 34369.0
+            },
+            {
+              "timestamp": "2026-03-31T20:41:00Z",
+              "sum": 34340.0
+            },
+            {
+              "timestamp": "2026-03-31T20:42:00Z",
+              "sum": 33503.0
+            },
+            {
+              "timestamp": "2026-03-31T20:43:00Z",
+              "sum": 0.0
+            }
+          ]
+        },
+        "inspectio-v3-send-6": {
+          "sum": 159665.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:37:00Z",
+              "sum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:38:00Z",
+              "sum": 23073.0
+            },
+            {
+              "timestamp": "2026-03-31T20:39:00Z",
+              "sum": 34038.0
+            },
+            {
+              "timestamp": "2026-03-31T20:40:00Z",
+              "sum": 34287.0
+            },
+            {
+              "timestamp": "2026-03-31T20:41:00Z",
+              "sum": 34227.0
+            },
+            {
+              "timestamp": "2026-03-31T20:42:00Z",
+              "sum": 34040.0
+            },
+            {
+              "timestamp": "2026-03-31T20:43:00Z",
+              "sum": 0.0
+            }
+          ]
+        },
+        "inspectio-v3-send-7": {
+          "sum": 159657.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:37:00Z",
+              "sum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:38:00Z",
+              "sum": 23194.0
+            },
+            {
+              "timestamp": "2026-03-31T20:39:00Z",
+              "sum": 34164.0
+            },
+            {
+              "timestamp": "2026-03-31T20:40:00Z",
+              "sum": 33948.0
+            },
+            {
+              "timestamp": "2026-03-31T20:41:00Z",
+              "sum": 34123.0
+            },
+            {
+              "timestamp": "2026-03-31T20:42:00Z",
+              "sum": 34228.0
+            },
+            {
+              "timestamp": "2026-03-31T20:43:00Z",
+              "sum": 0.0
+            }
+          ]
+        }
+      },
+      "persist_lag_by_queue": {
+        "inspectio-v3-persist-transport-0": {
+          "max_seconds": 287.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:37:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:38:00Z",
+              "maximum": 4.0
+            },
+            {
+              "timestamp": "2026-03-31T20:39:00Z",
+              "maximum": 64.0
+            },
+            {
+              "timestamp": "2026-03-31T20:40:00Z",
+              "maximum": 122.0
+            },
+            {
+              "timestamp": "2026-03-31T20:41:00Z",
+              "maximum": 177.0
+            },
+            {
+              "timestamp": "2026-03-31T20:42:00Z",
+              "maximum": 221.0
+            },
+            {
+              "timestamp": "2026-03-31T20:43:00Z",
+              "maximum": 287.0
+            }
+          ]
+        },
+        "inspectio-v3-persist-transport-1": {
+          "max_seconds": 287.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:37:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:38:00Z",
+              "maximum": 7.0
+            },
+            {
+              "timestamp": "2026-03-31T20:39:00Z",
+              "maximum": 63.0
+            },
+            {
+              "timestamp": "2026-03-31T20:40:00Z",
+              "maximum": 91.0
+            },
+            {
+              "timestamp": "2026-03-31T20:41:00Z",
+              "maximum": 182.0
+            },
+            {
+              "timestamp": "2026-03-31T20:42:00Z",
+              "maximum": 182.0
+            },
+            {
+              "timestamp": "2026-03-31T20:43:00Z",
+              "maximum": 287.0
+            }
+          ]
+        },
+        "inspectio-v3-persist-transport-2": {
+          "max_seconds": 287.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:37:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:38:00Z",
+              "maximum": 9.0
+            },
+            {
+              "timestamp": "2026-03-31T20:39:00Z",
+              "maximum": 67.0
+            },
+            {
+              "timestamp": "2026-03-31T20:40:00Z",
+              "maximum": 119.0
+            },
+            {
+              "timestamp": "2026-03-31T20:41:00Z",
+              "maximum": 178.0
+            },
+            {
+              "timestamp": "2026-03-31T20:42:00Z",
+              "maximum": 234.0
+            },
+            {
+              "timestamp": "2026-03-31T20:43:00Z",
+              "maximum": 287.0
+            }
+          ]
+        },
+        "inspectio-v3-persist-transport-3": {
+          "max_seconds": 291.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:37:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:38:00Z",
+              "maximum": 7.0
+            },
+            {
+              "timestamp": "2026-03-31T20:39:00Z",
+              "maximum": 7.0
+            },
+            {
+              "timestamp": "2026-03-31T20:40:00Z",
+              "maximum": 104.0
+            },
+            {
+              "timestamp": "2026-03-31T20:41:00Z",
+              "maximum": 177.0
+            },
+            {
+              "timestamp": "2026-03-31T20:42:00Z",
+              "maximum": 236.0
+            },
+            {
+              "timestamp": "2026-03-31T20:43:00Z",
+              "maximum": 291.0
+            }
+          ]
+        },
+        "inspectio-v3-persist-transport-4": {
+          "max_seconds": 300.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:37:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:38:00Z",
+              "maximum": 11.0
+            },
+            {
+              "timestamp": "2026-03-31T20:39:00Z",
+              "maximum": 69.0
+            },
+            {
+              "timestamp": "2026-03-31T20:40:00Z",
+              "maximum": 114.0
+            },
+            {
+              "timestamp": "2026-03-31T20:41:00Z",
+              "maximum": 184.0
+            },
+            {
+              "timestamp": "2026-03-31T20:42:00Z",
+              "maximum": 243.0
+            },
+            {
+              "timestamp": "2026-03-31T20:43:00Z",
+              "maximum": 300.0
+            }
+          ]
+        },
+        "inspectio-v3-persist-transport-5": {
+          "max_seconds": 277.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:37:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:38:00Z",
+              "maximum": 4.0
+            },
+            {
+              "timestamp": "2026-03-31T20:39:00Z",
+              "maximum": 64.0
+            },
+            {
+              "timestamp": "2026-03-31T20:40:00Z",
+              "maximum": 125.0
+            },
+            {
+              "timestamp": "2026-03-31T20:41:00Z",
+              "maximum": 177.0
+            },
+            {
+              "timestamp": "2026-03-31T20:42:00Z",
+              "maximum": 238.0
+            },
+            {
+              "timestamp": "2026-03-31T20:43:00Z",
+              "maximum": 277.0
+            }
+          ]
+        },
+        "inspectio-v3-persist-transport-6": {
+          "max_seconds": 285.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:37:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:38:00Z",
+              "maximum": 8.0
+            },
+            {
+              "timestamp": "2026-03-31T20:39:00Z",
+              "maximum": 64.0
+            },
+            {
+              "timestamp": "2026-03-31T20:40:00Z",
+              "maximum": 117.0
+            },
+            {
+              "timestamp": "2026-03-31T20:41:00Z",
+              "maximum": 177.0
+            },
+            {
+              "timestamp": "2026-03-31T20:42:00Z",
+              "maximum": 236.0
+            },
+            {
+              "timestamp": "2026-03-31T20:43:00Z",
+              "maximum": 285.0
+            }
+          ]
+        },
+        "inspectio-v3-persist-transport-7": {
+          "max_seconds": 290.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:37:00Z",
+              "maximum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:38:00Z",
+              "maximum": 5.0
+            },
+            {
+              "timestamp": "2026-03-31T20:39:00Z",
+              "maximum": 63.0
+            },
+            {
+              "timestamp": "2026-03-31T20:40:00Z",
+              "maximum": 119.0
+            },
+            {
+              "timestamp": "2026-03-31T20:41:00Z",
+              "maximum": 178.0
+            },
+            {
+              "timestamp": "2026-03-31T20:42:00Z",
+              "maximum": 239.0
+            },
+            {
+              "timestamp": "2026-03-31T20:43:00Z",
+              "maximum": 290.0
+            }
+          ]
+        }
+      },
+      "normalized_delete_rps": 2948.2678983833716,
+      "active_period_count": 5
+    },
+    {
+      "profile": "off",
+      "run_id": "r2",
+      "job_window_utc": "2026-03-31T20:50:16Z..2026-03-31T20:54:31Z",
+      "query_window_utc": "2026-03-31T20:49:16Z..2026-03-31T20:56:31Z",
+      "query_window_seconds": 435.0,
+      "delete_total": 2031200.0,
+      "combined_avg_rps": 4669.425287356322,
+      "combined_peak_rps": 8601.483333333334,
+      "combined_by_timestamp": {
+        "2026-03-31T20:49:00Z": 0.0,
+        "2026-03-31T20:50:00Z": 296326.0,
+        "2026-03-31T20:51:00Z": 516089.0,
+        "2026-03-31T20:52:00Z": 492386.0,
+        "2026-03-31T20:53:00Z": 502273.0,
+        "2026-03-31T20:54:00Z": 224126.0,
+        "2026-03-31T20:55:00Z": 0.0
+      },
+      "persist_lag_max_seconds": 955.0,
+      "send_delete_by_queue": {
+        "inspectio-v3-send-0": {
+          "sum": 253991.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:49:00Z",
+              "sum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:50:00Z",
+              "sum": 37065.0
+            },
+            {
+              "timestamp": "2026-03-31T20:51:00Z",
+              "sum": 64589.0
+            },
+            {
+              "timestamp": "2026-03-31T20:52:00Z",
+              "sum": 61922.0
+            },
+            {
+              "timestamp": "2026-03-31T20:53:00Z",
+              "sum": 62257.0
+            },
+            {
+              "timestamp": "2026-03-31T20:54:00Z",
+              "sum": 28158.0
+            },
+            {
+              "timestamp": "2026-03-31T20:55:00Z",
+              "sum": 0.0
+            }
+          ]
+        },
+        "inspectio-v3-send-1": {
+          "sum": 254566.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:49:00Z",
+              "sum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:50:00Z",
+              "sum": 37099.0
+            },
+            {
+              "timestamp": "2026-03-31T20:51:00Z",
+              "sum": 64884.0
+            },
+            {
+              "timestamp": "2026-03-31T20:52:00Z",
+              "sum": 61613.0
+            },
+            {
+              "timestamp": "2026-03-31T20:53:00Z",
+              "sum": 63067.0
+            },
+            {
+              "timestamp": "2026-03-31T20:54:00Z",
+              "sum": 27903.0
+            },
+            {
+              "timestamp": "2026-03-31T20:55:00Z",
+              "sum": 0.0
+            }
+          ]
+        },
+        "inspectio-v3-send-2": {
+          "sum": 253779.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:49:00Z",
+              "sum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:50:00Z",
+              "sum": 37065.0
+            },
+            {
+              "timestamp": "2026-03-31T20:51:00Z",
+              "sum": 65068.0
+            },
+            {
+              "timestamp": "2026-03-31T20:52:00Z",
+              "sum": 61327.0
+            },
+            {
+              "timestamp": "2026-03-31T20:53:00Z",
+              "sum": 62589.0
+            },
+            {
+              "timestamp": "2026-03-31T20:54:00Z",
+              "sum": 27730.0
+            },
+            {
+              "timestamp": "2026-03-31T20:55:00Z",
+              "sum": 0.0
+            }
+          ]
+        },
+        "inspectio-v3-send-3": {
+          "sum": 254491.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:49:00Z",
+              "sum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:50:00Z",
+              "sum": 37017.0
+            },
+            {
+              "timestamp": "2026-03-31T20:51:00Z",
+              "sum": 64369.0
+            },
+            {
+              "timestamp": "2026-03-31T20:52:00Z",
+              "sum": 61698.0
+            },
+            {
+              "timestamp": "2026-03-31T20:53:00Z",
+              "sum": 63235.0
+            },
+            {
+              "timestamp": "2026-03-31T20:54:00Z",
+              "sum": 28172.0
+            },
+            {
+              "timestamp": "2026-03-31T20:55:00Z",
+              "sum": 0.0
+            }
+          ]
+        },
+        "inspectio-v3-send-4": {
+          "sum": 253354.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:49:00Z",
+              "sum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:50:00Z",
+              "sum": 37099.0
+            },
+            {
+              "timestamp": "2026-03-31T20:51:00Z",
+              "sum": 63949.0
+            },
+            {
+              "timestamp": "2026-03-31T20:52:00Z",
+              "sum": 61519.0
+            },
+            {
+              "timestamp": "2026-03-31T20:53:00Z",
+              "sum": 62734.0
+            },
+            {
+              "timestamp": "2026-03-31T20:54:00Z",
+              "sum": 28053.0
+            },
+            {
+              "timestamp": "2026-03-31T20:55:00Z",
+              "sum": 0.0
+            }
+          ]
+        },
+        "inspectio-v3-send-5": {
+          "sum": 253939.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:49:00Z",
+              "sum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:50:00Z",
+              "sum": 36852.0
+            },
+            {
+              "timestamp": "2026-03-31T20:51:00Z",
+              "sum": 64386.0
+            },
+            {
+              "timestamp": "2026-03-31T20:52:00Z",
+              "sum": 61931.0
+            },
+            {
+              "timestamp": "2026-03-31T20:53:00Z",
+              "sum": 62990.0
+            },
+            {
+              "timestamp": "2026-03-31T20:54:00Z",
+              "sum": 27780.0
+            },
+            {
+              "timestamp": "2026-03-31T20:55:00Z",
+              "sum": 0.0
+            }
+          ]
+        },
+        "inspectio-v3-send-6": {
+          "sum": 253714.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:49:00Z",
+              "sum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:50:00Z",
+              "sum": 37192.0
+            },
+            {
+              "timestamp": "2026-03-31T20:51:00Z",
+              "sum": 64673.0
+            },
+            {
+              "timestamp": "2026-03-31T20:52:00Z",
+              "sum": 61363.0
+            },
+            {
+              "timestamp": "2026-03-31T20:53:00Z",
+              "sum": 62429.0
+            },
+            {
+              "timestamp": "2026-03-31T20:54:00Z",
+              "sum": 28057.0
+            },
+            {
+              "timestamp": "2026-03-31T20:55:00Z",
+              "sum": 0.0
+            }
+          ]
+        },
+        "inspectio-v3-send-7": {
+          "sum": 253366.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:49:00Z",
+              "sum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T20:50:00Z",
+              "sum": 36937.0
+            },
+            {
+              "timestamp": "2026-03-31T20:51:00Z",
+              "sum": 64171.0
+            },
+            {
+              "timestamp": "2026-03-31T20:52:00Z",
+              "sum": 61013.0
+            },
+            {
+              "timestamp": "2026-03-31T20:53:00Z",
+              "sum": 62972.0
+            },
+            {
+              "timestamp": "2026-03-31T20:54:00Z",
+              "sum": 28273.0
+            },
+            {
+              "timestamp": "2026-03-31T20:55:00Z",
+              "sum": 0.0
+            }
+          ]
+        }
+      },
+      "persist_lag_by_queue": {
+        "inspectio-v3-persist-transport-0": {
+          "max_seconds": 861.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:49:00Z",
+              "maximum": 542.0
+            },
+            {
+              "timestamp": "2026-03-31T20:50:00Z",
+              "maximum": 639.0
+            },
+            {
+              "timestamp": "2026-03-31T20:51:00Z",
+              "maximum": 694.0
+            },
+            {
+              "timestamp": "2026-03-31T20:52:00Z",
+              "maximum": 751.0
+            },
+            {
+              "timestamp": "2026-03-31T20:53:00Z",
+              "maximum": 805.0
+            },
+            {
+              "timestamp": "2026-03-31T20:54:00Z",
+              "maximum": 861.0
+            },
+            {
+              "timestamp": "2026-03-31T20:55:00Z",
+              "maximum": 861.0
+            }
+          ]
+        },
+        "inspectio-v3-persist-transport-1": {
+          "max_seconds": 926.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:49:00Z",
+              "maximum": 595.0
+            },
+            {
+              "timestamp": "2026-03-31T20:50:00Z",
+              "maximum": 619.0
+            },
+            {
+              "timestamp": "2026-03-31T20:51:00Z",
+              "maximum": 707.0
+            },
+            {
+              "timestamp": "2026-03-31T20:52:00Z",
+              "maximum": 762.0
+            },
+            {
+              "timestamp": "2026-03-31T20:53:00Z",
+              "maximum": 816.0
+            },
+            {
+              "timestamp": "2026-03-31T20:54:00Z",
+              "maximum": 873.0
+            },
+            {
+              "timestamp": "2026-03-31T20:55:00Z",
+              "maximum": 926.0
+            }
+          ]
+        },
+        "inspectio-v3-persist-transport-2": {
+          "max_seconds": 919.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:49:00Z",
+              "maximum": 593.0
+            },
+            {
+              "timestamp": "2026-03-31T20:50:00Z",
+              "maximum": 598.0
+            },
+            {
+              "timestamp": "2026-03-31T20:51:00Z",
+              "maximum": 698.0
+            },
+            {
+              "timestamp": "2026-03-31T20:52:00Z",
+              "maximum": 754.0
+            },
+            {
+              "timestamp": "2026-03-31T20:53:00Z",
+              "maximum": 809.0
+            },
+            {
+              "timestamp": "2026-03-31T20:54:00Z",
+              "maximum": 871.0
+            },
+            {
+              "timestamp": "2026-03-31T20:55:00Z",
+              "maximum": 919.0
+            }
+          ]
+        },
+        "inspectio-v3-persist-transport-3": {
+          "max_seconds": 919.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:49:00Z",
+              "maximum": 592.0
+            },
+            {
+              "timestamp": "2026-03-31T20:50:00Z",
+              "maximum": 641.0
+            },
+            {
+              "timestamp": "2026-03-31T20:51:00Z",
+              "maximum": 661.0
+            },
+            {
+              "timestamp": "2026-03-31T20:52:00Z",
+              "maximum": 756.0
+            },
+            {
+              "timestamp": "2026-03-31T20:53:00Z",
+              "maximum": 803.0
+            },
+            {
+              "timestamp": "2026-03-31T20:54:00Z",
+              "maximum": 872.0
+            },
+            {
+              "timestamp": "2026-03-31T20:55:00Z",
+              "maximum": 919.0
+            }
+          ]
+        },
+        "inspectio-v3-persist-transport-4": {
+          "max_seconds": 955.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:49:00Z",
+              "maximum": 576.0
+            },
+            {
+              "timestamp": "2026-03-31T20:50:00Z",
+              "maximum": 687.0
+            },
+            {
+              "timestamp": "2026-03-31T20:51:00Z",
+              "maximum": 743.0
+            },
+            {
+              "timestamp": "2026-03-31T20:52:00Z",
+              "maximum": 803.0
+            },
+            {
+              "timestamp": "2026-03-31T20:53:00Z",
+              "maximum": 859.0
+            },
+            {
+              "timestamp": "2026-03-31T20:54:00Z",
+              "maximum": 919.0
+            },
+            {
+              "timestamp": "2026-03-31T20:55:00Z",
+              "maximum": 955.0
+            }
+          ]
+        },
+        "inspectio-v3-persist-transport-5": {
+          "max_seconds": 929.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:49:00Z",
+              "maximum": 596.0
+            },
+            {
+              "timestamp": "2026-03-31T20:50:00Z",
+              "maximum": 648.0
+            },
+            {
+              "timestamp": "2026-03-31T20:51:00Z",
+              "maximum": 671.0
+            },
+            {
+              "timestamp": "2026-03-31T20:52:00Z",
+              "maximum": 759.0
+            },
+            {
+              "timestamp": "2026-03-31T20:53:00Z",
+              "maximum": 815.0
+            },
+            {
+              "timestamp": "2026-03-31T20:54:00Z",
+              "maximum": 875.0
+            },
+            {
+              "timestamp": "2026-03-31T20:55:00Z",
+              "maximum": 929.0
+            }
+          ]
+        },
+        "inspectio-v3-persist-transport-6": {
+          "max_seconds": 911.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:49:00Z",
+              "maximum": 590.0
+            },
+            {
+              "timestamp": "2026-03-31T20:50:00Z",
+              "maximum": 590.0
+            },
+            {
+              "timestamp": "2026-03-31T20:51:00Z",
+              "maximum": 693.0
+            },
+            {
+              "timestamp": "2026-03-31T20:52:00Z",
+              "maximum": 748.0
+            },
+            {
+              "timestamp": "2026-03-31T20:53:00Z",
+              "maximum": 806.0
+            },
+            {
+              "timestamp": "2026-03-31T20:54:00Z",
+              "maximum": 838.0
+            },
+            {
+              "timestamp": "2026-03-31T20:55:00Z",
+              "maximum": 911.0
+            }
+          ]
+        },
+        "inspectio-v3-persist-transport-7": {
+          "max_seconds": 918.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T20:49:00Z",
+              "maximum": 595.0
+            },
+            {
+              "timestamp": "2026-03-31T20:50:00Z",
+              "maximum": 595.0
+            },
+            {
+              "timestamp": "2026-03-31T20:51:00Z",
+              "maximum": 703.0
+            },
+            {
+              "timestamp": "2026-03-31T20:52:00Z",
+              "maximum": 749.0
+            },
+            {
+              "timestamp": "2026-03-31T20:53:00Z",
+              "maximum": 812.0
+            },
+            {
+              "timestamp": "2026-03-31T20:54:00Z",
+              "maximum": 864.0
+            },
+            {
+              "timestamp": "2026-03-31T20:55:00Z",
+              "maximum": 918.0
+            }
+          ]
+        }
+      },
+      "normalized_delete_rps": 4669.425287356322,
+      "active_period_count": 5
+    },
+    {
+      "profile": "on",
+      "run_id": "r2",
+      "job_window_utc": "2026-03-31T21:04:16Z..2026-03-31T21:08:32Z",
+      "query_window_utc": "2026-03-31T21:03:16Z..2026-03-31T21:10:32Z",
+      "query_window_seconds": 436.0,
+      "delete_total": 1186600.0,
+      "combined_avg_rps": 2721.559633027523,
+      "combined_peak_rps": 4502.783333333334,
+      "combined_by_timestamp": {
+        "2026-03-31T21:03:00Z": 0.0,
+        "2026-03-31T21:04:00Z": 150215.0,
+        "2026-03-31T21:05:00Z": 270058.0,
+        "2026-03-31T21:06:00Z": 268903.0,
+        "2026-03-31T21:07:00Z": 270167.0,
+        "2026-03-31T21:08:00Z": 227257.0,
+        "2026-03-31T21:09:00Z": 0.0
+      },
+      "persist_lag_max_seconds": 1682.0,
+      "send_delete_by_queue": {
+        "inspectio-v3-send-0": {
+          "sum": 148171.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T21:03:00Z",
+              "sum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T21:04:00Z",
+              "sum": 18825.0
+            },
+            {
+              "timestamp": "2026-03-31T21:05:00Z",
+              "sum": 33946.0
+            },
+            {
+              "timestamp": "2026-03-31T21:06:00Z",
+              "sum": 33661.0
+            },
+            {
+              "timestamp": "2026-03-31T21:07:00Z",
+              "sum": 33830.0
+            },
+            {
+              "timestamp": "2026-03-31T21:08:00Z",
+              "sum": 27909.0
+            },
+            {
+              "timestamp": "2026-03-31T21:09:00Z",
+              "sum": 0.0
+            }
+          ]
+        },
+        "inspectio-v3-send-1": {
+          "sum": 147971.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T21:03:00Z",
+              "sum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T21:04:00Z",
+              "sum": 18773.0
+            },
+            {
+              "timestamp": "2026-03-31T21:05:00Z",
+              "sum": 34203.0
+            },
+            {
+              "timestamp": "2026-03-31T21:06:00Z",
+              "sum": 34120.0
+            },
+            {
+              "timestamp": "2026-03-31T21:07:00Z",
+              "sum": 34407.0
+            },
+            {
+              "timestamp": "2026-03-31T21:08:00Z",
+              "sum": 26468.0
+            },
+            {
+              "timestamp": "2026-03-31T21:09:00Z",
+              "sum": 0.0
+            }
+          ]
+        },
+        "inspectio-v3-send-2": {
+          "sum": 148730.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T21:03:00Z",
+              "sum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T21:04:00Z",
+              "sum": 18893.0
+            },
+            {
+              "timestamp": "2026-03-31T21:05:00Z",
+              "sum": 34321.0
+            },
+            {
+              "timestamp": "2026-03-31T21:06:00Z",
+              "sum": 34150.0
+            },
+            {
+              "timestamp": "2026-03-31T21:07:00Z",
+              "sum": 34249.0
+            },
+            {
+              "timestamp": "2026-03-31T21:08:00Z",
+              "sum": 27117.0
+            },
+            {
+              "timestamp": "2026-03-31T21:09:00Z",
+              "sum": 0.0
+            }
+          ]
+        },
+        "inspectio-v3-send-3": {
+          "sum": 148190.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T21:03:00Z",
+              "sum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T21:04:00Z",
+              "sum": 18856.0
+            },
+            {
+              "timestamp": "2026-03-31T21:05:00Z",
+              "sum": 33896.0
+            },
+            {
+              "timestamp": "2026-03-31T21:06:00Z",
+              "sum": 33619.0
+            },
+            {
+              "timestamp": "2026-03-31T21:07:00Z",
+              "sum": 33993.0
+            },
+            {
+              "timestamp": "2026-03-31T21:08:00Z",
+              "sum": 27826.0
+            },
+            {
+              "timestamp": "2026-03-31T21:09:00Z",
+              "sum": 0.0
+            }
+          ]
+        },
+        "inspectio-v3-send-4": {
+          "sum": 148512.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T21:03:00Z",
+              "sum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T21:04:00Z",
+              "sum": 18579.0
+            },
+            {
+              "timestamp": "2026-03-31T21:05:00Z",
+              "sum": 33224.0
+            },
+            {
+              "timestamp": "2026-03-31T21:06:00Z",
+              "sum": 33093.0
+            },
+            {
+              "timestamp": "2026-03-31T21:07:00Z",
+              "sum": 33155.0
+            },
+            {
+              "timestamp": "2026-03-31T21:08:00Z",
+              "sum": 30461.0
+            },
+            {
+              "timestamp": "2026-03-31T21:09:00Z",
+              "sum": 0.0
+            }
+          ]
+        },
+        "inspectio-v3-send-5": {
+          "sum": 148466.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T21:03:00Z",
+              "sum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T21:04:00Z",
+              "sum": 18865.0
+            },
+            {
+              "timestamp": "2026-03-31T21:05:00Z",
+              "sum": 33627.0
+            },
+            {
+              "timestamp": "2026-03-31T21:06:00Z",
+              "sum": 33188.0
+            },
+            {
+              "timestamp": "2026-03-31T21:07:00Z",
+              "sum": 33277.0
+            },
+            {
+              "timestamp": "2026-03-31T21:08:00Z",
+              "sum": 29509.0
+            },
+            {
+              "timestamp": "2026-03-31T21:09:00Z",
+              "sum": 0.0
+            }
+          ]
+        },
+        "inspectio-v3-send-6": {
+          "sum": 148636.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T21:03:00Z",
+              "sum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T21:04:00Z",
+              "sum": 18836.0
+            },
+            {
+              "timestamp": "2026-03-31T21:05:00Z",
+              "sum": 33742.0
+            },
+            {
+              "timestamp": "2026-03-31T21:06:00Z",
+              "sum": 33773.0
+            },
+            {
+              "timestamp": "2026-03-31T21:07:00Z",
+              "sum": 33883.0
+            },
+            {
+              "timestamp": "2026-03-31T21:08:00Z",
+              "sum": 28402.0
+            },
+            {
+              "timestamp": "2026-03-31T21:09:00Z",
+              "sum": 0.0
+            }
+          ]
+        },
+        "inspectio-v3-send-7": {
+          "sum": 147924.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T21:03:00Z",
+              "sum": 0.0
+            },
+            {
+              "timestamp": "2026-03-31T21:04:00Z",
+              "sum": 18588.0
+            },
+            {
+              "timestamp": "2026-03-31T21:05:00Z",
+              "sum": 33099.0
+            },
+            {
+              "timestamp": "2026-03-31T21:06:00Z",
+              "sum": 33299.0
+            },
+            {
+              "timestamp": "2026-03-31T21:07:00Z",
+              "sum": 33373.0
+            },
+            {
+              "timestamp": "2026-03-31T21:08:00Z",
+              "sum": 29565.0
+            },
+            {
+              "timestamp": "2026-03-31T21:09:00Z",
+              "sum": 0.0
+            }
+          ]
+        }
+      },
+      "persist_lag_by_queue": {
+        "inspectio-v3-persist-transport-0": {
+          "max_seconds": 1656.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T21:03:00Z",
+              "maximum": 1321.0
+            },
+            {
+              "timestamp": "2026-03-31T21:04:00Z",
+              "maximum": 1374.0
+            },
+            {
+              "timestamp": "2026-03-31T21:05:00Z",
+              "maximum": 1430.0
+            },
+            {
+              "timestamp": "2026-03-31T21:06:00Z",
+              "maximum": 1487.0
+            },
+            {
+              "timestamp": "2026-03-31T21:07:00Z",
+              "maximum": 1557.0
+            },
+            {
+              "timestamp": "2026-03-31T21:08:00Z",
+              "maximum": 1603.0
+            },
+            {
+              "timestamp": "2026-03-31T21:09:00Z",
+              "maximum": 1656.0
+            }
+          ]
+        },
+        "inspectio-v3-persist-transport-1": {
+          "max_seconds": 1681.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T21:03:00Z",
+              "maximum": 1344.0
+            },
+            {
+              "timestamp": "2026-03-31T21:04:00Z",
+              "maximum": 1395.0
+            },
+            {
+              "timestamp": "2026-03-31T21:05:00Z",
+              "maximum": 1452.0
+            },
+            {
+              "timestamp": "2026-03-31T21:06:00Z",
+              "maximum": 1524.0
+            },
+            {
+              "timestamp": "2026-03-31T21:07:00Z",
+              "maximum": 1524.0
+            },
+            {
+              "timestamp": "2026-03-31T21:08:00Z",
+              "maximum": 1627.0
+            },
+            {
+              "timestamp": "2026-03-31T21:09:00Z",
+              "maximum": 1681.0
+            }
+          ]
+        },
+        "inspectio-v3-persist-transport-2": {
+          "max_seconds": 1638.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T21:03:00Z",
+              "maximum": 1330.0
+            },
+            {
+              "timestamp": "2026-03-31T21:04:00Z",
+              "maximum": 1387.0
+            },
+            {
+              "timestamp": "2026-03-31T21:05:00Z",
+              "maximum": 1387.0
+            },
+            {
+              "timestamp": "2026-03-31T21:06:00Z",
+              "maximum": 1495.0
+            },
+            {
+              "timestamp": "2026-03-31T21:07:00Z",
+              "maximum": 1553.0
+            },
+            {
+              "timestamp": "2026-03-31T21:08:00Z",
+              "maximum": 1592.0
+            },
+            {
+              "timestamp": "2026-03-31T21:09:00Z",
+              "maximum": 1638.0
+            }
+          ]
+        },
+        "inspectio-v3-persist-transport-3": {
+          "max_seconds": 1671.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T21:03:00Z",
+              "maximum": 1333.0
+            },
+            {
+              "timestamp": "2026-03-31T21:04:00Z",
+              "maximum": 1383.0
+            },
+            {
+              "timestamp": "2026-03-31T21:05:00Z",
+              "maximum": 1444.0
+            },
+            {
+              "timestamp": "2026-03-31T21:06:00Z",
+              "maximum": 1499.0
+            },
+            {
+              "timestamp": "2026-03-31T21:07:00Z",
+              "maximum": 1557.0
+            },
+            {
+              "timestamp": "2026-03-31T21:08:00Z",
+              "maximum": 1616.0
+            },
+            {
+              "timestamp": "2026-03-31T21:09:00Z",
+              "maximum": 1671.0
+            }
+          ]
+        },
+        "inspectio-v3-persist-transport-4": {
+          "max_seconds": 1673.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T21:03:00Z",
+              "maximum": 1420.0
+            },
+            {
+              "timestamp": "2026-03-31T21:04:00Z",
+              "maximum": 1478.0
+            },
+            {
+              "timestamp": "2026-03-31T21:05:00Z",
+              "maximum": 1538.0
+            },
+            {
+              "timestamp": "2026-03-31T21:06:00Z",
+              "maximum": 1594.0
+            },
+            {
+              "timestamp": "2026-03-31T21:07:00Z",
+              "maximum": 1564.0
+            },
+            {
+              "timestamp": "2026-03-31T21:08:00Z",
+              "maximum": 1624.0
+            },
+            {
+              "timestamp": "2026-03-31T21:09:00Z",
+              "maximum": 1673.0
+            }
+          ]
+        },
+        "inspectio-v3-persist-transport-5": {
+          "max_seconds": 1682.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T21:03:00Z",
+              "maximum": 1344.0
+            },
+            {
+              "timestamp": "2026-03-31T21:04:00Z",
+              "maximum": 1397.0
+            },
+            {
+              "timestamp": "2026-03-31T21:05:00Z",
+              "maximum": 1452.0
+            },
+            {
+              "timestamp": "2026-03-31T21:06:00Z",
+              "maximum": 1510.0
+            },
+            {
+              "timestamp": "2026-03-31T21:07:00Z",
+              "maximum": 1570.0
+            },
+            {
+              "timestamp": "2026-03-31T21:08:00Z",
+              "maximum": 1630.0
+            },
+            {
+              "timestamp": "2026-03-31T21:09:00Z",
+              "maximum": 1682.0
+            }
+          ]
+        },
+        "inspectio-v3-persist-transport-6": {
+          "max_seconds": 1665.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T21:03:00Z",
+              "maximum": 1322.0
+            },
+            {
+              "timestamp": "2026-03-31T21:04:00Z",
+              "maximum": 1373.0
+            },
+            {
+              "timestamp": "2026-03-31T21:05:00Z",
+              "maximum": 1431.0
+            },
+            {
+              "timestamp": "2026-03-31T21:06:00Z",
+              "maximum": 1496.0
+            },
+            {
+              "timestamp": "2026-03-31T21:07:00Z",
+              "maximum": 1547.0
+            },
+            {
+              "timestamp": "2026-03-31T21:08:00Z",
+              "maximum": 1607.0
+            },
+            {
+              "timestamp": "2026-03-31T21:09:00Z",
+              "maximum": 1665.0
+            }
+          ]
+        },
+        "inspectio-v3-persist-transport-7": {
+          "max_seconds": 1651.0,
+          "datapoints": [
+            {
+              "timestamp": "2026-03-31T21:03:00Z",
+              "maximum": 1324.0
+            },
+            {
+              "timestamp": "2026-03-31T21:04:00Z",
+              "maximum": 1374.0
+            },
+            {
+              "timestamp": "2026-03-31T21:05:00Z",
+              "maximum": 1430.0
+            },
+            {
+              "timestamp": "2026-03-31T21:06:00Z",
+              "maximum": 1486.0
+            },
+            {
+              "timestamp": "2026-03-31T21:07:00Z",
+              "maximum": 1544.0
+            },
+            {
+              "timestamp": "2026-03-31T21:08:00Z",
+              "maximum": 1599.0
+            },
+            {
+              "timestamp": "2026-03-31T21:09:00Z",
+              "maximum": 1651.0
+            }
+          ]
+        }
+      },
+      "normalized_delete_rps": 2721.559633027523,
+      "active_period_count": 5
+    }
+  ],
+  "reproducibility": {
+    "completion_metric": "combined_avg_rps",
+    "off_gate": {
+      "values": [
+        4849.074074074074,
+        4669.425287356322
+      ],
+      "variance_percent": 3.775,
+      "threshold_percent": 10.0,
+      "pass": true
+    },
+    "on_gate": {
+      "values": [
+        2948.2678983833716,
+        2721.559633027523
+      ],
+      "variance_percent": 7.997,
+      "threshold_percent": 10.0,
+      "pass": true
+    },
+    "off_peak_rps_runs": [
+      8939.983333333334,
+      8601.483333333334
+    ],
+    "on_peak_rps_runs": [
+      4591.45,
+      4502.783333333334
+    ],
+    "variance_threshold_percent": 10.0,
+    "reproducible": true
+  }
+}

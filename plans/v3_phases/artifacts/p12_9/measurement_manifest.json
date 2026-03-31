@@ -1,0 +1,105 @@
+{
+  "namespace": "AWS/SQS",
+  "measurement_method": "sum NumberOfMessagesDeleted across send shards",
+  "lag_method": "max ApproximateAgeOfOldestMessage across persistence shards",
+  "send_metric": {
+    "name": "NumberOfMessagesDeleted",
+    "stat": "Sum",
+    "period_seconds": 60,
+    "dimensions": [
+      {
+        "QueueName": "inspectio-v3-send-0"
+      },
+      {
+        "QueueName": "inspectio-v3-send-1"
+      },
+      {
+        "QueueName": "inspectio-v3-send-2"
+      },
+      {
+        "QueueName": "inspectio-v3-send-3"
+      },
+      {
+        "QueueName": "inspectio-v3-send-4"
+      },
+      {
+        "QueueName": "inspectio-v3-send-5"
+      },
+      {
+        "QueueName": "inspectio-v3-send-6"
+      },
+      {
+        "QueueName": "inspectio-v3-send-7"
+      }
+    ]
+  },
+  "lag_metric": {
+    "name": "ApproximateAgeOfOldestMessage",
+    "stat": "Maximum",
+    "period_seconds": 60,
+    "dimensions": [
+      {
+        "QueueName": "inspectio-v3-persist-transport-0"
+      },
+      {
+        "QueueName": "inspectio-v3-persist-transport-1"
+      },
+      {
+        "QueueName": "inspectio-v3-persist-transport-2"
+      },
+      {
+        "QueueName": "inspectio-v3-persist-transport-3"
+      },
+      {
+        "QueueName": "inspectio-v3-persist-transport-4"
+      },
+      {
+        "QueueName": "inspectio-v3-persist-transport-5"
+      },
+      {
+        "QueueName": "inspectio-v3-persist-transport-6"
+      },
+      {
+        "QueueName": "inspectio-v3-persist-transport-7"
+      }
+    ]
+  },
+  "preprocessing": {
+    "window_preload_seconds": 60,
+    "window_tail_seconds": 120,
+    "repro_metric": "combined_avg_rps",
+    "variance_threshold_percent": 10.0,
+    "min_active_periods": 3,
+    "allow_peak_gate": false
+  },
+  "overlap_check": {
+    "overlap_detected": false,
+    "overlaps": []
+  },
+  "run_windows": [
+    {
+      "run_id": "r1",
+      "profile": "off",
+      "job_window_utc": "2026-03-31T20:29:10Z..2026-03-31T20:33:22Z",
+      "query_window_utc": "2026-03-31T20:28:10Z..2026-03-31T20:35:22Z"
+    },
+    {
+      "run_id": "r1",
+      "profile": "on",
+      "job_window_utc": "2026-03-31T20:38:11Z..2026-03-31T20:42:24Z",
+      "query_window_utc": "2026-03-31T20:37:11Z..2026-03-31T20:44:24Z"
+    },
+    {
+      "run_id": "r2",
+      "profile": "off",
+      "job_window_utc": "2026-03-31T20:50:16Z..2026-03-31T20:54:31Z",
+      "query_window_utc": "2026-03-31T20:49:16Z..2026-03-31T20:56:31Z"
+    },
+    {
+      "run_id": "r2",
+      "profile": "on",
+      "job_window_utc": "2026-03-31T21:04:16Z..2026-03-31T21:08:32Z",
+      "query_window_utc": "2026-03-31T21:03:16Z..2026-03-31T21:10:32Z"
+    }
+  ]
+}
