@@ -64,7 +64,7 @@ Implementation targets **v3** only. **Normative docs:** **`plans/ASSIGNMENT.pdf`
 - **Outcomes:** v3 repeat returns a **summary**; visibility wait uses **`min(N, limit)`** rows (**≤ 100**). For **N > 100**, use **worker** logs/metrics for **3.1** send completes — see **`deploy/kubernetes/README.md`** and driver JSON fields.
 - **Tests:** **`pytest tests/unit/test_v3_load_harness_stats.py -m unit`**.
 
-## V3 persistence contracts + transport/writer/recovery path (phases P12.0-P12.8)
+## V3 persistence contracts + transport/writer/recovery path (phases P12.0-P12.9 WS2)
 
 - **Contracts (P12.0):**
   - **`PersistenceEventV1`** envelope schema (strict validation)
@@ -118,6 +118,15 @@ Implementation targets **v3** only. **Normative docs:** **`plans/ASSIGNMENT.pdf`
     **`INSPECTIO_V3_PERSIST_TRANSPORT_QUEUE_URLS`**
   - optional sharded transport envs are validated fail-fast for shard/list mismatches so
     send-shard and persistence-shard config drift is surfaced at startup
+- **Measurement lock + observability baseline (P12.9 WS1/WS2):**
+  - measurement-lock utility **`scripts/v3_p12_9_measurement_lock.py`** enforces
+    non-overlapping query windows + reproducibility checks with `combined_avg_rps`
+  - persistence writer now emits fixed-cadence parse-friendly snapshots
+    (`writer_snapshot {json}`) including per-shard receive/flush/ack metrics, op-specific
+    retries (`s3_put`, checkpoint, `ack`), queue polling idle ratio, transport-oldest-age
+    and buffered/flush-wait gauges
+  - snapshot cadence is configurable via
+    **`INSPECTIO_V3_WRITER_OBS_SNAPSHOT_INTERVAL_SEC`**
 - **Tests:** strict schema validation, replay-order determinism, fake transport replay path:
   - **`tests/unit/test_v3_persistence_schemas.py`**
   - **`tests/unit/test_v3_persistence_replay_order.py`**
@@ -134,6 +143,7 @@ Implementation targets **v3** only. **Normative docs:** **`plans/ASSIGNMENT.pdf`
   - **`tests/unit/test_v3_load_harness_stats.py`**
   - **`tests/unit/test_v3_settings_persistence_writer.py`**
   - **`tests/unit/test_v3_persistence_transport_sharded_router.py`**
+  - **`tests/unit/test_v3_p12_9_measurement_lock.py`**
 - **Decision lock:** **`plans/v3_phases/P12_DECISION_RECORD.md`**.
 - **Load harness extension point:** **`scripts/v3_load_test.py --persistence-mode {off,on}`**
   plus **`scripts/v3_persistence_throughput_report.py`** for gate reporting.

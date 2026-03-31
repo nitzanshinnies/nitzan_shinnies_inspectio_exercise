@@ -50,6 +50,7 @@ class _MemStore:
         self.bytes: dict[str, bytes] = {}
         self.jsons: dict[str, dict[str, Any]] = {}
         self.fail_checkpoint_once = False
+        self.fail_put_bytes_once = False
         self.put_bytes_calls = 0
 
     async def put_bytes(
@@ -61,6 +62,9 @@ class _MemStore:
         content_encoding: str | None = None,
     ) -> None:
         self.put_bytes_calls += 1
+        if self.fail_put_bytes_once:
+            self.fail_put_bytes_once = False
+            raise RuntimeError("segment write fail")
         self.bytes[key] = data
 
     async def put_json(self, *, key: str, data: dict[str, Any]) -> None:
@@ -142,6 +146,20 @@ async def test_writer_segment_before_checkpoint_contract_retryable() -> None:
     )  # overwrite same segment key after checkpoint failure
     cp = store.jsons["state/checkpoints/0/latest.json"]
     assert cp["segmentObjectKey"] == "state/events/0/00000000000000000000.ndjson.gz"
+    assert writer.metrics.checkpoint_write_retries >= 1
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_writer_segment_put_retry_increments_s3_put_retries() -> None:
+    store = _MemStore()
+    store.fail_put_bytes_once = True
+    clock = [20_500]
+    writer = _build_writer(store, clock=clock)
+    await writer.ingest_events([_event("e-seg-retry")])
+    flushed = await writer.flush_due(force=True)
+    assert len(flushed) == 1
+    assert writer.metrics.s3_put_retries >= 1
 
 
 @pytest.mark.unit
@@ -268,3 +286,22 @@ async def test_backward_compat_old_checkpoint_payload_loads_safely() -> None:
     cp = store.jsons["state/checkpoints/0/latest.json"]
     assert cp["lastSegmentSeq"] == 5
     assert cp["nextSegmentSeq"] == 6
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_writer_metrics_snapshot_contains_per_shard_fields() -> None:
+    store = _MemStore()
+    clock = [80_000]
+    writer = _build_writer(
+        store, clock=clock, flush_max_events=2, flush_interval_ms=10_000
+    )
+    await writer.ingest_events([_event("obs-1", shard=0), _event("obs-2", shard=0)])
+    await writer.flush_due(force=True)
+    writer.metrics.observe_ack_batch(shard=0, events=2, latency_ms=7, now_ms=clock[0])
+    snapshot = writer.metrics.snapshot(now_ms=clock[0] + 1000)
+    shard = snapshot["shards"]["0"]
+    assert "receive_events_total" in shard
+    assert "flush_payload_bytes_last" in shard
+    assert "ack_latency_ms_last" in shard
+    assert "buffered_events" in shard

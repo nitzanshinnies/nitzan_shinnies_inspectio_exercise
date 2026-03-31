@@ -161,6 +161,7 @@ Writer consumes one persistence transport shard queue and writes compressed segm
 - **`INSPECTIO_V3_WRITER_WRITE_BACKOFF_MAX_MS`**
 - **`INSPECTIO_V3_WRITER_WRITE_BACKOFF_JITTER`**
 - **`INSPECTIO_V3_WRITER_IDLE_SLEEP_SEC`**
+- **`INSPECTIO_V3_WRITER_OBS_SNAPSHOT_INTERVAL_SEC`** (parse-friendly `writer_snapshot {...}` log cadence)
 
 For **K=4** shard-aligned writer deployments, use **`inspectio-persistence-writer-shards-k4.yaml`** and
 delete the singleton writer Deployment before applying it.

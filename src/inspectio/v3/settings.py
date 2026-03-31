@@ -506,6 +506,12 @@ class V3PersistenceWriterSettings(BaseSettings):
         le=5.0,
         validation_alias="INSPECTIO_V3_WRITER_IDLE_SLEEP_SEC",
     )
+    writer_observability_snapshot_interval_sec: int = Field(
+        default=30,
+        ge=1,
+        le=300,
+        validation_alias="INSPECTIO_V3_WRITER_OBS_SNAPSHOT_INTERVAL_SEC",
+    )
 
     @field_validator("persist_transport_queue_url", mode="before")
     @classmethod
