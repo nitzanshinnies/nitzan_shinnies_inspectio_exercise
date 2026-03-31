@@ -24,6 +24,9 @@ spec:
           image: inspectio-v3:latest
           imagePullPolicy: IfNotPresent
           command: ["inspectio-v3-persistence-writer"]
+          env:
+            - name: INSPECTIO_V3_WRITER_SHARD_ID
+              value: "0"
           envFrom:
             - configMapRef:
                 name: inspectio-v3-config

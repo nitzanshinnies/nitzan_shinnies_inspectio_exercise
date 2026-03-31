@@ -12,6 +12,9 @@ from inspectio.v3.persistence_transport.protocol import (
 from inspectio.v3.persistence_transport.sqs_consumer import (
     SqsPersistenceTransportConsumer,
 )
+from inspectio.v3.persistence_transport.sharded_router import (
+    ShardedPersistenceTransportProducer,
+)
 from inspectio.v3.persistence_transport.sqs_producer import (
     DurabilityMode,
     SqsPersistenceTransportProducer,
@@ -26,4 +29,5 @@ __all__ = [
     "PersistenceTransportPublishError",
     "SqsPersistenceTransportConsumer",
     "SqsPersistenceTransportProducer",
+    "ShardedPersistenceTransportProducer",
 ]

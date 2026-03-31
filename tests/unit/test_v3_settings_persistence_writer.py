@@ -26,3 +26,28 @@ def test_writer_settings_reject_invalid_receive_max_events() -> None:
             persistence_s3_bucket="bucket",
             writer_receive_max_events=0,
         )
+
+
+@pytest.mark.unit
+def test_writer_settings_resolves_shard_queue_url() -> None:
+    s = V3PersistenceWriterSettings(
+        persist_transport_shard_count=2,
+        persist_transport_queue_urls=["https://sqs/persist-0", "https://sqs/persist-1"],
+        writer_shard_id=1,
+        persistence_s3_bucket="bucket",
+    )
+    assert s.resolved_transport_queue_url() == "https://sqs/persist-1"
+
+
+@pytest.mark.unit
+def test_writer_settings_rejects_out_of_range_shard_id() -> None:
+    with pytest.raises(ValidationError, match="WRITER_SHARD_ID must be in range"):
+        V3PersistenceWriterSettings(
+            persist_transport_shard_count=2,
+            persist_transport_queue_urls=[
+                "https://sqs/persist-0",
+                "https://sqs/persist-1",
+            ],
+            writer_shard_id=2,
+            persistence_s3_bucket="bucket",
+        )

@@ -64,7 +64,7 @@ Implementation targets **v3** only. **Normative docs:** **`plans/ASSIGNMENT.pdf`
 - **Outcomes:** v3 repeat returns a **summary**; visibility wait uses **`min(N, limit)`** rows (**≤ 100**). For **N > 100**, use **worker** logs/metrics for **3.1** send completes — see **`deploy/kubernetes/README.md`** and driver JSON fields.
 - **Tests:** **`pytest tests/unit/test_v3_load_harness_stats.py -m unit`**.
 
-## V3 persistence contracts + transport/writer/recovery path (phases P12.0-P12.7)
+## V3 persistence contracts + transport/writer/recovery path (phases P12.0-P12.8)
 
 - **Contracts (P12.0):**
   - **`PersistenceEventV1`** envelope schema (strict validation)
@@ -110,6 +110,14 @@ Implementation targets **v3** only. **Normative docs:** **`plans/ASSIGNMENT.pdf`
     quantitative stability vetoes (writer lag/flush caps + crash-loop checks)
   - script emits markdown report at
     **`plans/v3_phases/P12_7_THROUGHPUT_REPORT.md`** from load driver JSON + CloudWatch inputs
+- **Sharded persistence layer (P12.8):**
+  - shard-aware producer routing with **`ShardedPersistenceTransportProducer`** maps each
+    persistence event to `persist-transport-{shard}` queues
+  - writer shard binding validates **`INSPECTIO_V3_WRITER_SHARD_ID`** against
+    **`INSPECTIO_V3_PERSIST_TRANSPORT_SHARD_COUNT`** and resolves queue ownership from
+    **`INSPECTIO_V3_PERSIST_TRANSPORT_QUEUE_URLS`**
+  - optional sharded transport envs are validated fail-fast for shard/list mismatches so
+    send-shard and persistence-shard config drift is surfaced at startup
 - **Tests:** strict schema validation, replay-order determinism, fake transport replay path:
   - **`tests/unit/test_v3_persistence_schemas.py`**
   - **`tests/unit/test_v3_persistence_replay_order.py`**
@@ -125,6 +133,7 @@ Implementation targets **v3** only. **Normative docs:** **`plans/ASSIGNMENT.pdf`
   - **`tests/unit/test_v3_send_scheduler.py`**
   - **`tests/unit/test_v3_load_harness_stats.py`**
   - **`tests/unit/test_v3_settings_persistence_writer.py`**
+  - **`tests/unit/test_v3_persistence_transport_sharded_router.py`**
 - **Decision lock:** **`plans/v3_phases/P12_DECISION_RECORD.md`**.
 - **Load harness extension point:** **`scripts/v3_load_test.py --persistence-mode {off,on}`**
   plus **`scripts/v3_persistence_throughput_report.py`** for gate reporting.

@@ -30,6 +30,7 @@ async def amain() -> None:
     if settings.aws_secret_access_key:
         client_kw["aws_secret_access_key"] = settings.aws_secret_access_key
 
+    queue_url = settings.resolved_transport_queue_url()
     async with (
         session.client("sqs", **client_kw) as sqs_client,
         session.client(
@@ -39,7 +40,7 @@ async def amain() -> None:
     ):
         consumer = SqsPersistenceTransportConsumer(
             client=sqs_client,
-            queue_url=settings.persist_transport_queue_url,
+            queue_url=queue_url,
             wait_seconds=settings.writer_receive_wait_seconds,
             receive_max_events=settings.writer_receive_max_events,
         )
@@ -65,7 +66,9 @@ async def amain() -> None:
         )
 
         _log.info(
-            "persistence writer started queue=%s", settings.persist_transport_queue_url
+            "persistence writer started queue=%s shard=%s",
+            queue_url,
+            settings.writer_shard_id,
         )
         while True:
             events = await consumer.receive_many(

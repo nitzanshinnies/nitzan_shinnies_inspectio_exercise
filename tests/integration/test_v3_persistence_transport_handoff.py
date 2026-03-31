@@ -22,12 +22,14 @@ class _CollectingClient:
     def __init__(self, *, always_fail: bool = False) -> None:
         self.always_fail = always_fail
         self.events: list[dict[str, object]] = []
+        self.queue_urls: list[str] = []
         self.fail_count = 0
 
     async def send_message(self, *, QueueUrl: str, MessageBody: str) -> None:  # noqa: N803
         if self.always_fail:
             self.fail_count += 1
             raise RuntimeError("transport down")
+        self.queue_urls.append(QueueUrl)
         self.events.append(json.loads(MessageBody))
 
     async def send_message_batch(
@@ -166,6 +168,74 @@ async def test_transport_failures_do_not_crash_l2_or_worker_in_best_effort() -> 
     )
     await scheduler.wakeup_scan_due()
     assert client.fail_count > 0
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_multi_shard_transport_handoff_keeps_queue_segregation() -> None:
+    client = _CollectingClient()
+    shard_urls = ["q://persist-0", "q://persist-1"]
+    from inspectio.v3.persistence_transport.sharded_router import (
+        ShardedPersistenceTransportProducer,
+    )
+
+    p0 = SqsPersistenceTransportProducer(
+        queue_url=shard_urls[0],
+        client=client,
+        durability_mode="best_effort",
+        max_attempts=3,
+        backoff_base_ms=1,
+        backoff_max_ms=2,
+        backoff_jitter_fraction=0.0,
+        max_inflight_events=2_048,
+        max_batch_events=10,
+    )
+    p1 = SqsPersistenceTransportProducer(
+        queue_url=shard_urls[1],
+        client=client,
+        durability_mode="best_effort",
+        max_attempts=3,
+        backoff_base_ms=1,
+        backoff_max_ms=2,
+        backoff_jitter_fraction=0.0,
+        max_inflight_events=2_048,
+        max_batch_events=10,
+    )
+    emitter = TransportPersistenceEventEmitter(
+        producer=ShardedPersistenceTransportProducer(producers_by_shard={0: p0, 1: p1}),
+        clock_ms=lambda: 1_700_000_000_000,
+    )
+
+    scheduler = SendScheduler(
+        clock_ms=lambda: 10_000,
+        try_send=lambda _m: True,
+        outcomes=_OutcomesNoop(),
+        delete_sqs_message=_async_none,
+        metrics=SendWorkerMetrics(),
+        persistence_emitter=emitter,
+    )
+    for i in range(12):
+        shard = i % 2
+        unit = SendUnitV1(
+            trace_id=f"trace-ms-{i}",
+            message_id=f"m-ms-{i}",
+            body="hello",
+            received_at_ms=10_000,
+            batch_correlation_id=f"batch-ms-{i}",
+            shard=shard,
+            attempts_completed=0,
+        )
+        await scheduler.ingest_send_unit_sqs_message(
+            {
+                "ReceiptHandle": f"rh-ms-{i}",
+                "Body": unit.model_dump_json(by_alias=True),
+            },
+        )
+    await scheduler.wakeup_scan_due()
+
+    for payload, queue_url in zip(client.events, client.queue_urls, strict=False):
+        shard = int(payload["shard"])
+        assert queue_url == shard_urls[shard]
 
 
 async def _async_none(_rh: str) -> None:
