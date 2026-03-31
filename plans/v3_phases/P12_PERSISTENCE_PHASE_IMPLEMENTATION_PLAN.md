@@ -122,12 +122,12 @@ Introduce internal persistence interfaces without changing behavior.
 
 ### Tasks
 
-- Add `PersistenceEventEmitter` abstraction with:
+- [x] Add `PersistenceEventEmitter` abstraction with:
   - `emit_enqueued`
   - `emit_attempt_result`
   - `emit_terminal`
-- Add no-op emitter implementation (default safe baseline).
-- Wire emit hooks at lifecycle boundaries:
+- [x] Add no-op emitter implementation (default safe baseline).
+- [x] Wire emit hooks at lifecycle boundaries:
   - enqueue
   - per attempt result
   - terminal transition
@@ -140,8 +140,8 @@ Introduce internal persistence interfaces without changing behavior.
 
 ### Acceptance criteria
 
-- Unit tests assert emit call sequence and payload completeness.
-- Baseline mode (no-op emitter) passes full test suite with no behavior regression.
+- [x] Unit tests assert emit call sequence and payload completeness.
+- [x] Baseline mode (no-op emitter) passes full test suite with no behavior regression.
 
 ---
 

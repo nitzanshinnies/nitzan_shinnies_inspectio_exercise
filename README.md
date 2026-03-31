@@ -64,19 +64,26 @@ Implementation targets **v3** only. **Normative docs:** **`plans/ASSIGNMENT.pdf`
 - **Outcomes:** v3 repeat returns a **summary**; visibility wait uses **`min(N, limit)`** rows (**≤ 100**). For **N > 100**, use **worker** logs/metrics for **3.1** send completes — see **`deploy/kubernetes/README.md`** and driver JSON fields.
 - **Tests:** **`pytest tests/unit/test_v3_load_harness_stats.py -m unit`**.
 
-## V3 persistence contracts (phase P12.0)
+## V3 persistence contracts + emitter hooks (phases P12.0/P12.1)
 
-- **Contracts only (no runtime behavior changes yet):**
+- **Contracts (P12.0):**
   - **`PersistenceEventV1`** envelope schema (strict validation)
   - **`PersistenceCheckpointV1`** schema
   - deterministic replay ordering helper + idempotent fold reducer scaffolding
+- **Emitter hooks (P12.1):**
+  - `PersistenceEventEmitter` abstraction (`emit_enqueued`, `emit_attempt_result`, `emit_terminal`)
+  - default-safe no-op emitter wired at L2 enqueue and worker attempt/terminal transitions
+  - feature flags in settings: **`INSPECTIO_V3_PERSIST_EMIT_ENABLED`** and
+    **`INSPECTIO_V3_PERSIST_DURABILITY_MODE`** (`best_effort|strict`, currently
+    rollout metadata for later phases)
 - **Tests:** strict schema validation, replay-order determinism, fake transport replay path:
   - **`tests/unit/test_v3_persistence_schemas.py`**
   - **`tests/unit/test_v3_persistence_replay_order.py`**
   - **`tests/integration/test_v3_persistence_fake_transport.py`**
+  - **`tests/unit/test_v3_persistence_emitter_hooks.py`**
 - **Decision lock:** **`plans/v3_phases/P12_DECISION_RECORD.md`**.
 - **Load harness extension point:** **`scripts/v3_load_test.py --persistence-mode {off,on}`**
-  currently labels benchmark profile only (wiring begins in P12.1+).
+  currently labels benchmark profile only (transport wiring begins in P12.2+).
 
 ## Local stack
 

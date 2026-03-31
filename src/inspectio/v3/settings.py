@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Self
+from typing import Literal, Self
 
 from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -228,4 +228,24 @@ class V3L1Settings(BaseSettings):
         ge=32,
         le=4096,
         validation_alias="INSPECTIO_L1_L2_MAX_CONNECTIONS",
+    )
+
+
+class V3PersistenceSettings(BaseSettings):
+    """Feature flags for persistence integration rollout (P12.1+)."""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+        populate_by_name=True,
+    )
+
+    persistence_emit_enabled: bool = Field(
+        default=False,
+        validation_alias="INSPECTIO_V3_PERSIST_EMIT_ENABLED",
+    )
+    persistence_durability_mode: Literal["best_effort", "strict"] = Field(
+        default="best_effort",
+        validation_alias="INSPECTIO_V3_PERSIST_DURABILITY_MODE",
     )

@@ -110,16 +110,30 @@ async def _admit_bulk(
         if idempotency_key and idempotency_key.strip()
         else batch_id
     )
+    received_at_ms = deps.clock_ms()
+    shard = predicted_shard_index(
+        batch_correlation_id=batch_id,
+        shard_count=deps.shard_count,
+    )
     bulk = BulkIntentV1(
         trace_id=trace_id,
         batch_correlation_id=batch_id,
         idempotency_key=idem_for_envelope,
         count=count,
         body=body,
-        received_at_ms=deps.clock_ms(),
+        received_at_ms=received_at_ms,
         metadata=metadata,
     )
     await deps.enqueue_backend.enqueue(bulk)
+    await deps.persistence_emitter.emit_enqueued(
+        trace_id=trace_id,
+        batch_correlation_id=batch_id,
+        idempotency_key=idem_for_envelope,
+        count=count,
+        body=body,
+        received_at_ms=received_at_ms,
+        shard=shard,
+    )
     return _response_for_admission(
         batch_id=batch_id,
         count=count,

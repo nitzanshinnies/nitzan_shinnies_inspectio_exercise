@@ -11,6 +11,8 @@ from typing import Any
 from inspectio.v3.assignment_surface import Message
 from inspectio.v3.domain.retry_schedule import attempt_deadline_ms
 from inspectio.v3.outcomes.protocol import OutcomesWritePort
+from inspectio.v3.persistence_emitter.noop import NoopPersistenceEventEmitter
+from inspectio.v3.persistence_emitter.protocol import PersistenceEventEmitter
 from inspectio.v3.schemas.send_unit import SendUnitV1
 from inspectio.v3.worker.metrics import SendWorkerMetrics
 from inspectio.v3.worker.state import ActiveSendUnit
@@ -31,6 +33,7 @@ class SendScheduler:
         outcomes: OutcomesWritePort,
         delete_sqs_message: Callable[[str], Awaitable[None]],
         metrics: SendWorkerMetrics,
+        persistence_emitter: PersistenceEventEmitter | None = None,
         persist_terminal_stub: Callable[[dict[str, Any]], Awaitable[None]]
         | None = None,
     ) -> None:
@@ -39,6 +42,7 @@ class SendScheduler:
         self._outcomes = outcomes
         self._delete_sqs = delete_sqs_message
         self._metrics = metrics
+        self._persistence_emitter = persistence_emitter or NoopPersistenceEventEmitter()
         self._persist_terminal_stub = persist_terminal_stub
         self._active: dict[str, ActiveSendUnit] = {}
         self._terminal_message_ids: set[str] = set()
@@ -145,10 +149,32 @@ class SendScheduler:
                     sh = w.shard
                     trace_id = w.trace_id
                     batch_correlation_id = w.batch_correlation_id
+                    await self._persistence_emitter.emit_attempt_result(
+                        trace_id=trace_id,
+                        batch_correlation_id=batch_correlation_id,
+                        message_id=mid,
+                        shard=sh,
+                        received_at_ms=w.received_at_ms,
+                        attempt_count=ac,
+                        attempt_ok=True,
+                        status="success",
+                        next_due_at_ms=None,
+                    )
                     await self._outcomes.record_success(
                         message_id=mid,
                         attempt_count=ac,
                         final_timestamp_ms=ts,
+                    )
+                    await self._persistence_emitter.emit_terminal(
+                        trace_id=trace_id,
+                        batch_correlation_id=batch_correlation_id,
+                        message_id=mid,
+                        shard=sh,
+                        received_at_ms=w.received_at_ms,
+                        attempt_count=ac,
+                        status="success",
+                        final_timestamp_ms=ts,
+                        reason=None,
                     )
                     await self._emit_persist_stub(
                         message_id=mid,
@@ -177,9 +203,31 @@ class SendScheduler:
                     sh = w.shard
                     trace_id = w.trace_id
                     batch_correlation_id = w.batch_correlation_id
+                    await self._persistence_emitter.emit_attempt_result(
+                        trace_id=trace_id,
+                        batch_correlation_id=batch_correlation_id,
+                        message_id=mid,
+                        shard=sh,
+                        received_at_ms=w.received_at_ms,
+                        attempt_count=6,
+                        attempt_ok=False,
+                        status="failed",
+                        next_due_at_ms=None,
+                    )
                     await self._outcomes.record_failed(
                         message_id=mid,
                         attempt_count=6,
+                        final_timestamp_ms=ts,
+                        reason="max_try_send_failures",
+                    )
+                    await self._persistence_emitter.emit_terminal(
+                        trace_id=trace_id,
+                        batch_correlation_id=batch_correlation_id,
+                        message_id=mid,
+                        shard=sh,
+                        received_at_ms=w.received_at_ms,
+                        attempt_count=6,
+                        status="failed",
                         final_timestamp_ms=ts,
                         reason="max_try_send_failures",
                     )
@@ -203,6 +251,20 @@ class SendScheduler:
                         trace_id,
                         batch_correlation_id,
                         sh,
+                    )
+                else:
+                    ac = w.completed_try_sends
+                    next_due = attempt_deadline_ms(w.received_at_ms, ac + 1)
+                    await self._persistence_emitter.emit_attempt_result(
+                        trace_id=w.trace_id,
+                        batch_correlation_id=w.batch_correlation_id,
+                        message_id=mid,
+                        shard=w.shard,
+                        received_at_ms=w.received_at_ms,
+                        attempt_count=ac,
+                        attempt_ok=False,
+                        status="pending",
+                        next_due_at_ms=next_due,
                     )
 
             if receipt_to_delete is not None:

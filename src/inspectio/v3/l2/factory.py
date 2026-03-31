@@ -13,8 +13,9 @@ from fastapi import FastAPI
 from inspectio.v3.l2.app import create_l2_app
 from inspectio.v3.outcomes.null_store import NullOutcomesReader
 from inspectio.v3.outcomes.redis_store import RedisOutcomesStore
+from inspectio.v3.persistence_emitter.noop import NoopPersistenceEventEmitter
 from inspectio.v3.schemas.bulk_intent import BulkIntentV1
-from inspectio.v3.settings import V3SqsSettings
+from inspectio.v3.settings import V3PersistenceSettings, V3SqsSettings
 from inspectio.v3.sqs.bulk_producer import SqsBulkEnqueue
 
 
@@ -35,9 +36,13 @@ def create_l2_app_from_env() -> FastAPI:
     relay = _EnqueueRelay()
     shard_count = int(os.environ.get("INSPECTIO_V3_SEND_SHARD_COUNT", "1"))
     redis_url = os.environ.get("INSPECTIO_REDIS_URL") or os.environ.get("REDIS_URL")
+    persistence_settings = V3PersistenceSettings()
     outcomes_reader = (
         RedisOutcomesStore.from_url(redis_url) if redis_url else NullOutcomesReader()
     )
+    # P12.1 baseline: no-op emitter is always safe; flag is a rollout switch for later phases.
+    _ = persistence_settings.persistence_emit_enabled
+    persistence_emitter = NoopPersistenceEventEmitter()
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
@@ -67,5 +72,6 @@ def create_l2_app_from_env() -> FastAPI:
         clock_ms=lambda: int(time.time() * 1000),
         shard_count=shard_count,
         outcomes_reader=outcomes_reader,
+        persistence_emitter=persistence_emitter,
         lifespan=lifespan,
     )
