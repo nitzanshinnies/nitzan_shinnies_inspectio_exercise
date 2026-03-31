@@ -93,10 +93,10 @@ Lock persistence contracts and add test scaffolding before service changes.
 
 ### Tasks
 
-- Define canonical persistence event schema (versioned envelope).
-- Define checkpoint schema and replay ordering rules.
-- Add deterministic clock and fake transport fixtures for replay tests.
-- Add throughput benchmark harness extension points (persist on/off toggles).
+- [x] Define canonical persistence event schema (versioned envelope).
+- [x] Define checkpoint schema and replay ordering rules.
+- [x] Add deterministic clock and fake transport fixtures for replay tests.
+- [x] Add throughput benchmark harness extension points (persist on/off toggles).
 
 ### Expected file touch points
 
@@ -106,10 +106,11 @@ Lock persistence contracts and add test scaffolding before service changes.
 
 ### Acceptance criteria
 
-- Event and checkpoint schemas have strict validation tests.
-- Replay-order tests prove stable reconstruction from unordered delivery + ordered storage.
-- No runtime behavior changes yet.
-- Decision Record section above is fully resolved and documented.
+- [x] Event and checkpoint schemas have strict validation tests.
+- [x] Replay-order tests prove stable reconstruction from unordered delivery + ordered storage.
+- [x] No runtime behavior changes yet.
+- [x] Decision Record section above is fully resolved and documented
+  (`plans/v3_phases/P12_DECISION_RECORD.md`).
 
 ---
 

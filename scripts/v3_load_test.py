@@ -284,6 +284,15 @@ def main() -> int:
         ),
     )
     p.add_argument(
+        "--persistence-mode",
+        choices=("off", "on"),
+        default=os.environ.get("INSPECTIO_LOAD_TEST_PERSISTENCE_MODE", "off"),
+        help=(
+            "Benchmark profile label only (P12.0 extension point). "
+            "No runtime wiring in this phase."
+        ),
+    )
+    p.add_argument(
         "--json-summary",
         action=argparse.BooleanOptionalAction,
         default=True,
@@ -361,6 +370,7 @@ def main() -> int:
                     if run_end is None
                     else round(max_total, 3),
                     "parallel_admission": par,
+                    "persistence_mode": args.persistence_mode,
                     "admission_sec": round(admission_sec, 3),
                     "admission_rps": admission_rps(admitted, admission_sec),
                     "chunks": len(chunk_durs),
