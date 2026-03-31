@@ -1,0 +1,19 @@
+{
+  "ok": true,
+  "api_base": "http://inspectio-l1:8080",
+  "phases": [
+    {
+      "recipients_admitted": 10000,
+      "max_total_sec_cap": null,
+      "parallel_admission": 1,
+      "persistence_mode": "off",
+      "admission_sec": 0.212,
+      "admission_rps": 47065.49,
+      "chunks": 1,
+      "completion_detection": "outcomes_get_success_capped",
+      "chunk_latency_ms_p50": 212.43,
+      "chunk_latency_ms_p95": 212.43,
+      "chunk_latency_ms_p99": 212.43
+    }
+  ]
+}
