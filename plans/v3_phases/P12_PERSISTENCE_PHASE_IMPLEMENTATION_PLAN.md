@@ -334,7 +334,7 @@ Demonstrate persistence-enabled mode retains the required throughput envelope de
 - [ ] Async persistence transport handoff
 - [ ] Batched S3 segment writer + checkpoints
 - [x] Deterministic replay recovery
-- [ ] Outcomes isolation from durability path
+- [x] Outcomes isolation from durability path
 - [ ] Fault-injection correctness tests
 - [ ] Throughput comparison report (persist off vs on)
 - [ ] Decision Record resolved and committed
