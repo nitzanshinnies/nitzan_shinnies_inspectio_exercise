@@ -5,11 +5,15 @@ from __future__ import annotations
 import pytest
 
 from inspectio.v3.load_harness.stats import (
+    HARD_GATE_RATIO_MIN,
+    TARGET_GATE_RATIO_MIN,
     admission_rps,
+    classify_throughput_gate,
     outcomes_visible_target,
     parse_positive_int_csv,
     percentile_sorted,
     split_parallel_counts,
+    throughput_ratio,
 )
 
 
@@ -53,3 +57,16 @@ def test_outcomes_visible_target() -> None:
     assert outcomes_visible_target(10, 100) == 10
     assert outcomes_visible_target(500, 100) == 100
     assert outcomes_visible_target(3, 50) == 3
+
+
+@pytest.mark.unit
+def test_throughput_ratio() -> None:
+    assert throughput_ratio(85.0, 100.0) == 0.85
+    assert throughput_ratio(10.0, 0.0) == 0.0
+
+
+@pytest.mark.unit
+def test_classify_throughput_gate() -> None:
+    assert classify_throughput_gate(TARGET_GATE_RATIO_MIN) == "target_pass"
+    assert classify_throughput_gate(HARD_GATE_RATIO_MIN) == "hard_pass_target_miss"
+    assert classify_throughput_gate(0.69) == "hard_fail"

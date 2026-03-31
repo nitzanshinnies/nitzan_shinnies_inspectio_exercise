@@ -168,3 +168,37 @@ persisted segments/checkpoints before receive loops start:
 - **`INSPECTIO_V3_WORKER_RECOVERY_SHARD`** (shard index this worker owns)
 - **`INSPECTIO_V3_PERSISTENCE_S3_BUCKET`** (already used by writer; required when recovery enabled)
 - **`INSPECTIO_V3_PERSISTENCE_S3_PREFIX`** (default `state`)
+
+## P12.7 throughput gate runbook (persist off vs on)
+
+For assignment throughput gates, run both profiles in-cluster with identical workload shape:
+
+1. **Persistence off baseline**
+   - set `INSPECTIO_V3_PERSIST_EMIT_ENABLED=false`
+   - deploy/restart workloads
+   - run benchmark Job and save JSON logs to `persist-off.json`
+2. **Persistence on profile**
+   - set `INSPECTIO_V3_PERSIST_EMIT_ENABLED=true` and run writer deployment
+   - deploy/restart workloads
+   - run same benchmark Job and save JSON logs to `persist-on.json`
+3. Collect CloudWatch peak delete throughput across all send queues (msgs/sec),
+   writer lag metric sample, and error rates for both runs.
+4. Build gate report:
+
+```bash
+python scripts/v3_persistence_throughput_report.py \
+  --persist-off-json persist-off.json \
+  --persist-on-json persist-on.json \
+  --persist-off-delete-rps 12000 \
+  --persist-on-delete-rps 9800 \
+  --persist-off-writer-lag-ms 0 \
+  --persist-on-writer-lag-ms 350 \
+  --persist-off-error-rate 0.001 \
+  --persist-on-error-rate 0.002
+```
+
+The script writes `plans/v3_phases/P12_7_THROUGHPUT_REPORT.md` and classifies gates:
+
+- `target_pass` (>= 85%)
+- `hard_pass_target_miss` (>= 70% and < 85%)
+- `hard_fail` (< 70%)

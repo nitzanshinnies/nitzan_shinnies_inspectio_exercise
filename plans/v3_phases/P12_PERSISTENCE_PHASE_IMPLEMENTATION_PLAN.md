@@ -336,7 +336,7 @@ Demonstrate persistence-enabled mode retains the required throughput envelope de
 - [x] Deterministic replay recovery
 - [x] Outcomes isolation from durability path
 - [x] Fault-injection correctness tests
-- [ ] Throughput comparison report (persist off vs on)
+- [x] Throughput comparison report (persist off vs on)
 - [ ] Decision Record resolved and committed
 - [ ] Core Invariants validated in automated tests
 

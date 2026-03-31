@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+HARD_GATE_RATIO_MIN = 0.70
+TARGET_GATE_RATIO_MIN = 0.85
+
 
 def parse_positive_int_csv(raw: str, *, field_name: str = "value") -> tuple[int, ...]:
     parts = [p.strip() for p in raw.split(",") if p.strip()]
@@ -54,3 +57,22 @@ def outcomes_visible_target(expected_recipients: int, api_limit: int) -> int:
         return 0
     cap = max(1, min(api_limit, 100))
     return min(expected_recipients, cap)
+
+
+def throughput_ratio(persist_on_rps: float, persist_off_rps: float) -> float:
+    if persist_off_rps <= 0:
+        return 0.0
+    return round(persist_on_rps / persist_off_rps, 4)
+
+
+def classify_throughput_gate(
+    ratio: float,
+    *,
+    hard_gate: float = HARD_GATE_RATIO_MIN,
+    target_gate: float = TARGET_GATE_RATIO_MIN,
+) -> str:
+    if ratio >= target_gate:
+        return "target_pass"
+    if ratio >= hard_gate:
+        return "hard_pass_target_miss"
+    return "hard_fail"

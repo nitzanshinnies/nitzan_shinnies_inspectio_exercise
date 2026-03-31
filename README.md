@@ -64,7 +64,7 @@ Implementation targets **v3** only. **Normative docs:** **`plans/ASSIGNMENT.pdf`
 - **Outcomes:** v3 repeat returns a **summary**; visibility wait uses **`min(N, limit)`** rows (**≤ 100**). For **N > 100**, use **worker** logs/metrics for **3.1** send completes — see **`deploy/kubernetes/README.md`** and driver JSON fields.
 - **Tests:** **`pytest tests/unit/test_v3_load_harness_stats.py -m unit`**.
 
-## V3 persistence contracts + transport/writer/recovery path (phases P12.0-P12.6)
+## V3 persistence contracts + transport/writer/recovery path (phases P12.0-P12.7)
 
 - **Contracts (P12.0):**
   - **`PersistenceEventV1`** envelope schema (strict validation)
@@ -102,6 +102,12 @@ Implementation targets **v3** only. **Normative docs:** **`plans/ASSIGNMENT.pdf`
   - integration matrix covers crash windows, duplicate transport delivery, out-of-order replay,
     transient S3 failures, and writer restart under high ingest
   - correctness gates assert no pending-loss on restart and deterministic replay convergence
+- **Throughput gates + report tooling (P12.7):**
+  - report builder script **`scripts/v3_persistence_throughput_report.py`** compares
+    persistence-off vs persistence-on runs and classifies gates (`hard_fail`,
+    `hard_pass_target_miss`, `target_pass`)
+  - script emits markdown report at
+    **`plans/v3_phases/P12_7_THROUGHPUT_REPORT.md`** from load driver JSON + CloudWatch inputs
 - **Tests:** strict schema validation, replay-order determinism, fake transport replay path:
   - **`tests/unit/test_v3_persistence_schemas.py`**
   - **`tests/unit/test_v3_persistence_replay_order.py`**
@@ -115,10 +121,11 @@ Implementation targets **v3** only. **Normative docs:** **`plans/ASSIGNMENT.pdf`
   - **`tests/integration/test_v3_recovery_bootstrap_runtime.py`**
   - **`tests/integration/test_v3_persistence_fault_injection.py`**
   - **`tests/unit/test_v3_send_scheduler.py`**
+  - **`tests/unit/test_v3_load_harness_stats.py`**
   - **`tests/unit/test_v3_settings_persistence_writer.py`**
 - **Decision lock:** **`plans/v3_phases/P12_DECISION_RECORD.md`**.
 - **Load harness extension point:** **`scripts/v3_load_test.py --persistence-mode {off,on}`**
-  currently labels benchmark profile only.
+  plus **`scripts/v3_persistence_throughput_report.py`** for gate reporting.
 
 ## Local stack
 
