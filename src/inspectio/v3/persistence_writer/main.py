@@ -7,6 +7,7 @@ import json
 import logging
 import time
 from collections import defaultdict
+from dataclasses import dataclass
 
 import aioboto3
 
@@ -19,6 +20,42 @@ from inspectio.v3.schemas.persistence_event import PersistenceEventV1
 from inspectio.v3.settings import V3PersistenceWriterSettings
 
 _log = logging.getLogger(__name__)
+MILLISECONDS_PER_SECOND = 1000
+
+
+@dataclass(slots=True)
+class QueueOldestAgeSample:
+    age_ms: int = 0
+    sampled_at_ms: int = 0
+    last_attempted_at_ms: int = 0
+
+
+async def _maybe_refresh_queue_oldest_age(
+    *,
+    consumer: SqsPersistenceTransportConsumer,
+    sample: QueueOldestAgeSample,
+    now_ms: int,
+    sample_interval_ms: int,
+    timeout_sec: float,
+) -> QueueOldestAgeSample:
+    if (
+        sample.last_attempted_at_ms > 0
+        and now_ms - sample.last_attempted_at_ms < sample_interval_ms
+    ):
+        return sample
+    sample.last_attempted_at_ms = now_ms
+    try:
+        sampled_age = await asyncio.wait_for(
+            consumer.queue_oldest_age_ms(),
+            timeout=timeout_sec,
+        )
+    except Exception:  # noqa: BLE001
+        return sample
+    if sampled_age is None:
+        return sample
+    sample.age_ms = max(0, sampled_age)
+    sample.sampled_at_ms = now_ms
+    return sample
 
 
 async def amain() -> None:
@@ -74,6 +111,11 @@ async def amain() -> None:
             settings.writer_shard_id,
         )
         last_snapshot_ms = clock_ms()
+        queue_age_sample = QueueOldestAgeSample()
+        queue_age_sample_interval_ms = (
+            settings.writer_observability_queue_age_sample_interval_sec
+            * MILLISECONDS_PER_SECOND
+        )
 
         async def ack_many_with_retry(events_to_ack: list[PersistenceEventV1]) -> int:
             ack_by_shard: dict[int, int] = defaultdict(int)
@@ -106,25 +148,28 @@ async def amain() -> None:
                 max_events=settings.writer_receive_max_events
             )
             now_ms = clock_ms()
+            queue_age_sample = await _maybe_refresh_queue_oldest_age(
+                consumer=consumer,
+                sample=queue_age_sample,
+                now_ms=now_ms,
+                sample_interval_ms=queue_age_sample_interval_ms,
+                timeout_sec=settings.writer_observability_queue_age_timeout_sec,
+            )
+            writer.metrics.observe_transport_oldest_age(
+                shard=settings.writer_shard_id,
+                age_ms=queue_age_sample.age_ms,
+                sampled_at_ms=queue_age_sample.sampled_at_ms,
+                now_ms=now_ms,
+            )
             writer.metrics.observe_poll(idle=not events)
             if events:
                 events_by_shard: dict[int, int] = defaultdict(int)
-                oldest_emitted_at_by_shard: dict[int, int] = {}
                 for event in events:
                     events_by_shard[event.shard] += 1
-                    oldest = oldest_emitted_at_by_shard.get(event.shard)
-                    if oldest is None or event.emitted_at_ms < oldest:
-                        oldest_emitted_at_by_shard[event.shard] = event.emitted_at_ms
                 for shard, count in events_by_shard.items():
                     writer.metrics.observe_receive_batch(
                         shard=shard,
                         events=count,
-                        now_ms=now_ms,
-                    )
-                    oldest_emitted_at = oldest_emitted_at_by_shard[shard]
-                    writer.metrics.observe_transport_oldest_age(
-                        shard=shard,
-                        age_ms=max(0, now_ms - oldest_emitted_at),
                         now_ms=now_ms,
                     )
                 await writer.ingest_events(events)

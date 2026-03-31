@@ -17,6 +17,8 @@ def test_writer_settings_minimal_required_fields() -> None:
     assert s.writer_receive_max_events == 10
     assert s.writer_flush_max_events == 500
     assert s.writer_observability_snapshot_interval_sec == 30
+    assert s.writer_observability_queue_age_sample_interval_sec == 30
+    assert s.writer_observability_queue_age_timeout_sec == 1.0
 
 
 @pytest.mark.unit

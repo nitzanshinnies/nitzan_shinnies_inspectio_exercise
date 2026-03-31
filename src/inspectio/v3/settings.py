@@ -512,6 +512,18 @@ class V3PersistenceWriterSettings(BaseSettings):
         le=300,
         validation_alias="INSPECTIO_V3_WRITER_OBS_SNAPSHOT_INTERVAL_SEC",
     )
+    writer_observability_queue_age_sample_interval_sec: int = Field(
+        default=30,
+        ge=1,
+        le=300,
+        validation_alias="INSPECTIO_V3_WRITER_QUEUE_AGE_SAMPLE_INTERVAL_SEC",
+    )
+    writer_observability_queue_age_timeout_sec: float = Field(
+        default=1.0,
+        gt=0.0,
+        le=5.0,
+        validation_alias="INSPECTIO_V3_WRITER_QUEUE_AGE_TIMEOUT_SEC",
+    )
 
     @field_validator("persist_transport_queue_url", mode="before")
     @classmethod

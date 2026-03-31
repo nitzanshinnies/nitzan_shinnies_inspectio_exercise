@@ -297,11 +297,21 @@ async def test_writer_metrics_snapshot_contains_per_shard_fields() -> None:
         store, clock=clock, flush_max_events=2, flush_interval_ms=10_000
     )
     await writer.ingest_events([_event("obs-1", shard=0), _event("obs-2", shard=0)])
+    writer.metrics.observe_transport_oldest_age(
+        shard=0,
+        age_ms=5_000,
+        sampled_at_ms=79_900,
+        now_ms=clock[0],
+    )
     await writer.flush_due(force=True)
     writer.metrics.observe_ack_batch(shard=0, events=2, latency_ms=7, now_ms=clock[0])
     snapshot = writer.metrics.snapshot(now_ms=clock[0] + 1000)
+    assert snapshot["snapshot_emitted_at_ms"] == 81_000
     shard = snapshot["shards"]["0"]
     assert "receive_events_total" in shard
+    assert "ingest_events_per_sec" in shard
     assert "flush_payload_bytes_last" in shard
     assert "ack_latency_ms_last" in shard
+    assert "transport_oldest_age_ms_last" in shard
+    assert "transport_oldest_age_sampled_at_ms" in shard
     assert "buffered_events" in shard

@@ -4,11 +4,23 @@
 
 This artifact records the per-shard writer observability fields added in WS2 and the parse format emitted by `inspectio-v3-persistence-writer`.
 
+## Evidence outputs
+
+- Raw on-run snapshots:
+  `plans/v3_phases/artifacts/p12_9/ws2_observability_evidence/writer_snapshots_on_run.log`
+- Parsed summary table:
+  `plans/v3_phases/artifacts/p12_9/ws2_observability_evidence/completeness_summary.md`
+- Machine-readable pass/fail report:
+  `plans/v3_phases/artifacts/p12_9/ws2_observability_evidence/completeness_report.json`
+
 ## Snapshot log format
 
 Writer emits structured snapshots at cadence:
 
 - env: `INSPECTIO_V3_WRITER_OBS_SNAPSHOT_INTERVAL_SEC`
+- queue-age sampling envs:
+  `INSPECTIO_V3_WRITER_QUEUE_AGE_SAMPLE_INTERVAL_SEC`,
+  `INSPECTIO_V3_WRITER_QUEUE_AGE_TIMEOUT_SEC`
 - log prefix: `writer_snapshot `
 - payload: JSON object
 
@@ -16,6 +28,7 @@ Example payload shape:
 
 ```json
 {
+  "snapshot_emitted_at_ms": 1711917600000,
   "queue_polling_idle_ratio": 0.42,
   "ingest_events_per_sec": 1885.123,
   "polls_total": 250,
@@ -50,6 +63,7 @@ Example payload shape:
       "ack_retries": 0,
       "transport_oldest_age_ms_last": 420,
       "transport_oldest_age_ms_max": 1100,
+      "transport_oldest_age_sampled_at_ms": 1711917600000,
       "buffered_events": 0,
       "oldest_buffer_age_ms": 0,
       "ingest_events_per_sec": 910.4
@@ -66,7 +80,13 @@ Example payload shape:
 - flush payload bytes: `flush_payload_bytes_last`
 - flush duration: `flush_duration_ms_last`, `flush_duration_ms_max`
 - ack batch size/latency: `ack_events_last_batch`, `ack_latency_ms_last`, `ack_latency_ms_max`
-- retry counts by op: `s3_put_retries`, `checkpoint_write_retries`
 - retry counts by op: `s3_put_retries`, `checkpoint_write_retries`, `ack_retries`
 - queue polling idle ratio: `queue_polling_idle_ratio`
 - lag and buffered gauges: `transport_oldest_age_ms_last|max`, `lag_to_durable_commit_ms_last|max`, `buffered_events`, `oldest_buffer_age_ms`
+
+## Queue-age semantics
+
+- `transport_oldest_age_ms_last|max` is sampled from the queue-level SQS attribute
+  `ApproximateAgeOfOldestMessage` (seconds -> milliseconds), not inferred from event payload timestamps.
+- `transport_oldest_age_sampled_at_ms` records the sample timestamp.
+- If sampling fails or times out, writer keeps last-known value and last-known sample timestamp.

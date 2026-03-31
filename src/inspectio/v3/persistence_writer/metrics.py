@@ -114,13 +114,14 @@ class PersistenceWriterMetrics:
         shard_metrics.oldest_buffer_age_ms = oldest_buffer_age_ms
 
     def observe_transport_oldest_age(
-        self, *, shard: int, age_ms: int, now_ms: int
+        self, *, shard: int, age_ms: int, sampled_at_ms: int, now_ms: int
     ) -> None:
         shard_metrics = self._for_shard(shard, now_ms=now_ms)
         shard_metrics.transport_oldest_age_ms_last = age_ms
         shard_metrics.transport_oldest_age_ms_max = max(
             shard_metrics.transport_oldest_age_ms_max, age_ms
         )
+        shard_metrics.transport_oldest_age_sampled_at_ms = sampled_at_ms
 
     def snapshot(self, *, now_ms: int) -> dict[str, Any]:
         self.init_clock(now_ms=now_ms)
@@ -141,6 +142,7 @@ class PersistenceWriterMetrics:
             item["ingest_events_per_sec"] = round(shard_ingest_events_per_sec, 3)
             shard_snapshot[str(shard_id)] = item
         return {
+            "snapshot_emitted_at_ms": now_ms,
             "polls_total": self.polls_total,
             "polls_idle": self.polls_idle,
             "queue_polling_idle_ratio": round(idle_ratio, 6),
@@ -188,5 +190,6 @@ class PersistenceWriterShardMetrics:
     ack_retries: int = 0
     transport_oldest_age_ms_last: int = 0
     transport_oldest_age_ms_max: int = 0
+    transport_oldest_age_sampled_at_ms: int = 0
     buffered_events: int = 0
     oldest_buffer_age_ms: int = 0
