@@ -1,0 +1,54 @@
+{
+  "off": {
+    "window_start_utc": "2026-03-31T13:37:55Z",
+    "window_end_utc": "2026-03-31T13:42:55Z",
+    "admission_rps": 39744.7,
+    "phase": {
+      "recipients_admitted": 10000,
+      "max_total_sec_cap": null,
+      "parallel_admission": 1,
+      "persistence_mode": "off",
+      "admission_sec": 0.252,
+      "admission_rps": 39744.7,
+      "chunks": 1,
+      "completion_detection": "outcomes_get_success_capped",
+      "chunk_latency_ms_p50": 251.57,
+      "chunk_latency_ms_p95": 251.57,
+      "chunk_latency_ms_p99": 251.57
+    },
+    "delete": {
+      "total_deleted": 17560.0,
+      "window_sec": 300.0,
+      "avg_rps": 58.53,
+      "peak_rps": 166.67
+    },
+    "writer_lag_ms": 0.0,
+    "error_rate": 0.0
+  },
+  "on": {
+    "window_start_utc": "2026-03-31T13:39:20Z",
+    "window_end_utc": "2026-03-31T13:44:20Z",
+    "admission_rps": 45796.03,
+    "phase": {
+      "recipients_admitted": 10000,
+      "max_total_sec_cap": null,
+      "parallel_admission": 1,
+      "persistence_mode": "on",
+      "admission_sec": 0.218,
+      "admission_rps": 45796.03,
+      "chunks": 1,
+      "completion_detection": "outcomes_get_success_capped",
+      "chunk_latency_ms_p50": 218.32,
+      "chunk_latency_ms_p95": 218.32,
+      "chunk_latency_ms_p99": 218.32
+    },
+    "delete": {
+      "total_deleted": 7745.0,
+      "window_sec": 300.0,
+      "avg_rps": 25.82,
+      "peak_rps": 129.08
+    },
+    "writer_lag_ms": 52000.0,
+    "error_rate": 0.0
+  }
+}

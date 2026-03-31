@@ -38,6 +38,16 @@ def _format_ratio(ratio: float) -> str:
     return f"{round(ratio * 100.0, 2)}%"
 
 
+def _merge_policy_outcome(gate: str, *, waiver_note: str) -> str:
+    if gate == "target_pass":
+        return "target-pass"
+    if gate == "hard_pass_target_miss":
+        return "pass-with-target-miss"
+    if waiver_note.strip():
+        return "hard-fail-with-waiver"
+    return "block"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Generate P12.7 persistence throughput comparison report",
@@ -99,6 +109,51 @@ def main() -> int:
         default="plans/v3_phases/P12_7_THROUGHPUT_REPORT.md",
         help="Output markdown report path",
     )
+    parser.add_argument(
+        "--persist-off-window",
+        default="",
+        help="CloudWatch window for off run (UTC start..end)",
+    )
+    parser.add_argument(
+        "--persist-on-window",
+        default="",
+        help="CloudWatch window for on run (UTC start..end)",
+    )
+    parser.add_argument(
+        "--image-tag",
+        default="",
+        help="Exact benchmark image tag used for both runs",
+    )
+    parser.add_argument(
+        "--configmap-sha256",
+        default="",
+        help="SHA256 digest of inspectio-v3-config data used for runs",
+    )
+    parser.add_argument(
+        "--profile-equivalence",
+        default="",
+        help="Short statement proving profile equivalence between off/on runs",
+    )
+    parser.add_argument(
+        "--stability-off",
+        default="stable",
+        help="Stability statement for off run (e.g. stable/no crash loops)",
+    )
+    parser.add_argument(
+        "--stability-on",
+        default="stable",
+        help="Stability statement for on run (e.g. stable/no crash loops)",
+    )
+    parser.add_argument(
+        "--waiver-note",
+        default="",
+        help="Waiver reference if hard gate fails and exception is approved",
+    )
+    parser.add_argument(
+        "--cloudwatch-evidence",
+        default="",
+        help="CloudWatch query command/reference used for delete throughput + lag",
+    )
     args = parser.parse_args()
 
     off_json = _read_json(Path(args.persist_off_json))
@@ -116,14 +171,23 @@ def main() -> int:
     delete_ratio = throughput_ratio(
         args.persist_on_delete_rps, args.persist_off_delete_rps
     )
+    merge_policy = _merge_policy_outcome(gate, waiver_note=args.waiver_note)
 
     lines = [
         "# P12.7 Throughput Comparison Report",
         "",
-        "## Inputs",
+        "## Benchmark identity",
+        f"- image tag: `{args.image_tag}`",
+        f"- configmap sha256: `{args.configmap_sha256}`",
+        f"- profile equivalence: `{args.profile_equivalence}`",
+        "",
+        "## Inputs and artifacts",
         f"- persist-off JSON: `{args.persist_off_json}`",
         f"- persist-on JSON: `{args.persist_on_json}`",
         f"- phase index: `{args.phase_index}`",
+        f"- persist-off CloudWatch window: `{args.persist_off_window}`",
+        f"- persist-on CloudWatch window: `{args.persist_on_window}`",
+        f"- CloudWatch evidence command/reference: `{args.cloudwatch_evidence}`",
         "",
         "## Gate result",
         f"- admission throughput ratio (on/off): `{_format_ratio(ratio)}`",
@@ -132,6 +196,8 @@ def main() -> int:
         f"- target gate (>= {_format_ratio(TARGET_GATE_RATIO_MIN)}): "
         f"`{'PASS' if ratio >= TARGET_GATE_RATIO_MIN else 'MISS'}`",
         f"- classification: `{gate}`",
+        f"- merge policy outcome: `{merge_policy}`",
+        f"- waiver note: `{args.waiver_note or 'none'}`",
         "",
         "## Required outputs",
         f"- admit throughput off/on: `{off_rps}` / `{on_rps}` recipients/sec",
@@ -141,6 +207,10 @@ def main() -> int:
         f"- writer lag ms off/on: `{args.persist_off_writer_lag_ms}` / `{args.persist_on_writer_lag_ms}`",
         f"- error rate off/on: `{args.persist_off_error_rate}` / `{args.persist_on_error_rate}`",
         f"- error rate delta (on-off): `{error_rate_delta}`",
+        "",
+        "## Stability",
+        f"- off run stability: `{args.stability_off}`",
+        f"- on run stability: `{args.stability_on}`",
         "",
         "## Phase snapshots",
         "```json",
