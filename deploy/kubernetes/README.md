@@ -164,6 +164,7 @@ Writer consumes one persistence transport shard queue and writes compressed segm
 
 For **K=4** shard-aligned writer deployments, use **`inspectio-persistence-writer-shards-k4.yaml`** and
 delete the singleton writer Deployment before applying it.
+For **K=8**, use **`inspectio-persistence-writer-shards-k8.yaml`** similarly.
 
 ## P12.4 worker recovery envs
 

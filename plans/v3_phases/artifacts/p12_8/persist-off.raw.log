@@ -1,0 +1,25 @@
+INFO max-total-sec disabled (no driver wall clock cap)
+INFO HTTP Request: GET http://inspectio-l1:8080/healthz "HTTP/1.1 200 OK"
+INFO healthz ok from http://inspectio-l1:8080
+INFO phase recipients=10000 admission start (parallel=1)
+INFO HTTP Request: POST http://inspectio-l1:8080/messages/repeat?count=10000 "HTTP/1.1 202 Accepted"
+INFO phase n=10000 admission_rps=47065.49 (no success wait)
+{
+  "ok": true,
+  "api_base": "http://inspectio-l1:8080",
+  "phases": [
+    {
+      "recipients_admitted": 10000,
+      "max_total_sec_cap": null,
+      "parallel_admission": 1,
+      "persistence_mode": "off",
+      "admission_sec": 0.212,
+      "admission_rps": 47065.49,
+      "chunks": 1,
+      "completion_detection": "outcomes_get_success_capped",
+      "chunk_latency_ms_p50": 212.43,
+      "chunk_latency_ms_p95": 212.43,
+      "chunk_latency_ms_p99": 212.43
+    }
+  ]
+}
