@@ -8,7 +8,10 @@ from inspectio.v3.load_harness.stats import (
     HARD_GATE_RATIO_MIN,
     TARGET_GATE_RATIO_MIN,
     admission_rps,
+    classify_composite_throughput_gate,
     classify_throughput_gate,
+    COMPLETION_HARD_GATE_RATIO_MIN,
+    COMPLETION_TARGET_GATE_RATIO_MIN,
     outcomes_visible_target,
     parse_positive_int_csv,
     percentile_sorted,
@@ -70,3 +73,93 @@ def test_classify_throughput_gate() -> None:
     assert classify_throughput_gate(TARGET_GATE_RATIO_MIN) == "target_pass"
     assert classify_throughput_gate(HARD_GATE_RATIO_MIN) == "hard_pass_target_miss"
     assert classify_throughput_gate(0.69) == "hard_fail"
+
+
+@pytest.mark.unit
+def test_composite_gate_hard_fail_completion() -> None:
+    result = classify_composite_throughput_gate(
+        admission_ratio=0.9,
+        completion_ratio=0.6,
+        writer_lag_on_ms=1000.0,
+        writer_lag_cap_ms=5000.0,
+        flush_latency_on_ms=50.0,
+        flush_latency_cap_ms=500.0,
+        crash_loop_off=False,
+        crash_loop_on=False,
+    )
+    assert result["classification"] == "hard_fail_completion"
+
+
+@pytest.mark.unit
+def test_composite_gate_hard_fail_stability() -> None:
+    result = classify_composite_throughput_gate(
+        admission_ratio=0.9,
+        completion_ratio=0.9,
+        writer_lag_on_ms=9000.0,
+        writer_lag_cap_ms=5000.0,
+        flush_latency_on_ms=50.0,
+        flush_latency_cap_ms=500.0,
+        crash_loop_off=False,
+        crash_loop_on=False,
+    )
+    assert result["classification"] == "hard_fail_stability"
+
+
+@pytest.mark.unit
+def test_composite_gate_hard_fail_admission() -> None:
+    result = classify_composite_throughput_gate(
+        admission_ratio=0.6,
+        completion_ratio=0.9,
+        writer_lag_on_ms=1000.0,
+        writer_lag_cap_ms=5000.0,
+        flush_latency_on_ms=50.0,
+        flush_latency_cap_ms=500.0,
+        crash_loop_off=False,
+        crash_loop_on=False,
+    )
+    assert result["classification"] == "hard_fail_admission"
+
+
+@pytest.mark.unit
+def test_composite_gate_target_pass() -> None:
+    result = classify_composite_throughput_gate(
+        admission_ratio=TARGET_GATE_RATIO_MIN,
+        completion_ratio=COMPLETION_TARGET_GATE_RATIO_MIN,
+        writer_lag_on_ms=1000.0,
+        writer_lag_cap_ms=5000.0,
+        flush_latency_on_ms=50.0,
+        flush_latency_cap_ms=500.0,
+        crash_loop_off=False,
+        crash_loop_on=False,
+    )
+    assert result["classification"] == "target_pass"
+
+
+@pytest.mark.unit
+def test_composite_gate_hard_pass_target_miss() -> None:
+    result = classify_composite_throughput_gate(
+        admission_ratio=TARGET_GATE_RATIO_MIN,
+        completion_ratio=COMPLETION_HARD_GATE_RATIO_MIN,
+        writer_lag_on_ms=1000.0,
+        writer_lag_cap_ms=5000.0,
+        flush_latency_on_ms=50.0,
+        flush_latency_cap_ms=500.0,
+        crash_loop_off=False,
+        crash_loop_on=False,
+    )
+    assert result["classification"] == "hard_pass_target_miss"
+
+
+@pytest.mark.unit
+def test_composite_gate_invalid_missing_metrics() -> None:
+    result = classify_composite_throughput_gate(
+        admission_ratio=0.9,
+        completion_ratio=None,
+        writer_lag_on_ms=1000.0,
+        writer_lag_cap_ms=5000.0,
+        flush_latency_on_ms=50.0,
+        flush_latency_cap_ms=500.0,
+        crash_loop_off=False,
+        crash_loop_on=False,
+    )
+    assert result["classification"] == "invalid_missing_metrics"

@@ -106,6 +106,8 @@ Implementation targets **v3** only. **Normative docs:** **`plans/ASSIGNMENT.pdf`
   - report builder script **`scripts/v3_persistence_throughput_report.py`** compares
     persistence-off vs persistence-on runs and classifies gates (`hard_fail`,
     `hard_pass_target_miss`, `target_pass`)
+  - composite classification now enforces admission ratio + completion ratio +
+    quantitative stability vetoes (writer lag/flush caps + crash-loop checks)
   - script emits markdown report at
     **`plans/v3_phases/P12_7_THROUGHPUT_REPORT.md`** from load driver JSON + CloudWatch inputs
 - **Tests:** strict schema validation, replay-order determinism, fake transport replay path:

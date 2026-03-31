@@ -193,12 +193,29 @@ python scripts/v3_persistence_throughput_report.py \
   --persist-on-delete-rps 9800 \
   --persist-off-writer-lag-ms 0 \
   --persist-on-writer-lag-ms 350 \
+  --persist-off-flush-latency-ms 0 \
+  --persist-on-flush-latency-ms 400 \
+  --writer-lag-cap-ms 30000 \
+  --flush-latency-cap-ms 5000 \
   --persist-off-error-rate 0.001 \
-  --persist-on-error-rate 0.002
+  --persist-on-error-rate 0.002 \
+  --persist-off-window "2026-03-31T13:37:55Z..2026-03-31T13:42:55Z" \
+  --persist-on-window "2026-03-31T13:39:20Z..2026-03-31T13:44:20Z" \
+  --image-tag "194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:<tag>" \
+  --configmap-sha256 "<sha256>" \
+  --profile-equivalence "same image/replicas/shards/job shape; persistence toggle only" \
+  --stability-off "stable: no crash loops observed" \
+  --stability-on "stable: no crash loops observed" \
+  --crash-loop-off false \
+  --crash-loop-on false \
+  --cloudwatch-evidence "AWS/SQS NumberOfMessagesDeleted + persist transport lag query"
 ```
 
 The script writes `plans/v3_phases/P12_7_THROUGHPUT_REPORT.md` and classifies gates:
 
-- `target_pass` (>= 85%)
-- `hard_pass_target_miss` (>= 70% and < 85%)
-- `hard_fail` (< 70%)
+- `target_pass`
+- `hard_pass_target_miss`
+- `hard_fail_completion`
+- `hard_fail_stability`
+- `hard_fail_admission`
+- `invalid_missing_metrics`

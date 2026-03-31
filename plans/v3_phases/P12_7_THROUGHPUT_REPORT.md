@@ -17,8 +17,10 @@
 - admission throughput ratio (on/off): `115.23%`
 - hard gate (>= 70.0%): `PASS`
 - target gate (>= 85.0%): `PASS`
-- classification: `target_pass`
-- merge policy outcome: `target-pass`
+- completion hard gate (>= 70.0%): `FAIL`
+- completion target gate (>= 85.0%): `MISS`
+- classification: `hard_fail_completion`
+- merge policy outcome: `block`
 - waiver note: `none`
 
 ## Required outputs
@@ -26,12 +28,25 @@
 - combined send-queue delete throughput off/on: `58.53` / `25.82` msgs/sec
 - send delete throughput ratio (on/off): `44.11%`
 - writer lag ms off/on: `0.0` / `52000.0`
+- writer flush latency ms off/on: `0.0` / `0.0`
+- writer lag cap ms: `30000.0`
+- flush latency cap ms: `5000.0`
 - error rate off/on: `0.0` / `0.0`
 - error rate delta (on-off): `0.0`
 
+## Per-dimension gate table
+| Dimension | Hard Pass | Target Pass |
+|---|---|---|
+| Admission ratio | `True` | `True` |
+| Completion ratio | `False` | `False` |
+
 ## Stability
 - off run stability: `stable: no crash loops observed; queue drain completed`
-- on run stability: `stable: no crash loops observed; writer lag bounded`
+- on run stability: `stable: no crash loops observed; writer lag bounded check failed against cap`
+- crash-loop check off/on (must be false): `False` / `False`
+- crash-loop pass: `True`
+- writer lag cap pass: `False`
+- flush latency cap pass: `True`
 
 ## Phase snapshots
 ```json
@@ -62,5 +77,19 @@
     "chunk_latency_ms_p95": 218.32,
     "chunk_latency_ms_p99": 218.32
   }
+}
+```
+
+## Composite rationale (machine-readable)
+```json
+{
+  "classification": "hard_fail_completion",
+  "admission_hard_pass": true,
+  "admission_target_pass": true,
+  "completion_hard_pass": false,
+  "completion_target_pass": false,
+  "writer_lag_cap_pass": false,
+  "flush_latency_cap_pass": true,
+  "crash_loop_pass": true
 }
 ```
