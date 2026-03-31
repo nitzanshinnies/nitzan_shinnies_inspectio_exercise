@@ -164,6 +164,10 @@ class V3WorkerSettings(BaseSettings):
         le=8,
         validation_alias="INSPECTIO_V3_WORKER_RECEIVE_POLLERS",
     )
+    worker_record_outcomes: bool = Field(
+        default=True,
+        validation_alias="INSPECTIO_V3_WORKER_RECORD_OUTCOMES",
+    )
 
     @field_validator("persist_queue_url", mode="before")
     @classmethod

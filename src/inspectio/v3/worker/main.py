@@ -12,6 +12,7 @@ from typing import Any
 import aioboto3
 
 from inspectio.v3.assignment_surface import Message
+from inspectio.v3.outcomes.null_store import NullOutcomesWriter
 from inspectio.v3.outcomes.redis_store import RedisOutcomesStore
 from inspectio.v3.settings import (
     V3WorkerSettings,
@@ -42,7 +43,11 @@ async def amain() -> None:
     _lvl = getattr(logging, _lvl_name, logging.INFO)
     logging.basicConfig(level=_lvl, format="%(levelname)s %(name)s %(message)s")
     settings = V3WorkerSettings()
-    outcomes = RedisOutcomesStore.from_url(settings.redis_url)
+    outcomes = (
+        RedisOutcomesStore.from_url(settings.redis_url)
+        if settings.worker_record_outcomes
+        else NullOutcomesWriter()
+    )
     metrics = SendWorkerMetrics()
     session = aioboto3.Session()
     kw = sqs_client_kwargs_from_worker_settings(settings)

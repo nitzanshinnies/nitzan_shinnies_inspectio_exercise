@@ -1,4 +1,4 @@
-"""No-op / empty outcomes reader for tests and L2 without Redis."""
+"""No-op outcomes ports for tests and high-throughput runs."""
 
 from __future__ import annotations
 
@@ -11,3 +11,24 @@ class NullOutcomesReader:
 
     async def list_success(self, *, limit: int) -> list[dict[str, Any]]:
         return []
+
+
+class NullOutcomesWriter:
+    async def record_failed(
+        self,
+        *,
+        message_id: str,
+        attempt_count: int,
+        final_timestamp_ms: int,
+        reason: str,
+    ) -> None:
+        return None
+
+    async def record_success(
+        self,
+        *,
+        message_id: str,
+        attempt_count: int,
+        final_timestamp_ms: int,
+    ) -> None:
+        return None
