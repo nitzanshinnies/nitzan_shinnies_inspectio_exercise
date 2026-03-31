@@ -56,6 +56,7 @@ class BufferedPersistenceWriter:
         self._buffers: dict[int, list[PersistenceEventV1]] = {}
         self._buffer_started_at_ms: dict[int, int] = {}
         self._next_segment_seq: dict[int, int] = {}
+        self._committed_watermark: dict[int, tuple[int, int]] = {}
         self._initialized_shards: set[int] = set()
         self._seen_event_ids: dict[int, set[str]] = {}
         self._seen_event_queue: dict[int, deque[str]] = {}
@@ -95,12 +96,25 @@ class BufferedPersistenceWriter:
     ) -> list[PersistenceEventV1]:
         flush_started = time.perf_counter()
         ordered = sorted_for_replay(events)
+        watermark = self._committed_watermark.get(shard, (-1, -1))
+        filtered = [e for e in ordered if self._ordering_key(e) > watermark]
+        dropped = len(ordered) - len(filtered)
+        if dropped:
+            self.metrics.events_dropped_committed_watermark += dropped
+        if not filtered:
+            self.metrics.empty_flushes_due_to_dedupe += 1
+            self._buffers[shard] = []
+            self._buffer_started_at_ms.pop(shard, None)
+            # Return all input events for ack (already committed).
+            return ordered
+
         segment_seq = self._next_segment_seq[shard]
         object_key = self._segment_key(shard=shard, seq=segment_seq)
         checkpoint_key = self._checkpoint_key(shard)
 
-        payload = self._encode_segment(ordered)
-        last_event_index = ordered[-1].segment_event_index if ordered else 0
+        payload = self._encode_segment(filtered)
+        last_event_index = filtered[-1].segment_event_index if filtered else 0
+        max_source_segment, max_source_index = self._max_ordering_key(filtered)
 
         for attempt in range(self._write_max_attempts):
             try:
@@ -116,6 +130,8 @@ class BufferedPersistenceWriter:
                     last_segment_seq=segment_seq,
                     next_segment_seq=segment_seq + 1,
                     last_event_index=last_event_index,
+                    committed_source_segment_seq=max_source_segment,
+                    committed_source_event_index=max_source_index,
                     updated_at_ms=self._clock_ms(),
                     segment_object_key=object_key,
                 )
@@ -123,7 +139,7 @@ class BufferedPersistenceWriter:
                     key=checkpoint_key,
                     data=checkpoint.model_dump(mode="json", by_alias=True),
                 )
-                self.metrics.events_flushed += len(ordered)
+                self.metrics.events_flushed += len(filtered)
                 self.metrics.segments_written += 1
                 self.metrics.checkpoint_writes += 1
                 dur_ms = int((time.perf_counter() - flush_started) * 1000)
@@ -132,22 +148,27 @@ class BufferedPersistenceWriter:
                     self.metrics.flush_duration_ms_max,
                     dur_ms,
                 )
-                lag = max(0, self._clock_ms() - max(e.emitted_at_ms for e in ordered))
+                lag = max(0, self._clock_ms() - max(e.emitted_at_ms for e in filtered))
                 self.metrics.lag_to_durable_commit_ms_last = lag
                 self.metrics.lag_to_durable_commit_ms_max = max(
                     self.metrics.lag_to_durable_commit_ms_max,
                     lag,
                 )
                 self._next_segment_seq[shard] = segment_seq + 1
+                self._committed_watermark[shard] = (
+                    max_source_segment,
+                    max_source_index,
+                )
                 self._buffers[shard] = []
                 self._buffer_started_at_ms.pop(shard, None)
+                # Ack all input events: committed+already-committed.
                 return ordered
             except Exception as exc:  # noqa: BLE001
-                self.metrics.s3_errors += len(ordered)
+                self.metrics.s3_errors += len(filtered)
                 if attempt + 1 >= self._write_max_attempts:
-                    self.metrics.flush_failures += len(ordered)
+                    self.metrics.flush_failures += len(filtered)
                     raise PersistenceWriterFlushError(str(exc)) from exc
-                self.metrics.flush_retries += len(ordered)
+                self.metrics.flush_retries += len(filtered)
                 delay_ms = self._compute_backoff_ms(attempt)
                 await self._sleeper(delay_ms / 1000.0)
         return []
@@ -158,9 +179,14 @@ class BufferedPersistenceWriter:
         cp = await self._store.get_json(key=self._checkpoint_key(shard))
         if cp is None:
             self._next_segment_seq[shard] = 0
+            self._committed_watermark[shard] = (-1, -1)
         else:
             parsed = PersistenceCheckpointV1.model_validate(cp)
             self._next_segment_seq[shard] = parsed.next_segment_seq
+            self._committed_watermark[shard] = (
+                parsed.committed_source_segment_seq,
+                parsed.committed_source_event_index,
+            )
         self._initialized_shards.add(shard)
         self._buffers.setdefault(shard, [])
         self._seen_event_ids.setdefault(shard, set())
@@ -194,6 +220,19 @@ class BufferedPersistenceWriter:
         ]
         ndjson = ("\n".join(lines) + "\n").encode("utf-8")
         return gzip.compress(ndjson)
+
+    @staticmethod
+    def _ordering_key(event: PersistenceEventV1) -> tuple[int, int]:
+        return (event.segment_seq, event.segment_event_index)
+
+    @classmethod
+    def _max_ordering_key(
+        cls,
+        events: list[PersistenceEventV1],
+    ) -> tuple[int, int]:
+        if not events:
+            return (-1, -1)
+        return max(cls._ordering_key(e) for e in events)
 
     def _compute_backoff_ms(self, attempt_zero_indexed: int) -> int:
         expo = self._backoff_base_ms * (2**attempt_zero_indexed)

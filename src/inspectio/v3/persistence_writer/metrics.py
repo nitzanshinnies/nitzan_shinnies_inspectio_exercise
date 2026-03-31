@@ -9,6 +9,8 @@ from dataclasses import dataclass
 class PersistenceWriterMetrics:
     events_buffered: int = 0
     events_deduped: int = 0
+    events_dropped_committed_watermark: int = 0
+    empty_flushes_due_to_dedupe: int = 0
     events_flushed: int = 0
     segments_written: int = 0
     checkpoint_writes: int = 0

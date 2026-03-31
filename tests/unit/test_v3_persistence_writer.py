@@ -17,7 +17,12 @@ from inspectio.v3.schemas.persistence_event import PersistenceEventV1
 
 
 def _event(
-    event_id: str, *, shard: int = 0, emitted_at_ms: int = 100
+    event_id: str,
+    *,
+    shard: int = 0,
+    emitted_at_ms: int = 100,
+    segment_seq: int = 1,
+    segment_event_index: int = 0,
 ) -> PersistenceEventV1:
     return PersistenceEventV1.model_validate(
         {
@@ -26,8 +31,8 @@ def _event(
             "eventType": "attempt_result",
             "emittedAtMs": emitted_at_ms,
             "shard": shard,
-            "segmentSeq": 1,
-            "segmentEventIndex": 0,
+            "segmentSeq": segment_seq,
+            "segmentEventIndex": segment_event_index,
             "traceId": "t",
             "batchCorrelationId": "b",
             "messageId": "m",
@@ -118,6 +123,8 @@ async def test_writer_batches_events_into_one_segment_per_flush() -> None:
     cp = store.jsons["state/checkpoints/0/latest.json"]
     assert cp["lastSegmentSeq"] == 0
     assert cp["nextSegmentSeq"] == 1
+    assert cp["committedSourceSegmentSeq"] == 1
+    assert cp["committedSourceEventIndex"] == 0
 
 
 @pytest.mark.unit
@@ -171,3 +178,93 @@ async def test_writer_dedupes_duplicate_event_ids() -> None:
     await writer.flush_due(force=True)
     assert writer.metrics.events_deduped == 1
     assert writer.metrics.events_flushed == 1
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_restart_redelivery_drop_by_committed_watermark_no_new_segment() -> None:
+    store = _MemStore()
+    clock = [50_000]
+    writer1 = _build_writer(store, clock=clock)
+    batch_a = [
+        _event("a-1", segment_seq=11, segment_event_index=0),
+        _event("a-2", segment_seq=11, segment_event_index=1),
+    ]
+    await writer1.ingest_events(batch_a)
+    acked_a = await writer1.flush_due(force=True)
+    assert len(acked_a) == 2
+    assert writer1.metrics.segments_written == 1
+    assert (
+        store.jsons["state/checkpoints/0/latest.json"]["committedSourceSegmentSeq"]
+        == 11
+    )
+    assert (
+        store.jsons["state/checkpoints/0/latest.json"]["committedSourceEventIndex"] == 1
+    )
+
+    # Restart with same durable store/checkpoint, then redeliver already-committed events.
+    writer2 = _build_writer(store, clock=clock)
+    await writer2.ingest_events(batch_a)
+    before_bytes = len(store.bytes)
+    before_cp = dict(store.jsons["state/checkpoints/0/latest.json"])
+    acked_redelivered = await writer2.flush_due(force=True)
+    after_bytes = len(store.bytes)
+    after_cp = dict(store.jsons["state/checkpoints/0/latest.json"])
+    assert len(acked_redelivered) == 2
+    assert after_bytes == before_bytes
+    assert after_cp == before_cp
+    assert writer2.metrics.events_dropped_committed_watermark == 2
+    assert writer2.metrics.empty_flushes_due_to_dedupe == 1
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_mixed_batch_filters_committed_events_and_advances_checkpoint() -> None:
+    store = _MemStore()
+    clock = [60_000]
+    writer1 = _build_writer(store, clock=clock)
+    await writer1.ingest_events(
+        [
+            _event("b-1", segment_seq=21, segment_event_index=0),
+            _event("b-2", segment_seq=21, segment_event_index=1),
+        ],
+    )
+    await writer1.flush_due(force=True)
+
+    writer2 = _build_writer(store, clock=clock)
+    mixed = [
+        _event("b-1-redelivered", segment_seq=21, segment_event_index=0),
+        _event("c-1-new", segment_seq=22, segment_event_index=0),
+        _event("c-2-new", segment_seq=22, segment_event_index=1),
+    ]
+    await writer2.ingest_events(mixed)
+    acked = await writer2.flush_due(force=True)
+    assert len(acked) == 3
+    cp = store.jsons["state/checkpoints/0/latest.json"]
+    assert cp["committedSourceSegmentSeq"] == 22
+    assert cp["committedSourceEventIndex"] == 1
+    assert writer2.metrics.events_dropped_committed_watermark == 1
+    assert writer2.metrics.events_flushed == 2
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_backward_compat_old_checkpoint_payload_loads_safely() -> None:
+    store = _MemStore()
+    store.jsons["state/checkpoints/0/latest.json"] = {
+        "schemaVersion": 1,
+        "shard": 0,
+        "lastSegmentSeq": 4,
+        "nextSegmentSeq": 5,
+        "lastEventIndex": 8,
+        "updatedAtMs": 100,
+        "segmentObjectKey": "state/events/0/00000000000000000004.ndjson.gz",
+    }
+    clock = [70_000]
+    writer = _build_writer(store, clock=clock)
+    await writer.ingest_events([_event("d-1", segment_seq=1, segment_event_index=0)])
+    acked = await writer.flush_due(force=True)
+    assert len(acked) == 1
+    cp = store.jsons["state/checkpoints/0/latest.json"]
+    assert cp["lastSegmentSeq"] == 5
+    assert cp["nextSegmentSeq"] == 6

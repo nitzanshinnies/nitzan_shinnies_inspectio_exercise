@@ -22,6 +22,16 @@ class PersistenceCheckpointV1(BaseModel):
     last_segment_seq: int = Field(alias="lastSegmentSeq", ge=0)
     next_segment_seq: int = Field(alias="nextSegmentSeq", ge=1)
     last_event_index: int = Field(alias="lastEventIndex", ge=0)
+    committed_source_segment_seq: int = Field(
+        alias="committedSourceSegmentSeq",
+        default=-1,
+        ge=-1,
+    )
+    committed_source_event_index: int = Field(
+        alias="committedSourceEventIndex",
+        default=-1,
+        ge=-1,
+    )
     updated_at_ms: int = Field(alias="updatedAtMs", ge=0)
     segment_object_key: str = Field(alias="segmentObjectKey", min_length=1)
 
@@ -31,4 +41,11 @@ class PersistenceCheckpointV1(BaseModel):
         if self.next_segment_seq != expected:
             msg = f"nextSegmentSeq must equal lastSegmentSeq + 1 ({expected})"
             raise ValueError(msg)
+        if (
+            self.committed_source_segment_seq == -1
+            and self.committed_source_event_index != -1
+        ):
+            raise ValueError(
+                "committedSourceEventIndex requires committedSourceSegmentSeq",
+            )
         return self

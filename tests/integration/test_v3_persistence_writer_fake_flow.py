@@ -19,7 +19,7 @@ def _event(event_id: str, *, shard: int) -> PersistenceEventV1:
             "eventType": "terminal",
             "emittedAtMs": 1_700_000_000_000,
             "shard": shard,
-            "segmentSeq": 1,
+            "segmentSeq": int(event_id.split("-")[-1]),
             "segmentEventIndex": 0,
             "traceId": "t",
             "batchCorrelationId": "b",
@@ -104,3 +104,46 @@ async def test_fake_flow_flushes_and_acks_consumed_events() -> None:
     assert writer.metrics.segments_written >= 2
     assert "state/checkpoints/0/latest.json" in store.jsons
     assert "state/checkpoints/1/latest.json" in store.jsons
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_writer_restart_redelivery_idempotent() -> None:
+    store = _MemStore()
+    clock = [1_700_000_200_000]
+    writer_a = BufferedPersistenceWriter(
+        store=store,
+        clock_ms=lambda: clock[0],
+        flush_max_events=10,
+        flush_interval_ms=10_000,
+        dedupe_event_id_cap=10_000,
+        write_max_attempts=2,
+        backoff_base_ms=1,
+        backoff_max_ms=1,
+        backoff_jitter_fraction=0.0,
+    )
+    batch_a = [_event("a-100", shard=0), _event("a-101", shard=0)]
+    await writer_a.ingest_events(batch_a)
+    acked_a = await writer_a.flush_due(force=True)
+    assert len(acked_a) == 2
+    cp_before = dict(store.jsons["state/checkpoints/0/latest.json"])
+    bytes_before = dict(store.bytes)
+
+    # restart + redelivery of already committed events
+    writer_b = BufferedPersistenceWriter(
+        store=store,
+        clock_ms=lambda: clock[0],
+        flush_max_events=10,
+        flush_interval_ms=10_000,
+        dedupe_event_id_cap=10_000,
+        write_max_attempts=2,
+        backoff_base_ms=1,
+        backoff_max_ms=1,
+        backoff_jitter_fraction=0.0,
+    )
+    await writer_b.ingest_events(batch_a)
+    acked_redelivery = await writer_b.flush_due(force=True)
+    assert len(acked_redelivery) == 2
+    assert dict(store.jsons["state/checkpoints/0/latest.json"]) == cp_before
+    assert dict(store.bytes) == bytes_before
+    assert writer_b.metrics.events_dropped_committed_watermark == 2
