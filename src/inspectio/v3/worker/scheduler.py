@@ -164,7 +164,7 @@ class SendScheduler:
                     self._terminal_message_ids.add(mid)
                     del self._active[mid]
                     self._metrics.send_ok += 1
-                    _log.info(
+                    _log.debug(
                         "send_ok messageId=%s traceId=%s batchCorrelationId=%s "
                         "attempts=%s shard=%s",
                         mid,
@@ -197,7 +197,7 @@ class SendScheduler:
                     self._terminal_message_ids.add(mid)
                     del self._active[mid]
                     self._metrics.send_fail += 1
-                    _log.info(
+                    _log.debug(
                         "send_fail messageId=%s traceId=%s batchCorrelationId=%s shard=%s",
                         mid,
                         trace_id,

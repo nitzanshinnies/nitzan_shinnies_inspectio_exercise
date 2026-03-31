@@ -17,6 +17,11 @@ Expansion of **`plans/V3_ASYNC_PIPELINE_IMPLEMENTATION_PLAN.md`** into merge-siz
 | P6 | [P6_KUBERNETES.md](./P6_KUBERNETES.md) | **`deploy/kubernetes/`**, ConfigMap/Secrets, multi-replica L2 |
 | P7 | [P7_LOAD_HARNESS.md](./P7_LOAD_HARNESS.md) | In-cluster Job + driver; primary metric (master plan **3.1**); bounded waits |
 
+## Supplemental docs
+
+- [P11_PERSISTENCE_REQUIREMENTS_TO_DESIGN_MAPPING.md](./P11_PERSISTENCE_REQUIREMENTS_TO_DESIGN_MAPPING.md) - Assignment persistence clauses mapped to a throughput-preserving v3 design direction.
+- [P12_PERSISTENCE_PHASE_IMPLEMENTATION_PLAN.md](./P12_PERSISTENCE_PHASE_IMPLEMENTATION_PLAN.md) - Agent-ready phased implementation plan for persistence rollout and verification.
+
 ## Dependencies
 
 **Same order as master plan phase table:**

@@ -55,13 +55,11 @@ def build_router(deps: L2Dependencies) -> APIRouter:
 
     @router.post("/messages/repeat", status_code=202)
     async def post_messages_repeat(
-        count: Annotated[int, Query()],
+        count: Annotated[int, Query(ge=1, le=100_000)],
         payload: PostMessageRequestBody,
         idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
         trace_id: Annotated[str | None, Header(alias="X-Trace-Id")] = None,
     ) -> dict[str, str | int]:
-        if count < 1:
-            raise HTTPException(status_code=400, detail="count must be >= 1")
         return await _admit_bulk(
             deps=deps,
             body=payload.body,

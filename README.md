@@ -64,6 +64,20 @@ Implementation targets **v3** only. **Normative docs:** **`plans/ASSIGNMENT.pdf`
 - **Outcomes:** v3 repeat returns a **summary**; visibility wait uses **`min(N, limit)`** rows (**≤ 100**). For **N > 100**, use **worker** logs/metrics for **3.1** send completes — see **`deploy/kubernetes/README.md`** and driver JSON fields.
 - **Tests:** **`pytest tests/unit/test_v3_load_harness_stats.py -m unit`**.
 
+## V3 persistence contracts (phase P12.0)
+
+- **Contracts only (no runtime behavior changes yet):**
+  - **`PersistenceEventV1`** envelope schema (strict validation)
+  - **`PersistenceCheckpointV1`** schema
+  - deterministic replay ordering helper + idempotent fold reducer scaffolding
+- **Tests:** strict schema validation, replay-order determinism, fake transport replay path:
+  - **`tests/unit/test_v3_persistence_schemas.py`**
+  - **`tests/unit/test_v3_persistence_replay_order.py`**
+  - **`tests/integration/test_v3_persistence_fake_transport.py`**
+- **Decision lock:** **`plans/v3_phases/P12_DECISION_RECORD.md`**.
+- **Load harness extension point:** **`scripts/v3_load_test.py --persistence-mode {off,on}`**
+  currently labels benchmark profile only (wiring begins in P12.1+).
+
 ## Local stack
 
 The **repository root** `docker-compose.yml` runs **redis**, **localstack** (S3 + SQS), **`inspectio-l1`** (published **8080** → browser entry), **`inspectio-api`** (L2 on **8000** inside the network only—no host port), **`inspectio-expander`**, and **`inspectio-worker`**. Default **`INSPECTIO_V3_SEND_SHARD_COUNT`** is **1** so a single worker covers all send traffic; raise **`K`** and add one worker per **`inspectio-v3-send-{i}`** URL. The v2 app stack remains archived under **`v2_obsolete/archive/`**. Compose project name is **`inspectio`** (`name:` in the file). Stop it with:

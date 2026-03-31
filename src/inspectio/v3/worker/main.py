@@ -5,12 +5,14 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 import time
 from typing import Any
 
 import aioboto3
 
 from inspectio.v3.assignment_surface import Message
+from inspectio.v3.outcomes.null_store import NullOutcomesWriter
 from inspectio.v3.outcomes.redis_store import RedisOutcomesStore
 from inspectio.v3.settings import (
     V3WorkerSettings,
@@ -37,9 +39,15 @@ def _try_send_factory(settings: V3WorkerSettings):
 
 
 async def amain() -> None:
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s %(message)s")
+    _lvl_name = os.environ.get("INSPECTIO_V3_WORKER_LOG_LEVEL", "INFO").upper()
+    _lvl = getattr(logging, _lvl_name, logging.INFO)
+    logging.basicConfig(level=_lvl, format="%(levelname)s %(name)s %(message)s")
     settings = V3WorkerSettings()
-    outcomes = RedisOutcomesStore.from_url(settings.redis_url)
+    outcomes = (
+        RedisOutcomesStore.from_url(settings.redis_url)
+        if settings.worker_record_outcomes
+        else NullOutcomesWriter()
+    )
     metrics = SendWorkerMetrics()
     session = aioboto3.Session()
     kw = sqs_client_kwargs_from_worker_settings(settings)
@@ -83,16 +91,23 @@ async def amain() -> None:
                     MaxNumberOfMessages=10,
                     WaitTimeSeconds=20,
                 )
-                for msg in resp.get("Messages", []):
-                    await scheduler.ingest_send_unit_sqs_message(msg)
+                msgs = resp.get("Messages", [])
+                if msgs:
+                    await asyncio.gather(
+                        *[scheduler.ingest_send_unit_sqs_message(m) for m in msgs],
+                    )
+
+        wake_every = float(settings.worker_wakeup_sec)
 
         async def wakeup_loop() -> None:
             while True:
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(wake_every)
                 await scheduler.wakeup_scan_due()
 
-        _log.info("worker started queue=%s", q)
-        await asyncio.gather(receive_loop(), wakeup_loop())
+        pollers = max(1, int(settings.worker_receive_pollers))
+        receive_tasks = [asyncio.create_task(receive_loop()) for _ in range(pollers)]
+        _log.info("worker started queue=%s pollers=%s", q, pollers)
+        await asyncio.gather(*receive_tasks, wakeup_loop())
 
 
 def main() -> None:

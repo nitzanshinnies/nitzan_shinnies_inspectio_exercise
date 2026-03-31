@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import random
 import uuid
@@ -16,6 +17,8 @@ from inspectio.v3.expander.metrics import ExpansionMetrics
 from inspectio.v3.schemas.send_unit import SendUnitV1
 from inspectio.v3.sqs.aws_throttle import is_aws_throttle_error
 from inspectio.v3.sqs.backoff import compute_backoff_delay_ms
+
+_DEFAULT_PUBLISH_CONCURRENCY = 48
 
 _BATCH_FAIL_RETRY_CODES = frozenset(
     {
@@ -37,8 +40,9 @@ async def publish_send_units_to_shards(
     sleeper: Callable[[float], Awaitable[None]],
     rng: random.Random,
     metrics: ExpansionMetrics,
+    publish_concurrency: int = _DEFAULT_PUBLISH_CONCURRENCY,
 ) -> None:
-    """Group by ``unit.shard``, then ``SendMessageBatch`` (max 10 entries) per queue."""
+    """Group by ``unit.shard``, then parallel ``SendMessageBatch`` (max 10 entries)."""
     k = len(send_queue_urls)
     by_shard: dict[int, list[SendUnitV1]] = defaultdict(list)
     for u in units:
@@ -47,19 +51,29 @@ async def publish_send_units_to_shards(
             raise ValueError(msg)
         by_shard[u.shard].append(u)
 
-    for shard_idx in sorted(by_shard.keys()):
-        url = send_queue_urls[shard_idx]
-        for chunk in chunk_fixed_size(by_shard[shard_idx], 10):
+    sem = asyncio.Semaphore(max(1, publish_concurrency))
+
+    async def _one_batch(queue_url: str, chunk: list[SendUnitV1]) -> int:
+        async with sem:
             await _send_message_batch_with_retries(
                 client,
-                queue_url=url,
+                queue_url=queue_url,
                 units=chunk,
                 max_attempts=max_attempts,
                 sleeper=sleeper,
                 rng=rng,
                 metrics=metrics,
             )
-            metrics.expanded_units_published += len(chunk)
+            return len(chunk)
+
+    tasks: list[asyncio.Task[int]] = []
+    for shard_idx in sorted(by_shard.keys()):
+        url = send_queue_urls[shard_idx]
+        for chunk in chunk_fixed_size(by_shard[shard_idx], 10):
+            tasks.append(asyncio.create_task(_one_batch(url, chunk)))
+    if tasks:
+        published = sum(await asyncio.gather(*tasks))
+        metrics.expanded_units_published += published
 
 
 async def _send_message_batch_with_retries(

@@ -13,7 +13,7 @@ See **`plans/v3_phases/P6_KUBERNETES.md`**, workspace rule **`inspectio-eks-agen
 
 ## Apply order
 
-1. Edit **`configmap.yaml`**: replace `REPLACE_WITH_SQS_*` placeholders; align **`INSPECTIO_V3_SEND_SHARD_COUNT`** with the number of comma-separated send URLs.
+1. Edit **`configmap.yaml`**: replace `REPLACE_WITH_SQS_*` placeholders; align **`INSPECTIO_V3_SEND_SHARD_COUNT`** with the number of send URLs. **`INSPECTIO_V3_SEND_QUEUE_URLS`** must be a **JSON array** string (e.g. `'["https://sqs.../shard-0","https://.../shard-1"]'`) so **`V3ExpanderSettings`** can parse it from Kubernetes env.
 2. Edit **`serviceaccount.yaml`**: set the real **IRSA** role ARN (or drop the annotation if the node role suffices).
 3. (Optional) Create **`inspectio-v3-secrets`** for static AWS keys — see **`secret-aws.example.yaml`**. Deployments use **`optional: true`** so IRSA-only clusters do not require this Secret.
 4. Apply:
@@ -43,6 +43,8 @@ kubectl -n inspectio rollout status deployment/inspectio-l1 --timeout=120s
 
 Duplicate **`inspectio-worker.yaml`** per shard (e.g. `inspectio-worker-1.yaml`) with a **unique** `metadata.name` and **`INSPECTIO_V3_WORKER_SEND_QUEUE_URL`** for that shard’s queue. Keep **`INSPECTIO_V3_SEND_QUEUE_URLS`** and **`INSPECTIO_V3_SEND_SHARD_COUNT`** consistent on the expander ConfigMap.
 
+**K = 4 template:** **`inspectio-worker-shards-k4.yaml`** defines **`inspectio-worker-shard-0` … `shard-3`**, each overriding **`INSPECTIO_V3_WORKER_SEND_QUEUE_URL`**. Set **`INSPECTIO_V3_SEND_SHARD_COUNT: "4"`** and a **four-element JSON array** for **`INSPECTIO_V3_SEND_QUEUE_URLS`**, then **`kubectl -n inspectio delete deployment inspectio-worker --ignore-not-found`** and apply the shard file (replace **`REPLACE_*`** queue URLs and image). Scale each shard Deployment to split consumer capacity across queues.
+
 ## `kubectl apply -k` pitfalls
 
 - **Immutable selectors:** if you change `spec.selector.matchLabels` on an existing Deployment, apply will fail — recreate the workload or avoid changing selectors.
@@ -70,6 +72,42 @@ Driver: **`scripts/v3_load_test.py`** (installed in the image via **`deploy/dock
   ```
 
 - **Benchmark (admission)** — **`load-test-job-benchmark.yaml`**: **`activeDeadlineSeconds: 600`**, **`--sizes "10000"`**, **`--no-wait-successes`**, **`--max-total-sec 0`** (wall clock bounded by Job only). **`kubectl wait --timeout=620s`** per workspace rules.
+
+- **Sustained repeat (no outcome poll)** — **`load-test-job-sustain.yaml`**: runs **`scripts/v3_sustained_admit.py`** with high **`--batch`** (default **500**) to push **offered msg/s** with fewer HTTP calls. Override **`--concurrency`** / **`--batch`** in the manifest after setting the image tag. Tune expander with **`INSPECTIO_V3_EXPANDER_PUBLISH_CONCURRENCY`** and **`INSPECTIO_V3_EXPANDER_BULK_RECEIVE_MAX`** (ConfigMap) if the bulk→send fan-out lags admission.
+
+### `eks-10k` image tag + in-cluster sustain (admit ≈10k+ msg/s)
+
+Use a **performance-tuned** image (e.g. built from **`feat/v3-eks-throughput-scale`**) tagged for EKS, then point **all** workloads (api, l1, expander, every send-shard worker Deployment) at the same tag:
+
+```bash
+TAG=eks-10k   # or your ECR tag
+REGISTRY=194768394273.dkr.ecr.us-east-1.amazonaws.com
+IMG="${REGISTRY}/inspectio-v3:${TAG}"
+NS=inspectio
+for d in inspectio-api inspectio-l1 inspectio-expander \
+         inspectio-worker-shard-0 inspectio-worker-shard-1 \
+         inspectio-worker-shard-2 inspectio-worker-shard-3; do
+  c=$(kubectl -n "$NS" get deploy "$d" -o jsonpath='{.spec.template.spec.containers[0].name}')
+  kubectl -n "$NS" set image "deployment/$d" "$c=$IMG"
+done
+# wait for rollouts …
+```
+
+**Sustain Job** (admission-only driver; no success polling): set the Job container image to **`$IMG`**, then apply. Example shape that reached **~14k offered admit msg/s** on a K=4 stack (tune to your cluster):
+
+- **Job name:** e.g. **`inspectio-v3-sustain-10k`**
+- **Args:** `python scripts/v3_sustained_admit.py --duration-sec 55 --concurrency 180 --batch 500 --body-prefix p10k`
+- **Env:** `INSPECTIO_LOAD_TEST_API_BASE=http://inspectio-l1:8080`
+
+```bash
+kubectl -n inspectio delete job inspectio-v3-sustain-10k --ignore-not-found
+# edit a one-off Job YAML so .spec.template.spec.containers[0].image matches $IMG, then:
+kubectl apply -f your-sustain-10k-job.yaml
+kubectl -n inspectio wait --for=condition=complete job/inspectio-v3-sustain-10k --timeout=620s
+kubectl -n inspectio logs job/inspectio-v3-sustain-10k
+```
+
+**End-to-end completion rate (~SQS consumer throughput):** after the run, wait for queues to drain, then sum **CloudWatch** **`AWS/SQS` → `NumberOfMessagesDeleted`** for **each** send queue (`inspectio-v3-send-0` … `send-{K-1}`) over the load window. **Peak combined** ≈ **sum of per-queue `Sum` (60s period) / 60** for the busiest minute. If admit RPS ≫ deletes/s, scale **expander** and **per-shard worker** replicas and/or raise **`INSPECTIO_V3_EXPANDER_PUBLISH_CONCURRENCY`**, then **rollout restart** workloads that read the ConfigMap. For more **SQS long-polls per worker pod**, set **`INSPECTIO_V3_WORKER_RECEIVE_POLLERS`** (default **2**, max **8**) on the ConfigMap and restart **worker** Deployments only.
 
 **Throughput claims (master 3.1 / 3.2):** report **admission RPS** from the driver JSON. **Completed `try_send` / send-side RPS** is not fully observable via **`GET /messages/success`** when **N > 100** (Redis ring cap). For large **N**, use **worker** pod logs (e.g. **`send_ok`** lines) or metrics — see **`plans/v3_phases/P7_LOAD_HARNESS.md`**.
 

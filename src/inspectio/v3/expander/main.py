@@ -38,6 +38,8 @@ async def amain() -> None:
                 metrics=metrics,
                 sleeper=sleeper,
                 rng=rng,
+                publish_concurrency=settings.expander_publish_concurrency,
+                bulk_receive_max=settings.expander_bulk_receive_max,
             )
 
 
