@@ -7,6 +7,7 @@ import json
 
 import pytest
 
+from inspectio.v3.domain.retry_schedule import attempt_deadline_ms
 from inspectio.v3.persistence_recovery.bootstrap import PersistenceRecoveryBootstrap
 from inspectio.v3.schemas.persistence_event import (
     EVENT_TYPE_ATTEMPT_RESULT,
@@ -55,6 +56,7 @@ def _event(
     status: str,
     next_due_at_ms: int | None,
     body: str | None,
+    reason: str | None = None,
 ) -> PersistenceEventV1:
     return PersistenceEventV1.model_validate(
         {
@@ -75,6 +77,7 @@ def _event(
             "receivedAtMs": 10_000,
             "body": body,
             "finalTimestampMs": 11_000 if event_type == EVENT_TYPE_TERMINAL else None,
+            "reason": reason,
         }
     )
 
@@ -96,7 +99,7 @@ async def _write_segment(
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_recovery_bootstrap_rebuilds_pending_and_terminal_sets() -> None:
+async def test_checkpoint_forward_filtering_uses_committed_watermark() -> None:
     store = _MemStore()
     await store.put_json(
         key="state/checkpoints/0/latest.json",
@@ -107,7 +110,7 @@ async def test_recovery_bootstrap_rebuilds_pending_and_terminal_sets() -> None:
             "nextSegmentSeq": 1,
             "lastEventIndex": 1,
             "committedSourceSegmentSeq": 0,
-            "committedSourceEventIndex": 1,
+            "committedSourceEventIndex": 0,
             "updatedAtMs": 12_000,
             "segmentObjectKey": "state/events/0/00000000000000000000.ndjson.gz",
         },
@@ -124,19 +127,19 @@ async def test_recovery_bootstrap_rebuilds_pending_and_terminal_sets() -> None:
                 segment_event_index=0,
                 attempt_count=1,
                 status="pending",
-                next_due_at_ms=10_500,
+                next_due_at_ms=attempt_deadline_ms(10_000, 2),
                 body="hello",
             ),
             _event(
-                event_type=EVENT_TYPE_TERMINAL,
-                event_id="evt-t1",
-                message_id="m-terminal",
+                event_type=EVENT_TYPE_ATTEMPT_RESULT,
+                event_id="evt-a2",
+                message_id="m-pending",
                 segment_seq=0,
                 segment_event_index=1,
-                attempt_count=1,
-                status="success",
-                next_due_at_ms=None,
-                body="done",
+                attempt_count=2,
+                status="pending",
+                next_due_at_ms=attempt_deadline_ms(10_000, 3),
+                body="hello",
             ),
         ],
     )
@@ -146,13 +149,90 @@ async def test_recovery_bootstrap_rebuilds_pending_and_terminal_sets() -> None:
 
     assert snapshot.loaded_segments == 1
     assert snapshot.loaded_events == 2
-    assert snapshot.terminal_message_ids == {"m-terminal"}
+    assert snapshot.skipped_events_checkpoint_watermark == 1
+    assert snapshot.terminal_message_ids == set()
     assert len(snapshot.pending_units) == 1
     pending = snapshot.pending_units[0]
     assert pending.message_id == "m-pending"
-    assert pending.attempt_count == 1
-    assert pending.next_due_at_ms == 10_500
+    assert pending.attempt_count == 2
+    assert pending.next_due_at_ms == attempt_deadline_ms(10_000, 3)
     assert pending.body == "hello"
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_no_checkpoint_replays_all_available_segments() -> None:
+    store = _MemStore()
+    await _write_segment(
+        store,
+        key="state/events/0/00000000000000000000.ndjson.gz",
+        events=[
+            _event(
+                event_type=EVENT_TYPE_ATTEMPT_RESULT,
+                event_id="evt-1",
+                message_id="m-1",
+                segment_seq=0,
+                segment_event_index=0,
+                attempt_count=1,
+                status="pending",
+                next_due_at_ms=attempt_deadline_ms(10_000, 2),
+                body="payload",
+            ),
+        ],
+    )
+    await _write_segment(
+        store,
+        key="state/events/0/00000000000000000001.ndjson.gz",
+        events=[
+            _event(
+                event_type=EVENT_TYPE_TERMINAL,
+                event_id="evt-2",
+                message_id="m-2",
+                segment_seq=1,
+                segment_event_index=0,
+                attempt_count=1,
+                status="success",
+                next_due_at_ms=None,
+                body="done",
+            ),
+        ],
+    )
+    snapshot = await PersistenceRecoveryBootstrap(
+        object_store=store, shard_ids=[0]
+    ).recover()
+    assert snapshot.loaded_segments == 2
+    assert snapshot.loaded_events == 2
+    assert snapshot.skipped_events_checkpoint_watermark == 0
+    assert {unit.message_id for unit in snapshot.pending_units} == {"m-1"}
+    assert snapshot.terminal_message_ids == {"m-2"}
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_recovery_bootstrap_invalid_next_due_is_dropped_and_counted() -> None:
+    store = _MemStore()
+    await _write_segment(
+        store,
+        key="state/events/0/00000000000000000000.ndjson.gz",
+        events=[
+            _event(
+                event_type=EVENT_TYPE_ATTEMPT_RESULT,
+                event_id="evt-bad",
+                message_id="m-bad",
+                segment_seq=0,
+                segment_event_index=0,
+                attempt_count=1,
+                status="pending",
+                next_due_at_ms=123,
+                body="payload",
+            ),
+        ],
+    )
+    snapshot = await PersistenceRecoveryBootstrap(
+        object_store=store, shard_ids=[0]
+    ).recover()
+    assert snapshot.pending_units == []
+    assert snapshot.skipped_pending_invalid_timing == 1
 
 
 @pytest.mark.unit
@@ -171,7 +251,7 @@ async def test_recovery_bootstrap_is_deterministic_across_repeated_runs() -> Non
                 segment_event_index=1,
                 attempt_count=2,
                 status="pending",
-                next_due_at_ms=11_000,
+                next_due_at_ms=attempt_deadline_ms(10_000, 3),
                 body=None,
             ),
             _event(
@@ -182,7 +262,7 @@ async def test_recovery_bootstrap_is_deterministic_across_repeated_runs() -> Non
                 segment_event_index=0,
                 attempt_count=1,
                 status="pending",
-                next_due_at_ms=10_500,
+                next_due_at_ms=attempt_deadline_ms(10_000, 2),
                 body="payload",
             ),
         ],
@@ -195,3 +275,32 @@ async def test_recovery_bootstrap_is_deterministic_across_repeated_runs() -> Non
     assert first.pending_units == second.pending_units
     assert first.terminal_message_ids == second.terminal_message_ids
     assert first.skipped_pending_missing_body == 0
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_terminal_states_are_excluded_from_pending_seed() -> None:
+    store = _MemStore()
+    await _write_segment(
+        store,
+        key="state/events/0/00000000000000000000.ndjson.gz",
+        events=[
+            _event(
+                event_type=EVENT_TYPE_TERMINAL,
+                event_id="evt-t1",
+                message_id="m-terminal",
+                segment_seq=0,
+                segment_event_index=0,
+                attempt_count=2,
+                status="failed",
+                next_due_at_ms=None,
+                body="body",
+                reason="max_try_send_failures",
+            ),
+        ],
+    )
+    snapshot = await PersistenceRecoveryBootstrap(
+        object_store=store, shard_ids=[0]
+    ).recover()
+    assert snapshot.pending_units == []
+    assert snapshot.terminal_message_ids == {"m-terminal"}

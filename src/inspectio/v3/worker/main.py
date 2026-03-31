@@ -83,12 +83,14 @@ async def amain() -> None:
             recovered_pending = snapshot.pending_units
             recovered_terminal_ids = snapshot.terminal_message_ids
             _log.info(
-                "recovery loaded pending=%s terminal=%s segments=%s events=%s skippedMissingBody=%s shard=%s",
+                "recovery loaded pending=%s terminal=%s segments=%s events=%s skippedByCheckpoint=%s skippedMissingBody=%s skippedInvalidTiming=%s shard=%s",
                 len(snapshot.pending_units),
                 len(snapshot.terminal_message_ids),
                 snapshot.loaded_segments,
                 snapshot.loaded_events,
+                snapshot.skipped_events_checkpoint_watermark,
                 snapshot.skipped_pending_missing_body,
+                snapshot.skipped_pending_invalid_timing,
                 settings.worker_recovery_shard,
             )
 
