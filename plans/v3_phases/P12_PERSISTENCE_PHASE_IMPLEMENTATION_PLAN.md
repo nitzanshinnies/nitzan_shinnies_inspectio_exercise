@@ -80,6 +80,7 @@ P12.5 Read-model hardening and failure isolation
 P12.6 Correctness and fault-injection verification
 P12.7 Throughput validation and regression gates
 P12.8 Sharded persistence transport and writer scaling
+P12.9 Completion throughput rescue and gate closure
 ```
 
 Each phase is mergeable and must ship with tests.
@@ -343,6 +344,24 @@ with send-path shard parallelism.
 
 ---
 
+## P12.9 — Completion Throughput Rescue and Gate Closure
+
+### Goal
+
+Recover persistence-enabled completion throughput to pass the composite gate while preserving correctness and stability guarantees from P12.4-P12.8.
+
+### Plan reference
+
+- `plans/v3_phases/P12_9_COMPLETION_THROUGHPUT_RESCUE_PLAN.md`
+
+### Acceptance criteria
+
+- Completion hard gate passes (`>= 70%` on/off ratio) under reproducible off/on benchmark profiles.
+- No regression in persistence correctness and restart safety suites.
+- Stability signals remain healthy (no crash loops, lag/flush caps pass).
+
+---
+
 ## Agent Execution Rules
 
 1. One phase per PR unless phase is explicitly tiny.
@@ -363,6 +382,7 @@ with send-path shard parallelism.
 - [x] Fault-injection correctness tests
 - [x] Throughput comparison report (persist off vs on)
 - [x] Shard-aligned persistence routing/writer scaling
+- [ ] Completion throughput rescue and gate closure (P12.9)
 - [ ] Decision Record resolved and committed
 - [ ] Core Invariants validated in automated tests
 
