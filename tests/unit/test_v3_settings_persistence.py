@@ -13,6 +13,9 @@ def test_persistence_settings_defaults_safe_baseline() -> None:
     settings = V3PersistenceSettings()
     assert settings.persistence_emit_enabled is False
     assert settings.persistence_durability_mode == "best_effort"
+    assert settings.persist_transport_queue_url is None
+    assert settings.persist_transport_max_attempts == 4
+    assert settings.persist_transport_batch_max_events == 10
 
 
 @pytest.mark.unit
@@ -20,9 +23,12 @@ def test_persistence_settings_accepts_strict_mode() -> None:
     settings = V3PersistenceSettings(
         persistence_emit_enabled=True,
         persistence_durability_mode="strict",
+        persist_transport_queue_url="https://sqs/persist",
+        persist_transport_dlq_url="https://sqs/persist-dlq",
     )
     assert settings.persistence_emit_enabled is True
     assert settings.persistence_durability_mode == "strict"
+    assert settings.persist_transport_queue_url == "https://sqs/persist"
 
 
 @pytest.mark.unit

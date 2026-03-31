@@ -232,7 +232,7 @@ class V3L1Settings(BaseSettings):
 
 
 class V3PersistenceSettings(BaseSettings):
-    """Feature flags for persistence integration rollout (P12.1+)."""
+    """Feature flags/config for persistence transport integration (P12.1/P12.2)."""
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -249,3 +249,58 @@ class V3PersistenceSettings(BaseSettings):
         default="best_effort",
         validation_alias="INSPECTIO_V3_PERSIST_DURABILITY_MODE",
     )
+    persist_transport_queue_url: str | None = Field(
+        default=None,
+        validation_alias="INSPECTIO_V3_PERSIST_TRANSPORT_QUEUE_URL",
+    )
+    persist_transport_dlq_url: str | None = Field(
+        default=None,
+        validation_alias="INSPECTIO_V3_PERSIST_TRANSPORT_DLQ_URL",
+    )
+    persist_transport_max_attempts: int = Field(
+        default=4,
+        ge=1,
+        le=10,
+        validation_alias="INSPECTIO_V3_PERSIST_TRANSPORT_MAX_ATTEMPTS",
+    )
+    persist_transport_backoff_base_ms: int = Field(
+        default=50,
+        ge=1,
+        le=5_000,
+        validation_alias="INSPECTIO_V3_PERSIST_TRANSPORT_BACKOFF_BASE_MS",
+    )
+    persist_transport_backoff_max_ms: int = Field(
+        default=2_000,
+        ge=1,
+        le=30_000,
+        validation_alias="INSPECTIO_V3_PERSIST_TRANSPORT_BACKOFF_MAX_MS",
+    )
+    persist_transport_backoff_jitter_fraction: float = Field(
+        default=0.2,
+        ge=0.0,
+        le=1.0,
+        validation_alias="INSPECTIO_V3_PERSIST_TRANSPORT_BACKOFF_JITTER",
+    )
+    persist_transport_max_inflight_events: int = Field(
+        default=4_096,
+        ge=1,
+        le=100_000,
+        validation_alias="INSPECTIO_V3_PERSIST_TRANSPORT_MAX_INFLIGHT",
+    )
+    persist_transport_batch_max_events: int = Field(
+        default=10,
+        ge=1,
+        le=10,
+        validation_alias="INSPECTIO_V3_PERSIST_TRANSPORT_BATCH_MAX_EVENTS",
+    )
+
+    @field_validator(
+        "persist_transport_queue_url", "persist_transport_dlq_url", mode="before"
+    )
+    @classmethod
+    def _empty_url_as_none(cls, value: object) -> str | None:
+        if value is None:
+            return None
+        if isinstance(value, str) and not value.strip():
+            return None
+        return str(value).strip()
