@@ -130,6 +130,7 @@ Raise persist-on completion throughput without compromising correctness.
 ### Active implementation packet
 
 - Iteration 3 (SE-ready): `plans/v3_phases/artifacts/p12_9/iter-3/ITER3_PLAN.md`
+- Iteration 3 rerun hygiene fix: `plans/v3_phases/P12_9_WS3_1_RERUN_MEASUREMENT_HYGIENE_FIX_SPEC.md`
 
 ### Tuning levers (in order)
 

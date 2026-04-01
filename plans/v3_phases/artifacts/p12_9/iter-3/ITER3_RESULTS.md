@@ -54,6 +54,10 @@ Evaluation:
 
 Iteration 3 is **NO-GO** for promotion because the completion-ratio threshold was not met.
 
+Remediation reference:
+
+- `plans/v3_phases/P12_9_WS3_1_RERUN_MEASUREMENT_HYGIENE_FIX_SPEC.md`
+
 Rollback executed to previous known-good image:
 
 - rollback image:
