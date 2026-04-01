@@ -90,6 +90,7 @@ def _build_writer(
     flush_max_events: int = 100,
     flush_min_batch_events: int = 1,
     flush_interval_ms: int = 1_000,
+    checkpoint_every_n_flushes: int = 1,
 ) -> BufferedPersistenceWriter:
     return BufferedPersistenceWriter(
         store=store,
@@ -97,6 +98,7 @@ def _build_writer(
         flush_max_events=flush_max_events,
         flush_min_batch_events=flush_min_batch_events,
         flush_interval_ms=flush_interval_ms,
+        checkpoint_every_n_flushes=checkpoint_every_n_flushes,
         dedupe_event_id_cap=1_000,
         write_max_attempts=2,
         backoff_base_ms=1,
@@ -176,6 +178,7 @@ async def test_writer_exhausted_failures_raise_and_buffer_remains() -> None:
         flush_max_events=1,
         flush_min_batch_events=1,
         flush_interval_ms=1,
+        checkpoint_every_n_flushes=1,
         dedupe_event_id_cap=100,
         write_max_attempts=1,
         backoff_base_ms=1,
@@ -361,3 +364,40 @@ async def test_interval_flush_does_not_starve_small_idle_buffer() -> None:
     clock[0] = 101_100
     flushed = await writer.flush_due(force=False)
     assert len(flushed) == 1
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_checkpoint_cadence_writes_every_second_flush_when_configured() -> None:
+    store = _MemStore()
+    clock = [110_000]
+    writer = _build_writer(
+        store,
+        clock=clock,
+        flush_max_events=2,
+        flush_min_batch_events=1,
+        flush_interval_ms=1_000,
+        checkpoint_every_n_flushes=2,
+    )
+    await writer.ingest_events(
+        [
+            _event("c1", segment_seq=1, segment_event_index=0),
+            _event("c2", segment_seq=1, segment_event_index=1),
+        ]
+    )
+    await writer.flush_due(force=True)
+    assert "state/checkpoints/0/latest.json" not in store.jsons
+    assert writer.metrics.checkpoint_writes == 0
+    assert writer.metrics.checkpoint_writes_skipped_due_to_cadence == 1
+
+    await writer.ingest_events(
+        [
+            _event("c3", segment_seq=2, segment_event_index=0),
+            _event("c4", segment_seq=2, segment_event_index=1),
+        ]
+    )
+    await writer.flush_due(force=True)
+    assert "state/checkpoints/0/latest.json" in store.jsons
+    assert writer.metrics.checkpoint_writes == 1
+    snapshot = writer.metrics.snapshot(now_ms=clock[0] + 1)
+    assert snapshot["checkpoint_writes_skipped_due_to_cadence"] == 1

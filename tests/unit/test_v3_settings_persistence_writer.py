@@ -17,6 +17,7 @@ def test_writer_settings_minimal_required_fields() -> None:
     assert s.writer_receive_max_events == 10
     assert s.writer_flush_max_events == 500
     assert s.writer_flush_min_batch_events == 1
+    assert s.persistence_checkpoint_every_n_flushes == 1
     assert s.persistence_ack_delete_max_concurrency == 2
     assert s.writer_observability_snapshot_interval_sec == 30
     assert s.writer_observability_queue_age_sample_interval_sec == 30
@@ -70,4 +71,14 @@ def test_writer_settings_rejects_flush_min_over_max() -> None:
             persistence_s3_bucket="bucket",
             writer_flush_max_events=5,
             writer_flush_min_batch_events=6,
+        )
+
+
+@pytest.mark.unit
+def test_writer_settings_rejects_checkpoint_cadence_over_bound() -> None:
+    with pytest.raises(ValidationError):
+        V3PersistenceWriterSettings(
+            persist_transport_queue_url="https://sqs/persist",
+            persistence_s3_bucket="bucket",
+            persistence_checkpoint_every_n_flushes=21,
         )

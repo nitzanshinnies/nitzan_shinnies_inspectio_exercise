@@ -131,6 +131,7 @@ Raise persist-on completion throughput without compromising correctness.
 
 - Iteration 3 (SE-ready): `plans/v3_phases/artifacts/p12_9/iter-3/ITER3_PLAN.md`
 - Iteration 3 rerun hygiene fix: `plans/v3_phases/P12_9_WS3_1_RERUN_MEASUREMENT_HYGIENE_FIX_SPEC.md`
+- Iteration 4 checkpoint-amplification fix: `plans/v3_phases/P12_9_WS3_2_ITER4_CHECKPOINT_WRITE_AMPLIFICATION_SPEC.md`
 
 ### Tuning levers (in order)
 
@@ -255,7 +256,7 @@ Rollback actions:
 
 - [x] WS1 completed with reproducible completion metrics.
 - [ ] WS2 merged with per-shard bottleneck visibility.
-- [x] At least one WS3 iteration completed with measurable gain (Iteration 3: +7.10pp vs Iteration 2, no-go on threshold miss).
+- [x] At least one WS3 iteration completed with measurable gain (Iteration 3: +7.10pp vs Iteration 2, no-go on threshold miss; Iteration 4 checkpoint cadence: 44.52%, -0.32pp vs WS3.1 baseline, no-go).
 - [ ] Final gate rerun artifacts committed.
 - [ ] Completion hard gate `>= 70%` achieved.
 - [ ] P12.9 closure report published.

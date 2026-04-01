@@ -209,6 +209,67 @@ async def test_no_checkpoint_replays_all_available_segments() -> None:
 
 @pytest.mark.unit
 @pytest.mark.asyncio
+async def test_sparse_checkpoint_replays_forward_segments_correctly() -> None:
+    store = _MemStore()
+    await store.put_json(
+        key="state/checkpoints/0/latest.json",
+        data={
+            "schemaVersion": 1,
+            "shard": 0,
+            "lastSegmentSeq": 0,
+            "nextSegmentSeq": 1,
+            "lastEventIndex": 0,
+            "committedSourceSegmentSeq": 0,
+            "committedSourceEventIndex": 0,
+            "updatedAtMs": 12_000,
+            "segmentObjectKey": "state/events/0/00000000000000000000.ndjson.gz",
+        },
+    )
+    await _write_segment(
+        store,
+        key="state/events/0/00000000000000000000.ndjson.gz",
+        events=[
+            _event(
+                event_type=EVENT_TYPE_ATTEMPT_RESULT,
+                event_id="evt-cp-0",
+                message_id="m-cp",
+                segment_seq=0,
+                segment_event_index=0,
+                attempt_count=1,
+                status="pending",
+                next_due_at_ms=attempt_deadline_ms(10_000, 2),
+                body="payload-a",
+            ),
+        ],
+    )
+    await _write_segment(
+        store,
+        key="state/events/0/00000000000000000001.ndjson.gz",
+        events=[
+            _event(
+                event_type=EVENT_TYPE_ATTEMPT_RESULT,
+                event_id="evt-cp-1",
+                message_id="m-cp",
+                segment_seq=1,
+                segment_event_index=0,
+                attempt_count=2,
+                status="pending",
+                next_due_at_ms=attempt_deadline_ms(10_000, 3),
+                body="payload-a",
+            ),
+        ],
+    )
+    snapshot = await PersistenceRecoveryBootstrap(
+        object_store=store, shard_ids=[0]
+    ).recover()
+    assert snapshot.loaded_segments == 2
+    assert snapshot.skipped_events_checkpoint_watermark == 1
+    assert len(snapshot.pending_units) == 1
+    assert snapshot.pending_units[0].attempt_count == 2
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
 async def test_recovery_bootstrap_invalid_next_due_is_dropped_and_counted() -> None:
     store = _MemStore()
     await _write_segment(
