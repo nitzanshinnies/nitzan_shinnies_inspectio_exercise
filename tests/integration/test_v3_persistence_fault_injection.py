@@ -77,6 +77,7 @@ def _writer(
         flush_max_events=500,
         flush_min_batch_events=1,
         flush_interval_ms=1_000,
+        checkpoint_every_n_flushes=1,
         dedupe_event_id_cap=200_000,
         write_max_attempts=write_max_attempts,
         backoff_base_ms=1,

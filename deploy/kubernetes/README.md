@@ -157,6 +157,7 @@ Writer consumes one persistence transport shard queue and writes compressed segm
 - **`INSPECTIO_V3_WRITER_FLUSH_MAX_EVENTS`**
 - **`INSPECTIO_V3_PERSISTENCE_WRITER_FLUSH_MIN_BATCH_EVENTS`** (`1..FLUSH_MAX`, interval-trigger occupancy floor)
 - **`INSPECTIO_V3_WRITER_FLUSH_INTERVAL_MS`**
+- **`INSPECTIO_V3_PERSISTENCE_CHECKPOINT_EVERY_N_FLUSHES`** (`1..20`, `1` keeps checkpoint-per-flush behavior)
 - **`INSPECTIO_V3_WRITER_DEDUPE_EVENT_ID_CAP`**
 - **`INSPECTIO_V3_WRITER_WRITE_MAX_ATTEMPTS`**
 - **`INSPECTIO_V3_WRITER_WRITE_BACKOFF_BASE_MS`**

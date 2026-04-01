@@ -18,6 +18,7 @@ class PersistenceWriterMetrics:
     events_flushed: int = 0
     segments_written: int = 0
     checkpoint_writes: int = 0
+    checkpoint_writes_skipped_due_to_cadence: int = 0
     flush_duration_ms_last: int = 0
     flush_duration_ms_max: int = 0
     flush_retries: int = 0
@@ -28,6 +29,7 @@ class PersistenceWriterMetrics:
     s3_put_retries: int = 0
     checkpoint_write_retries: int = 0
     ack_retries: int = 0
+    flushes_since_last_checkpoint: int = 0
     shard: dict[int, PersistenceWriterShardMetrics] = field(default_factory=dict)
 
     def init_clock(self, *, now_ms: int) -> None:
@@ -101,6 +103,15 @@ class PersistenceWriterMetrics:
             return
         raise ValueError(f"unknown retry operation: {operation}")
 
+    def observe_checkpoint_write(self, *, shard: int, now_ms: int) -> None:
+        shard_metrics = self._for_shard(shard, now_ms=now_ms)
+        shard_metrics.flushes_since_last_checkpoint = 0
+
+    def observe_checkpoint_skip(self, *, shard: int, now_ms: int) -> None:
+        self.checkpoint_writes_skipped_due_to_cadence += 1
+        shard_metrics = self._for_shard(shard, now_ms=now_ms)
+        shard_metrics.flushes_since_last_checkpoint += 1
+
     def observe_buffer_state(
         self,
         *,
@@ -149,6 +160,7 @@ class PersistenceWriterMetrics:
             "ingest_events_per_sec": round(ingest_events_per_sec, 3),
             "s3_put_retries": self.s3_put_retries,
             "checkpoint_write_retries": self.checkpoint_write_retries,
+            "checkpoint_writes_skipped_due_to_cadence": self.checkpoint_writes_skipped_due_to_cadence,
             "ack_retries": self.ack_retries,
             "events_buffered": self.events_buffered,
             "events_flushed": self.events_flushed,
@@ -188,6 +200,7 @@ class PersistenceWriterShardMetrics:
     s3_put_retries: int = 0
     checkpoint_write_retries: int = 0
     ack_retries: int = 0
+    flushes_since_last_checkpoint: int = 0
     transport_oldest_age_ms_last: int = 0
     transport_oldest_age_ms_max: int = 0
     transport_oldest_age_sampled_at_ms: int = 0

@@ -481,6 +481,12 @@ class V3PersistenceWriterSettings(BaseSettings):
         le=60_000,
         validation_alias="INSPECTIO_V3_WRITER_FLUSH_INTERVAL_MS",
     )
+    persistence_checkpoint_every_n_flushes: int = Field(
+        default=1,
+        ge=1,
+        le=20,
+        validation_alias="INSPECTIO_V3_PERSISTENCE_CHECKPOINT_EVERY_N_FLUSHES",
+    )
     writer_dedupe_event_id_cap: int = Field(
         default=200_000,
         ge=64,

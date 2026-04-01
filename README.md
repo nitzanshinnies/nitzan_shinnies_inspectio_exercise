@@ -138,6 +138,8 @@ Implementation targets **v3** only. **Normative docs:** **`plans/ASSIGNMENT.pdf`
     **`INSPECTIO_V3_PERSISTENCE_ACK_DELETE_MAX_CONCURRENCY`**
   - interval-trigger occupancy floor:
     **`INSPECTIO_V3_PERSISTENCE_WRITER_FLUSH_MIN_BATCH_EVENTS`**
+  - checkpoint cadence control:
+    **`INSPECTIO_V3_PERSISTENCE_CHECKPOINT_EVERY_N_FLUSHES`**
 - **Tests:** strict schema validation, replay-order determinism, fake transport replay path:
   - **`tests/unit/test_v3_persistence_schemas.py`**
   - **`tests/unit/test_v3_persistence_replay_order.py`**

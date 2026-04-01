@@ -100,6 +100,7 @@ async def amain() -> None:
             flush_max_events=settings.writer_flush_max_events,
             flush_min_batch_events=settings.writer_flush_min_batch_events,
             flush_interval_ms=settings.writer_flush_interval_ms,
+            checkpoint_every_n_flushes=settings.persistence_checkpoint_every_n_flushes,
             dedupe_event_id_cap=settings.writer_dedupe_event_id_cap,
             write_max_attempts=settings.writer_write_max_attempts,
             backoff_base_ms=settings.writer_write_backoff_base_ms,

@@ -33,6 +33,7 @@ class BufferedPersistenceWriter:
         flush_max_events: int,
         flush_min_batch_events: int,
         flush_interval_ms: int,
+        checkpoint_every_n_flushes: int,
         dedupe_event_id_cap: int,
         write_max_attempts: int,
         backoff_base_ms: int,
@@ -49,6 +50,7 @@ class BufferedPersistenceWriter:
             min(flush_min_batch_events, self._flush_max_events),
         )
         self._flush_interval_ms = max(1, flush_interval_ms)
+        self._checkpoint_every_n_flushes = max(1, checkpoint_every_n_flushes)
         self._dedupe_event_id_cap = max(64, dedupe_event_id_cap)
         self._write_max_attempts = max(1, write_max_attempts)
         self._backoff_base_ms = max(1, backoff_base_ms)
@@ -67,6 +69,7 @@ class BufferedPersistenceWriter:
         self._initialized_shards: set[int] = set()
         self._seen_event_ids: dict[int, set[str]] = {}
         self._seen_event_queue: dict[int, deque[str]] = {}
+        self._flushes_since_checkpoint: dict[int, int] = {}
 
     async def ingest_events(self, events: Sequence[PersistenceEventV1]) -> None:
         for event in events:
@@ -173,24 +176,43 @@ class BufferedPersistenceWriter:
                     content_type=SEGMENT_CONTENT_TYPE,
                     content_encoding=SEGMENT_CONTENT_ENCODING,
                 )
-                checkpoint = PersistenceCheckpointV1(
-                    shard=shard,
-                    last_segment_seq=segment_seq,
-                    next_segment_seq=segment_seq + 1,
-                    last_event_index=last_event_index,
-                    committed_source_segment_seq=max_source_segment,
-                    committed_source_event_index=max_source_index,
-                    updated_at_ms=self._clock_ms(),
-                    segment_object_key=object_key,
+                should_write_checkpoint = (
+                    self._flushes_since_checkpoint.get(shard, 0) + 1
+                    >= self._checkpoint_every_n_flushes
                 )
-                current_operation = "checkpoint_put"
-                await self._store.put_json(
-                    key=checkpoint_key,
-                    data=checkpoint.model_dump(mode="json", by_alias=True),
-                )
+                if should_write_checkpoint:
+                    checkpoint = PersistenceCheckpointV1(
+                        shard=shard,
+                        last_segment_seq=segment_seq,
+                        next_segment_seq=segment_seq + 1,
+                        last_event_index=last_event_index,
+                        committed_source_segment_seq=max_source_segment,
+                        committed_source_event_index=max_source_index,
+                        updated_at_ms=self._clock_ms(),
+                        segment_object_key=object_key,
+                    )
+                    current_operation = "checkpoint_put"
+                    await self._store.put_json(
+                        key=checkpoint_key,
+                        data=checkpoint.model_dump(mode="json", by_alias=True),
+                    )
                 self.metrics.events_flushed += len(filtered)
                 self.metrics.segments_written += 1
-                self.metrics.checkpoint_writes += 1
+                if should_write_checkpoint:
+                    self.metrics.checkpoint_writes += 1
+                    self._flushes_since_checkpoint[shard] = 0
+                    self.metrics.observe_checkpoint_write(
+                        shard=shard,
+                        now_ms=self._clock_ms(),
+                    )
+                else:
+                    self._flushes_since_checkpoint[shard] = (
+                        self._flushes_since_checkpoint.get(shard, 0) + 1
+                    )
+                    self.metrics.observe_checkpoint_skip(
+                        shard=shard,
+                        now_ms=self._clock_ms(),
+                    )
                 dur_ms = int((time.perf_counter() - flush_started) * 1000)
                 self.metrics.flush_duration_ms_last = dur_ms
                 self.metrics.flush_duration_ms_max = max(
@@ -256,6 +278,7 @@ class BufferedPersistenceWriter:
         self._buffers.setdefault(shard, [])
         self._seen_event_ids.setdefault(shard, set())
         self._seen_event_queue.setdefault(shard, deque())
+        self._flushes_since_checkpoint.setdefault(shard, 0)
 
     def _is_duplicate(self, event: PersistenceEventV1) -> bool:
         seen = self._seen_event_ids.setdefault(event.shard, set())
