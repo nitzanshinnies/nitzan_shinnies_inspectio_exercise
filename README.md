@@ -64,7 +64,7 @@ Implementation targets **v3** only. **Normative docs:** **`plans/ASSIGNMENT.pdf`
 - **Outcomes:** v3 repeat returns a **summary**; visibility wait uses **`min(N, limit)`** rows (**≤ 100**). For **N > 100**, use **worker** logs/metrics for **3.1** send completes — see **`deploy/kubernetes/README.md`** and driver JSON fields.
 - **Tests:** **`pytest tests/unit/test_v3_load_harness_stats.py -m unit`**.
 
-## V3 persistence contracts + transport/writer/recovery path (phases P12.0-P12.9 WS2)
+## V3 persistence contracts + transport/writer/recovery path (phases P12.0-P12.9 WS3)
 
 - **Contracts (P12.0):**
   - **`PersistenceEventV1`** envelope schema (strict validation)
@@ -133,6 +133,11 @@ Implementation targets **v3** only. **Normative docs:** **`plans/ASSIGNMENT.pdf`
   - queue-age sampling cadence/timeout are configurable via
     **`INSPECTIO_V3_WRITER_QUEUE_AGE_SAMPLE_INTERVAL_SEC`** and
     **`INSPECTIO_V3_WRITER_QUEUE_AGE_TIMEOUT_SEC`**
+- **Throughput tuning iteration controls (P12.9 WS3):**
+  - bounded delete parallelism:
+    **`INSPECTIO_V3_PERSISTENCE_ACK_DELETE_MAX_CONCURRENCY`**
+  - interval-trigger occupancy floor:
+    **`INSPECTIO_V3_PERSISTENCE_WRITER_FLUSH_MIN_BATCH_EVENTS`**
 - **Tests:** strict schema validation, replay-order determinism, fake transport replay path:
   - **`tests/unit/test_v3_persistence_schemas.py`**
   - **`tests/unit/test_v3_persistence_replay_order.py`**

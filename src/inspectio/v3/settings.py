@@ -458,11 +458,22 @@ class V3PersistenceWriterSettings(BaseSettings):
         le=10,
         validation_alias="INSPECTIO_V3_WRITER_RECEIVE_MAX_EVENTS",
     )
+    persistence_ack_delete_max_concurrency: int = Field(
+        default=2,
+        ge=1,
+        le=8,
+        validation_alias="INSPECTIO_V3_PERSISTENCE_ACK_DELETE_MAX_CONCURRENCY",
+    )
     writer_flush_max_events: int = Field(
         default=500,
         ge=1,
         le=50_000,
         validation_alias="INSPECTIO_V3_WRITER_FLUSH_MAX_EVENTS",
+    )
+    writer_flush_min_batch_events: int = Field(
+        default=1,
+        ge=1,
+        validation_alias="INSPECTIO_V3_PERSISTENCE_WRITER_FLUSH_MIN_BATCH_EVENTS",
     )
     writer_flush_interval_ms: int = Field(
         default=1_000,
@@ -576,6 +587,12 @@ class V3PersistenceWriterSettings(BaseSettings):
                 "INSPECTIO_V3_PERSIST_TRANSPORT_QUEUE_URL or "
                 "INSPECTIO_V3_PERSIST_TRANSPORT_QUEUE_URLS is required for writer"
             )
+        if self.writer_flush_min_batch_events > self.writer_flush_max_events:
+            msg = (
+                "INSPECTIO_V3_PERSISTENCE_WRITER_FLUSH_MIN_BATCH_EVENTS must be <= "
+                "INSPECTIO_V3_WRITER_FLUSH_MAX_EVENTS"
+            )
+            raise ValueError(msg)
         return self
 
     def resolved_transport_queue_url(self) -> str:

@@ -83,6 +83,7 @@ async def amain() -> None:
             queue_url=queue_url,
             wait_seconds=settings.writer_receive_wait_seconds,
             receive_max_events=settings.writer_receive_max_events,
+            ack_delete_max_concurrency=settings.persistence_ack_delete_max_concurrency,
         )
         store = S3PersistenceObjectStore(
             client=s3_client,
@@ -97,6 +98,7 @@ async def amain() -> None:
             store=store,
             clock_ms=clock_ms,
             flush_max_events=settings.writer_flush_max_events,
+            flush_min_batch_events=settings.writer_flush_min_batch_events,
             flush_interval_ms=settings.writer_flush_interval_ms,
             dedupe_event_id_cap=settings.writer_dedupe_event_id_cap,
             write_max_attempts=settings.writer_write_max_attempts,

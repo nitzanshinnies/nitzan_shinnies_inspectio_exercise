@@ -75,6 +75,7 @@ def _writer(
         store=store,
         clock_ms=lambda: now_ms,
         flush_max_events=500,
+        flush_min_batch_events=1,
         flush_interval_ms=1_000,
         dedupe_event_id_cap=200_000,
         write_max_attempts=write_max_attempts,
