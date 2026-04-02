@@ -8,6 +8,10 @@ Session recovery handoff:
 
 - `plans/v3_phases/P12_9_SESSION_RECOVERY_PLAN.md`
 
+Architecture intent (S3 as pure async backup; scheduler uses memory + SQS only):
+
+- `plans/v3_phases/P12_9_PERSISTENCE_ASYNC_BACKUP_DECISION_RECORD.md`
+
 This plan extends:
 
 - `plans/ASSIGNMENT.pdf`
