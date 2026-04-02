@@ -473,13 +473,19 @@ class V3PersistenceWriterSettings(BaseSettings):
     writer_flush_min_batch_events: int = Field(
         default=1,
         ge=1,
-        validation_alias="INSPECTIO_V3_PERSISTENCE_WRITER_FLUSH_MIN_BATCH_EVENTS",
+        validation_alias=AliasChoices(
+            "INSPECTIO_V3_PERSISTENCE_WRITER_FLUSH_MIN_BATCH_EVENTS",
+            "INSPECTIO_V3_WRITER_FLUSH_MIN_BATCH_EVENTS",
+        ),
     )
     writer_flush_interval_ms: int = Field(
         default=1_000,
         ge=1,
         le=60_000,
-        validation_alias="INSPECTIO_V3_WRITER_FLUSH_INTERVAL_MS",
+        validation_alias=AliasChoices(
+            "INSPECTIO_V3_PERSISTENCE_WRITER_FLUSH_INTERVAL_MS",
+            "INSPECTIO_V3_WRITER_FLUSH_INTERVAL_MS",
+        ),
     )
     persistence_checkpoint_every_n_flushes: int = Field(
         default=1,

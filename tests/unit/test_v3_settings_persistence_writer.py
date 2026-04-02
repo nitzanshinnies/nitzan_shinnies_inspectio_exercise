@@ -82,3 +82,28 @@ def test_writer_settings_rejects_checkpoint_cadence_over_bound() -> None:
             persistence_s3_bucket="bucket",
             persistence_checkpoint_every_n_flushes=21,
         )
+
+
+@pytest.mark.unit
+def test_writer_settings_reads_persistence_flush_interval_alias(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv(
+        "INSPECTIO_V3_PERSISTENCE_WRITER_FLUSH_INTERVAL_MS",
+        "2000",
+    )
+    s = V3PersistenceWriterSettings(
+        persist_transport_queue_url="https://sqs/persist",
+        persistence_s3_bucket="bucket",
+    )
+    assert s.writer_flush_interval_ms == 2000
+
+
+@pytest.mark.unit
+def test_writer_settings_rejects_flush_interval_over_bound() -> None:
+    with pytest.raises(ValidationError):
+        V3PersistenceWriterSettings(
+            persist_transport_queue_url="https://sqs/persist",
+            persistence_s3_bucket="bucket",
+            writer_flush_interval_ms=60_001,
+        )

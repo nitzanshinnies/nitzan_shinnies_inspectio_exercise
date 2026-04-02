@@ -30,6 +30,9 @@ class PersistenceWriterMetrics:
     checkpoint_write_retries: int = 0
     ack_retries: int = 0
     flushes_since_last_checkpoint: int = 0
+    flush_trigger_forced_total: int = 0
+    flush_trigger_occupancy_total: int = 0
+    flush_trigger_interval_total: int = 0
     shard: dict[int, PersistenceWriterShardMetrics] = field(default_factory=dict)
 
     def init_clock(self, *, now_ms: int) -> None:
@@ -65,6 +68,7 @@ class PersistenceWriterMetrics:
         shard_metrics.flush_events_last_batch = events
         shard_metrics.flush_payload_bytes_last = payload_bytes
         shard_metrics.flush_duration_ms_last = duration_ms
+        shard_metrics.flush_duration_ms_total += duration_ms
         shard_metrics.flush_duration_ms_max = max(
             shard_metrics.flush_duration_ms_max, duration_ms
         )
@@ -74,6 +78,22 @@ class PersistenceWriterMetrics:
         )
         shard_metrics.buffered_events = buffered_events
         shard_metrics.oldest_buffer_age_ms = oldest_buffer_age_ms
+
+    def observe_flush_trigger(self, *, shard: int, trigger: str, now_ms: int) -> None:
+        shard_metrics = self._for_shard(shard, now_ms=now_ms)
+        if trigger == "force":
+            self.flush_trigger_forced_total += 1
+            shard_metrics.flush_trigger_forced += 1
+            return
+        if trigger == "occupancy":
+            self.flush_trigger_occupancy_total += 1
+            shard_metrics.flush_trigger_occupancy += 1
+            return
+        if trigger == "interval":
+            self.flush_trigger_interval_total += 1
+            shard_metrics.flush_trigger_interval += 1
+            return
+        raise ValueError(f"unknown flush trigger: {trigger}")
 
     def observe_ack_batch(
         self, *, shard: int, events: int, latency_ms: int, now_ms: int
@@ -123,6 +143,10 @@ class PersistenceWriterMetrics:
         shard_metrics = self._for_shard(shard, now_ms=now_ms)
         shard_metrics.buffered_events = buffered_events
         shard_metrics.oldest_buffer_age_ms = oldest_buffer_age_ms
+        shard_metrics.buffered_events_high_water_mark = max(
+            shard_metrics.buffered_events_high_water_mark,
+            buffered_events,
+        )
 
     def observe_transport_oldest_age(
         self, *, shard: int, age_ms: int, sampled_at_ms: int, now_ms: int
@@ -151,6 +175,24 @@ class PersistenceWriterMetrics:
             )
             item = asdict(shard_metrics)
             item["ingest_events_per_sec"] = round(shard_ingest_events_per_sec, 3)
+            item["flushes_per_sec"] = round(
+                shard_metrics.flush_batches * 1000.0 / shard_elapsed_ms,
+                3,
+            )
+            item["avg_events_per_flush"] = round(
+                shard_metrics.flush_events_total / max(1, shard_metrics.flush_batches),
+                3,
+            )
+            item["interval_triggered_flush_ratio"] = round(
+                shard_metrics.flush_trigger_interval
+                / max(1, shard_metrics.flush_batches),
+                6,
+            )
+            item["avg_flush_latency_ms"] = round(
+                shard_metrics.flush_duration_ms_total
+                / max(1, shard_metrics.flush_batches),
+                3,
+            )
             shard_snapshot[str(shard_id)] = item
         return {
             "snapshot_emitted_at_ms": now_ms,
@@ -162,6 +204,9 @@ class PersistenceWriterMetrics:
             "checkpoint_write_retries": self.checkpoint_write_retries,
             "checkpoint_writes_skipped_due_to_cadence": self.checkpoint_writes_skipped_due_to_cadence,
             "ack_retries": self.ack_retries,
+            "flush_trigger_forced_total": self.flush_trigger_forced_total,
+            "flush_trigger_interval_total": self.flush_trigger_interval_total,
+            "flush_trigger_occupancy_total": self.flush_trigger_occupancy_total,
             "events_buffered": self.events_buffered,
             "events_flushed": self.events_flushed,
             "flush_failures": self.flush_failures,
@@ -189,6 +234,7 @@ class PersistenceWriterShardMetrics:
     flush_events_last_batch: int = 0
     flush_payload_bytes_last: int = 0
     flush_duration_ms_last: int = 0
+    flush_duration_ms_total: int = 0
     flush_duration_ms_max: int = 0
     lag_to_durable_commit_ms_last: int = 0
     lag_to_durable_commit_ms_max: int = 0
@@ -200,9 +246,13 @@ class PersistenceWriterShardMetrics:
     s3_put_retries: int = 0
     checkpoint_write_retries: int = 0
     ack_retries: int = 0
+    flush_trigger_forced: int = 0
+    flush_trigger_interval: int = 0
+    flush_trigger_occupancy: int = 0
     flushes_since_last_checkpoint: int = 0
     transport_oldest_age_ms_last: int = 0
     transport_oldest_age_ms_max: int = 0
     transport_oldest_age_sampled_at_ms: int = 0
     buffered_events: int = 0
     oldest_buffer_age_ms: int = 0
+    buffered_events_high_water_mark: int = 0
