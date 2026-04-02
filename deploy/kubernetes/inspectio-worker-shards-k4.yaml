@@ -1,0 +1,147 @@
+# K=4 send shards: one Deployment per queue (overrides INSPECTIO_V3_WORKER_SEND_QUEUE_URL).
+# Prerequisites: ConfigMap has INSPECTIO_V3_SEND_SHARD_COUNT: "4" and INSPECTIO_V3_SEND_QUEUE_URLS
+# as a JSON array of four URLs (order matches shard index 0..3).
+# Remove the single Deployment ``inspectio-worker`` before applying:
+#   kubectl -n inspectio delete deployment inspectio-worker --ignore-not-found
+#
+# Replace image / queue URLs (or use envsubst) before apply.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inspectio-worker-shard-0
+  namespace: inspectio
+  labels:
+    app.kubernetes.io/name: inspectio-worker-shard-0
+    app.kubernetes.io/part-of: inspectio-v3
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: inspectio-worker-shard-0
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: inspectio-worker-shard-0
+        app.kubernetes.io/part-of: inspectio-v3
+    spec:
+      serviceAccountName: inspectio-app
+      containers:
+        - name: worker
+          image: inspectio-v3:latest
+          imagePullPolicy: IfNotPresent
+          command: ["inspectio-v3-worker"]
+          envFrom:
+            - configMapRef:
+                name: inspectio-v3-config
+            - secretRef:
+                name: inspectio-v3-secrets
+                optional: true
+          env:
+            - name: INSPECTIO_V3_WORKER_SEND_QUEUE_URL
+              value: "REPLACE_WITH_SQS_SEND_QUEUE_URL_SHARD_0"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inspectio-worker-shard-1
+  namespace: inspectio
+  labels:
+    app.kubernetes.io/name: inspectio-worker-shard-1
+    app.kubernetes.io/part-of: inspectio-v3
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: inspectio-worker-shard-1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: inspectio-worker-shard-1
+        app.kubernetes.io/part-of: inspectio-v3
+    spec:
+      serviceAccountName: inspectio-app
+      containers:
+        - name: worker
+          image: inspectio-v3:latest
+          imagePullPolicy: IfNotPresent
+          command: ["inspectio-v3-worker"]
+          envFrom:
+            - configMapRef:
+                name: inspectio-v3-config
+            - secretRef:
+                name: inspectio-v3-secrets
+                optional: true
+          env:
+            - name: INSPECTIO_V3_WORKER_SEND_QUEUE_URL
+              value: "REPLACE_WITH_SQS_SEND_QUEUE_URL_SHARD_1"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inspectio-worker-shard-2
+  namespace: inspectio
+  labels:
+    app.kubernetes.io/name: inspectio-worker-shard-2
+    app.kubernetes.io/part-of: inspectio-v3
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: inspectio-worker-shard-2
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: inspectio-worker-shard-2
+        app.kubernetes.io/part-of: inspectio-v3
+    spec:
+      serviceAccountName: inspectio-app
+      containers:
+        - name: worker
+          image: inspectio-v3:latest
+          imagePullPolicy: IfNotPresent
+          command: ["inspectio-v3-worker"]
+          envFrom:
+            - configMapRef:
+                name: inspectio-v3-config
+            - secretRef:
+                name: inspectio-v3-secrets
+                optional: true
+          env:
+            - name: INSPECTIO_V3_WORKER_SEND_QUEUE_URL
+              value: "REPLACE_WITH_SQS_SEND_QUEUE_URL_SHARD_2"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inspectio-worker-shard-3
+  namespace: inspectio
+  labels:
+    app.kubernetes.io/name: inspectio-worker-shard-3
+    app.kubernetes.io/part-of: inspectio-v3
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: inspectio-worker-shard-3
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: inspectio-worker-shard-3
+        app.kubernetes.io/part-of: inspectio-v3
+    spec:
+      serviceAccountName: inspectio-app
+      containers:
+        - name: worker
+          image: inspectio-v3:latest
+          imagePullPolicy: IfNotPresent
+          command: ["inspectio-v3-worker"]
+          envFrom:
+            - configMapRef:
+                name: inspectio-v3-config
+            - secretRef:
+                name: inspectio-v3-secrets
+                optional: true
+          env:
+            - name: INSPECTIO_V3_WORKER_SEND_QUEUE_URL
+              value: "REPLACE_WITH_SQS_SEND_QUEUE_URL_SHARD_3"

@@ -1,0 +1,32 @@
+{
+  "metric": "NumberOfMessagesDeleted on persist-transport shards (writer acks)",
+  "persist_off_window": {
+    "active_periods": 1,
+    "combined_avg_rps": 22.62619,
+    "combined_peak_rps": 158.383333,
+    "datapoints": 7,
+    "profile_end_utc": "2026-04-02T01:58:31Z",
+    "profile_start_utc": "2026-04-02T01:54:17Z",
+    "query_end_utc": "2026-04-02T02:00:31Z",
+    "query_start_utc": "2026-04-02T01:53:17Z",
+    "raw_points_rps": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      158.383333
+    ]
+  },
+  "queues": [
+    "inspectio-v3-persist-transport-0",
+    "inspectio-v3-persist-transport-1",
+    "inspectio-v3-persist-transport-2",
+    "inspectio-v3-persist-transport-3",
+    "inspectio-v3-persist-transport-4",
+    "inspectio-v3-persist-transport-5",
+    "inspectio-v3-persist-transport-6",
+    "inspectio-v3-persist-transport-7"
+  ]
+}

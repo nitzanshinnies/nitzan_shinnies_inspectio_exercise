@@ -1,0 +1,81 @@
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_transports/default.py", line 101, in map_httpcore_exceptions
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]     yield
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_transports/default.py", line 394, in handle_async_request
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]     resp = await self._pool.handle_async_request(req)
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]   File "/usr/local/lib/python3.11/site-packages/httpcore/_async/connection_pool.py", line 256, in handle_async_request
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]     raise exc from None
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]   File "/usr/local/lib/python3.11/site-packages/httpcore/_async/connection_pool.py", line 236, in handle_async_request
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]     response = await connection.handle_async_request(
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]   File "/usr/local/lib/python3.11/site-packages/httpcore/_async/connection.py", line 103, in handle_async_request
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]     return await self._connection.handle_async_request(request)
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]   File "/usr/local/lib/python3.11/site-packages/httpcore/_async/http11.py", line 136, in handle_async_request
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]     raise exc
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]   File "/usr/local/lib/python3.11/site-packages/httpcore/_async/http11.py", line 106, in handle_async_request
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]     ) = await self._receive_response_headers(**kwargs)
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]   File "/usr/local/lib/python3.11/site-packages/httpcore/_async/http11.py", line 177, in _receive_response_headers
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]     event = await self._receive_event(timeout=timeout)
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]   File "/usr/local/lib/python3.11/site-packages/httpcore/_async/http11.py", line 217, in _receive_event
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]     data = await self._network_stream.read(
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]   File "/usr/local/lib/python3.11/site-packages/httpcore/_backends/anyio.py", line 32, in read
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]     with map_exceptions(exc_map):
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]   File "/usr/local/lib/python3.11/contextlib.py", line 158, in __exit__
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]     self.gen.throw(typ, value, traceback)
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]   File "/usr/local/lib/python3.11/site-packages/httpcore/_exceptions.py", line 14, in map_exceptions
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]     raise to_exc(exc) from exc
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load] httpcore.ReadError
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load] 
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load] The above exception was the direct cause of the following exception:
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load] 
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]   File "/app/scripts/v3_sustained_admit.py", line 93, in <module>
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]     raise SystemExit(main())
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]                      ^^^^^^
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]   File "/app/scripts/v3_sustained_admit.py", line 88, in main
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]     asyncio.run(_run(args))
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]     return runner.run(main)
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]            ^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]     return self._loop.run_until_complete(task)
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]   File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]     return future.result()
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]            ^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]   File "/app/scripts/v3_sustained_admit.py", line 60, in _run
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]     totals = await asyncio.gather(*tasks)
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]   File "/app/scripts/v3_sustained_admit.py", line 27, in _sender
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]     r = await client.post(
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]         ^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1859, in post
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]     return await self.request(
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]            ^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1540, in request
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]     return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1629, in send
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]     response = await self._send_handling_auth(
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1657, in _send_handling_auth
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]     response = await self._send_handling_redirects(
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1694, in _send_handling_redirects
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]     response = await self._send_single_request(request)
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1730, in _send_single_request
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]     response = await transport.handle_async_request(request)
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_transports/default.py", line 393, in handle_async_request
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]     with map_httpcore_exceptions():
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]   File "/usr/local/lib/python3.11/contextlib.py", line 158, in __exit__
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]     self.gen.throw(typ, value, traceback)
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_transports/default.py", line 118, in map_httpcore_exceptions
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load]     raise mapped_exc(message) from exc
+[pod/inspectio-v3-p12-9-iter5-on-8vlbc/load] httpx.ReadError
