@@ -12,6 +12,10 @@ Architecture intent (S3 as pure async backup; scheduler uses memory + SQS only):
 
 - `plans/v3_phases/P12_9_PERSISTENCE_ASYNC_BACKUP_DECISION_RECORD.md`
 
+AI / SE implementation handoff (tuning, benchmarks, ack contract, observability):
+
+- `plans/v3_phases/P12_9_AI_SE_HANDOFF_INDEX.md`
+
 This plan extends:
 
 - `plans/ASSIGNMENT.pdf`

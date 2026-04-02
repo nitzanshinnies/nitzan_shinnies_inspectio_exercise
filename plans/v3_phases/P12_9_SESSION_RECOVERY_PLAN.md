@@ -1,5 +1,11 @@
 # P12.9 Session Recovery Plan
 
+## AI SE implementation handoff (detailed plans)
+
+For agent-executable work after recovery, start at:
+
+- **`plans/v3_phases/P12_9_AI_SE_HANDOFF_INDEX.md`** — master index, execution order, promotion gates, links to Plans A–D.
+
 ## Goal
 
 Resume exactly where the session stopped, without re-discovery.
