@@ -416,6 +416,12 @@ P6,P7 → P8 (snapshots; can parallel P7 tail if replay tested without notificat
 
 ---
 
+## Inspectio v3 persistence posture (P12.9)
+
+**Durability vs throughput:** `plans/v3_phases/P12_9_PERSISTENCE_ASYNC_BACKUP_DECISION_RECORD.md` locks intent: **S3 is pure asynchronous backup**; the **scheduler** uses **in-memory state and SQS** only for steady-state control. Tighten durability **after** throughput gates are met, via separate benchmark-gated changes.
+
+---
+
 ## Checklist per PR (all phases)
 
 1. README env table / commands if new variables (**§26**).
