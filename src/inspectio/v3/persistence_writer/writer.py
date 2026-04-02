@@ -98,35 +98,42 @@ class BufferedPersistenceWriter:
                 oldest_buffer_age_ms=max(0, buffered_for),
                 now_ms=now,
             )
-            should_flush = self._should_flush(
+            trigger = self._flush_trigger(
                 force=force,
                 buffered_events=len(events),
                 buffered_for_ms=max(0, buffered_for),
                 idle_for_ms=max(0, idle_for),
             )
-            if should_flush:
+            if trigger is not None:
+                self.metrics.observe_flush_trigger(
+                    shard=shard,
+                    trigger=trigger,
+                    now_ms=self._clock_ms(),
+                )
                 flushed.extend(await self._flush_shard(shard, events))
         return flushed
 
-    def _should_flush(
+    def _flush_trigger(
         self,
         *,
         force: bool,
         buffered_events: int,
         buffered_for_ms: int,
         idle_for_ms: int,
-    ) -> bool:
+    ) -> str | None:
         if force:
-            return True
+            return "force"
         if buffered_events >= self._flush_max_events:
-            return True
+            return "occupancy"
         if buffered_for_ms < self._flush_interval_ms:
-            return False
+            return None
         if buffered_events >= self._flush_min_batch_events:
-            return True
+            return "interval"
         # Do not starve low-ingest shards: flush small buffers once they have been
         # idle for a full interval even if min occupancy is not reached.
-        return idle_for_ms >= self._flush_interval_ms
+        if idle_for_ms >= self._flush_interval_ms:
+            return "interval"
+        return None
 
     async def _flush_shard(
         self,

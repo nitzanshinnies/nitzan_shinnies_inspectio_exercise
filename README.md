@@ -136,6 +136,8 @@ Implementation targets **v3** only. **Normative docs:** **`plans/ASSIGNMENT.pdf`
 - **Throughput tuning iteration controls (P12.9 WS3):**
   - bounded delete parallelism:
     **`INSPECTIO_V3_PERSISTENCE_ACK_DELETE_MAX_CONCURRENCY`**
+  - interval cadence:
+    **`INSPECTIO_V3_PERSISTENCE_WRITER_FLUSH_INTERVAL_MS`**
   - interval-trigger occupancy floor:
     **`INSPECTIO_V3_PERSISTENCE_WRITER_FLUSH_MIN_BATCH_EVENTS`**
   - checkpoint cadence control:

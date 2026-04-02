@@ -321,6 +321,11 @@ async def test_writer_metrics_snapshot_contains_per_shard_fields() -> None:
     assert "transport_oldest_age_ms_last" in shard
     assert "transport_oldest_age_sampled_at_ms" in shard
     assert "buffered_events" in shard
+    assert "flushes_per_sec" in shard
+    assert "avg_events_per_flush" in shard
+    assert "interval_triggered_flush_ratio" in shard
+    assert "avg_flush_latency_ms" in shard
+    assert "buffered_events_high_water_mark" in shard
 
 
 @pytest.mark.unit
@@ -364,6 +369,36 @@ async def test_interval_flush_does_not_starve_small_idle_buffer() -> None:
     clock[0] = 101_100
     flushed = await writer.flush_due(force=False)
     assert len(flushed) == 1
+    snapshot = writer.metrics.snapshot(now_ms=clock[0] + 1)
+    shard = snapshot["shards"]["0"]
+    assert shard["interval_triggered_flush_ratio"] == 1.0
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_high_ingest_flush_uses_occupancy_trigger() -> None:
+    store = _MemStore()
+    clock = [105_000]
+    writer = _build_writer(
+        store,
+        clock=clock,
+        flush_max_events=3,
+        flush_min_batch_events=3,
+        flush_interval_ms=10_000,
+    )
+    await writer.ingest_events(
+        [
+            _event("occ-1", shard=0),
+            _event("occ-2", shard=0),
+            _event("occ-3", shard=0),
+        ]
+    )
+    flushed = await writer.flush_due(force=False)
+    assert len(flushed) == 3
+    snapshot = writer.metrics.snapshot(now_ms=clock[0] + 1)
+    assert snapshot["flush_trigger_occupancy_total"] == 1
+    assert snapshot["flush_trigger_interval_total"] == 0
+    assert snapshot["shards"]["0"]["interval_triggered_flush_ratio"] == 0.0
 
 
 @pytest.mark.unit
