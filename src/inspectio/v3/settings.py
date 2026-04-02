@@ -529,6 +529,28 @@ class V3PersistenceWriterSettings(BaseSettings):
         le=5.0,
         validation_alias="INSPECTIO_V3_WRITER_IDLE_SLEEP_SEC",
     )
+    writer_pipeline_enable: bool = Field(
+        default=True,
+        validation_alias="INSPECTIO_V3_WRITER_PIPELINE_ENABLE",
+    )
+    writer_ack_queue_max_events: int = Field(
+        default=20_000,
+        ge=100,
+        le=500_000,
+        validation_alias="INSPECTIO_V3_WRITER_ACK_QUEUE_MAX_EVENTS",
+    )
+    writer_flush_loop_sleep_ms: int = Field(
+        default=10,
+        ge=1,
+        le=1_000,
+        validation_alias="INSPECTIO_V3_WRITER_FLUSH_LOOP_SLEEP_MS",
+    )
+    writer_receive_loop_parallelism: int = Field(
+        default=1,
+        ge=1,
+        le=4,
+        validation_alias="INSPECTIO_V3_WRITER_RECEIVE_LOOP_PARALLELISM",
+    )
     writer_observability_snapshot_interval_sec: int = Field(
         default=30,
         ge=1,

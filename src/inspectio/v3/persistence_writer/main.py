@@ -8,6 +8,7 @@ import logging
 import time
 from collections import defaultdict
 from dataclasses import dataclass
+from collections.abc import Awaitable, Callable
 
 import aioboto3
 
@@ -21,6 +22,8 @@ from inspectio.v3.settings import V3PersistenceWriterSettings
 
 _log = logging.getLogger(__name__)
 MILLISECONDS_PER_SECOND = 1000
+ACK_QUEUE_BLOCK_SLEEP_SEC = 0.005
+ACK_BATCH_MAX_EVENTS = 1_000
 
 
 @dataclass(slots=True)
@@ -28,6 +31,123 @@ class QueueOldestAgeSample:
     age_ms: int = 0
     sampled_at_ms: int = 0
     last_attempted_at_ms: int = 0
+
+
+def _ack_counts(events: list[PersistenceEventV1]) -> dict[int, int]:
+    counts: dict[int, int] = defaultdict(int)
+    for event in events:
+        counts[event.shard] += 1
+    return counts
+
+
+def _observe_ack_metrics_for_batch(
+    *,
+    writer: BufferedPersistenceWriter,
+    events: list[PersistenceEventV1],
+    latency_ms: int,
+    now_ms: int,
+) -> None:
+    for shard, count in _ack_counts(events).items():
+        writer.metrics.observe_ack_batch(
+            shard=shard,
+            events=count,
+            latency_ms=latency_ms,
+            now_ms=now_ms,
+        )
+
+
+async def _enqueue_ack_events(
+    *,
+    ack_queue: asyncio.Queue[PersistenceEventV1],
+    events: list[PersistenceEventV1],
+    metrics: object,
+) -> None:
+    for event in events:
+        while ack_queue.full():
+            metrics.observe_ack_queue_blocked_push()
+            await asyncio.sleep(ACK_QUEUE_BLOCK_SLEEP_SEC)
+        ack_queue.put_nowait(event)
+        metrics.observe_ack_queue_depth(depth=ack_queue.qsize())
+
+
+def _drain_ack_batch(
+    *,
+    ack_queue: asyncio.Queue[PersistenceEventV1],
+    first: PersistenceEventV1,
+    max_events: int = ACK_BATCH_MAX_EVENTS,
+) -> list[PersistenceEventV1]:
+    batch = [first]
+    while len(batch) < max(1, max_events):
+        try:
+            batch.append(ack_queue.get_nowait())
+        except asyncio.QueueEmpty:
+            break
+    return batch
+
+
+def _drain_ack_queue_nowait(
+    *,
+    ack_queue: asyncio.Queue[PersistenceEventV1],
+    max_events: int = ACK_BATCH_MAX_EVENTS,
+) -> list[PersistenceEventV1]:
+    try:
+        first = ack_queue.get_nowait()
+    except asyncio.QueueEmpty:
+        return []
+    return _drain_ack_batch(
+        ack_queue=ack_queue,
+        first=first,
+        max_events=max_events,
+    )
+
+
+async def _flush_loop_iteration(
+    *,
+    writer: BufferedPersistenceWriter,
+    writer_lock: asyncio.Lock,
+    enqueue_for_ack: Callable[[list[PersistenceEventV1]], Awaitable[None]],
+) -> bool:
+    async with writer_lock:
+        flushed = await writer.flush_due(force=False)
+    writer.metrics.observe_flush_loop_iteration(noop=not flushed)
+    if not flushed:
+        return False
+    await enqueue_for_ack(flushed)
+    return True
+
+
+async def _shutdown_flush_and_ack(
+    *,
+    writer: BufferedPersistenceWriter,
+    writer_lock: asyncio.Lock,
+    ack_queue: asyncio.Queue[PersistenceEventV1],
+    ack_many_with_retry: Callable[[list[PersistenceEventV1]], Awaitable[int]],
+    clock_ms: Callable[[], int],
+) -> None:
+    async with writer_lock:
+        final_flushed = await writer.flush_due(force=True)
+    if final_flushed:
+        final_ack_latency_ms = await ack_many_with_retry(final_flushed)
+        _observe_ack_metrics_for_batch(
+            writer=writer,
+            events=final_flushed,
+            latency_ms=final_ack_latency_ms,
+            now_ms=clock_ms(),
+        )
+    while True:
+        batch = _drain_ack_queue_nowait(ack_queue=ack_queue)
+        if not batch:
+            break
+        ack_latency_ms = await ack_many_with_retry(batch)
+        _observe_ack_metrics_for_batch(
+            writer=writer,
+            events=batch,
+            latency_ms=ack_latency_ms,
+            now_ms=clock_ms(),
+        )
+        for _ in batch:
+            ack_queue.task_done()
+        writer.metrics.observe_ack_queue_depth(depth=ack_queue.qsize())
 
 
 async def _maybe_refresh_queue_oldest_age(
@@ -146,65 +266,190 @@ async def amain() -> None:
                     await asyncio.sleep(backoff_ms / 1000.0)
             return 0
 
-        while True:
-            events = await consumer.receive_many(
-                max_events=settings.writer_receive_max_events
-            )
-            now_ms = clock_ms()
-            queue_age_sample = await _maybe_refresh_queue_oldest_age(
-                consumer=consumer,
-                sample=queue_age_sample,
-                now_ms=now_ms,
-                sample_interval_ms=queue_age_sample_interval_ms,
-                timeout_sec=settings.writer_observability_queue_age_timeout_sec,
-            )
-            writer.metrics.observe_transport_oldest_age(
-                shard=settings.writer_shard_id,
-                age_ms=queue_age_sample.age_ms,
-                sampled_at_ms=queue_age_sample.sampled_at_ms,
-                now_ms=now_ms,
-            )
-            writer.metrics.observe_poll(idle=not events)
-            if events:
-                events_by_shard: dict[int, int] = defaultdict(int)
-                for event in events:
-                    events_by_shard[event.shard] += 1
-                for shard, count in events_by_shard.items():
-                    writer.metrics.observe_receive_batch(
-                        shard=shard,
-                        events=count,
-                        now_ms=now_ms,
-                    )
-                await writer.ingest_events(events)
-            flushed = await writer.flush_due(force=False)
-            if flushed:
-                ack_latency_ms = await ack_many_with_retry(flushed)
-                ack_by_shard: dict[int, int] = defaultdict(int)
-                for event in flushed:
-                    ack_by_shard[event.shard] += 1
-                ack_now = clock_ms()
-                for shard, count in ack_by_shard.items():
-                    writer.metrics.observe_ack_batch(
-                        shard=shard,
-                        events=count,
-                        latency_ms=ack_latency_ms,
-                        now_ms=ack_now,
-                    )
+        async def _emit_snapshot_if_due() -> None:
+            nonlocal last_snapshot_ms
             snapshot_now = clock_ms()
             if (
                 snapshot_now - last_snapshot_ms
-                >= settings.writer_observability_snapshot_interval_sec * 1000
+                < settings.writer_observability_snapshot_interval_sec
+                * MILLISECONDS_PER_SECOND
             ):
-                _log.info(
-                    "writer_snapshot %s",
-                    json.dumps(
-                        writer.metrics.snapshot(now_ms=snapshot_now),
-                        sort_keys=True,
-                    ),
+                return
+            _log.info(
+                "writer_snapshot %s",
+                json.dumps(
+                    writer.metrics.snapshot(now_ms=snapshot_now), sort_keys=True
+                ),
+            )
+            last_snapshot_ms = snapshot_now
+
+        if not settings.writer_pipeline_enable:
+            writer.metrics.pipeline_mode = "legacy"
+            while True:
+                events = await consumer.receive_many(
+                    max_events=settings.writer_receive_max_events
                 )
-                last_snapshot_ms = snapshot_now
-            if not events:
-                await asyncio.sleep(settings.writer_idle_sleep_sec)
+                now_ms = clock_ms()
+                queue_age_sample = await _maybe_refresh_queue_oldest_age(
+                    consumer=consumer,
+                    sample=queue_age_sample,
+                    now_ms=now_ms,
+                    sample_interval_ms=queue_age_sample_interval_ms,
+                    timeout_sec=settings.writer_observability_queue_age_timeout_sec,
+                )
+                writer.metrics.observe_transport_oldest_age(
+                    shard=settings.writer_shard_id,
+                    age_ms=queue_age_sample.age_ms,
+                    sampled_at_ms=queue_age_sample.sampled_at_ms,
+                    now_ms=now_ms,
+                )
+                writer.metrics.observe_poll(idle=not events)
+                writer.metrics.observe_receive_loop_iteration()
+                if events:
+                    for shard, count in _ack_counts(events).items():
+                        writer.metrics.observe_receive_batch(
+                            shard=shard,
+                            events=count,
+                            now_ms=now_ms,
+                        )
+                    await writer.ingest_events(events)
+                flushed = await writer.flush_due(force=False)
+                writer.metrics.observe_flush_loop_iteration(noop=not flushed)
+                if flushed:
+                    ack_latency_ms = await ack_many_with_retry(flushed)
+                    _observe_ack_metrics_for_batch(
+                        writer=writer,
+                        events=flushed,
+                        latency_ms=ack_latency_ms,
+                        now_ms=clock_ms(),
+                    )
+                await _emit_snapshot_if_due()
+                if not events:
+                    await asyncio.sleep(settings.writer_idle_sleep_sec)
+            return
+
+        writer.metrics.pipeline_mode = "decoupled_v1"
+        writer_lock = asyncio.Lock()
+        ack_queue: asyncio.Queue[PersistenceEventV1] = asyncio.Queue(
+            maxsize=settings.writer_ack_queue_max_events
+        )
+        writer.metrics.observe_ack_queue_depth(depth=ack_queue.qsize())
+
+        async def _enqueue_for_ack(events: list[PersistenceEventV1]) -> None:
+            await _enqueue_ack_events(
+                ack_queue=ack_queue,
+                events=events,
+                metrics=writer.metrics,
+            )
+
+        async def _receive_ingest_loop() -> None:
+            while True:
+                writer.metrics.observe_receive_loop_iteration()
+                events = await consumer.receive_many(
+                    max_events=settings.writer_receive_max_events
+                )
+                now_ms = clock_ms()
+                queue_age_sample_local = await _maybe_refresh_queue_oldest_age(
+                    consumer=consumer,
+                    sample=queue_age_sample,
+                    now_ms=now_ms,
+                    sample_interval_ms=queue_age_sample_interval_ms,
+                    timeout_sec=settings.writer_observability_queue_age_timeout_sec,
+                )
+                queue_age_sample.age_ms = queue_age_sample_local.age_ms
+                queue_age_sample.sampled_at_ms = queue_age_sample_local.sampled_at_ms
+                queue_age_sample.last_attempted_at_ms = (
+                    queue_age_sample_local.last_attempted_at_ms
+                )
+                writer.metrics.observe_transport_oldest_age(
+                    shard=settings.writer_shard_id,
+                    age_ms=queue_age_sample.age_ms,
+                    sampled_at_ms=queue_age_sample.sampled_at_ms,
+                    now_ms=now_ms,
+                )
+                writer.metrics.observe_poll(idle=not events)
+                if events:
+                    for shard, count in _ack_counts(events).items():
+                        writer.metrics.observe_receive_batch(
+                            shard=shard,
+                            events=count,
+                            now_ms=now_ms,
+                        )
+                    async with writer_lock:
+                        await writer.ingest_events(events)
+                else:
+                    await asyncio.sleep(settings.writer_idle_sleep_sec)
+
+        async def _flush_loop() -> None:
+            while True:
+                await _flush_loop_iteration(
+                    writer=writer,
+                    writer_lock=writer_lock,
+                    enqueue_for_ack=_enqueue_for_ack,
+                )
+                await asyncio.sleep(settings.writer_flush_loop_sleep_ms / 1000.0)
+
+        async def _ack_loop() -> None:
+            while True:
+                first = await ack_queue.get()
+                batch = _drain_ack_batch(ack_queue=ack_queue, first=first)
+                ack_latency_ms = await ack_many_with_retry(batch)
+                _observe_ack_metrics_for_batch(
+                    writer=writer,
+                    events=batch,
+                    latency_ms=ack_latency_ms,
+                    now_ms=clock_ms(),
+                )
+                for _ in batch:
+                    ack_queue.task_done()
+                writer.metrics.observe_ack_queue_depth(depth=ack_queue.qsize())
+
+        async def _snapshot_loop() -> None:
+            while True:
+                await _emit_snapshot_if_due()
+                await asyncio.sleep(
+                    settings.writer_observability_snapshot_interval_sec / 2.0
+                )
+
+        tasks: list[asyncio.Task[None]] = [
+            asyncio.create_task(_flush_loop(), name="writer-flush"),
+            asyncio.create_task(_ack_loop(), name="writer-ack"),
+            asyncio.create_task(_snapshot_loop(), name="writer-snapshot"),
+        ]
+        for idx in range(settings.writer_receive_loop_parallelism):
+            tasks.append(
+                asyncio.create_task(
+                    _receive_ingest_loop(),
+                    name=f"writer-receive-{idx}",
+                )
+            )
+        done: set[asyncio.Task[None]] = set()
+        try:
+            done, pending = await asyncio.wait(
+                tasks, return_when=asyncio.FIRST_EXCEPTION
+            )
+            for task in done:
+                exc = task.exception()
+                if exc is not None:
+                    raise exc
+            for task in pending:
+                task.cancel()
+            await asyncio.gather(*pending, return_exceptions=True)
+        finally:
+            # Stop background loops first, then perform explicit shutdown flush+ack.
+            for task in tasks:
+                task.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
+            try:
+                await _shutdown_flush_and_ack(
+                    writer=writer,
+                    writer_lock=writer_lock,
+                    ack_queue=ack_queue,
+                    ack_many_with_retry=ack_many_with_retry,
+                    clock_ms=clock_ms,
+                )
+            except Exception:  # noqa: BLE001
+                _log.exception("writer shutdown drain failed")
 
 
 def main() -> None:

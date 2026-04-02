@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Sequence
 from typing import Any
 
 import pytest
 
+from inspectio.v3.persistence_writer.main import _shutdown_flush_and_ack
 from inspectio.v3.persistence_writer.writer import BufferedPersistenceWriter
 from inspectio.v3.schemas.persistence_event import PersistenceEventV1
 
@@ -68,6 +70,18 @@ class _FakeConsumer:
 
     async def ack_many(self, events: Sequence[PersistenceEventV1]) -> None:
         self.acked.extend([e.event_id for e in events])
+
+
+class _ShutdownWriter:
+    def __init__(self, *, flushed: list[PersistenceEventV1]) -> None:
+        from inspectio.v3.persistence_writer.metrics import PersistenceWriterMetrics
+
+        self._flushed = flushed
+        self.metrics = PersistenceWriterMetrics()
+
+    async def flush_due(self, *, force: bool) -> list[PersistenceEventV1]:
+        assert force is True
+        return self._flushed
 
 
 @pytest.mark.integration
@@ -195,3 +209,32 @@ async def test_multi_writer_concurrent_flow_keeps_checkpoints_independent() -> N
     assert {event.event_id for event in acked_1} == {"w1-1", "w1-2"}
     assert store.jsons["state/checkpoints/0/latest.json"]["shard"] == 0
     assert store.jsons["state/checkpoints/1/latest.json"]["shard"] == 1
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_shutdown_drain_with_prefilled_ack_queue_completes() -> None:
+    writer = _ShutdownWriter(flushed=[_event("f-1", shard=0)])
+    lock = asyncio.Lock()
+    queue: asyncio.Queue[PersistenceEventV1] = asyncio.Queue(maxsize=2)
+    queue.put_nowait(_event("q-1", shard=0))
+    queue.put_nowait(_event("q-2", shard=0))
+    acked_ids: list[str] = []
+
+    async def _ack_many(events: list[PersistenceEventV1]) -> int:
+        acked_ids.extend(event.event_id for event in events)
+        return 1
+
+    await asyncio.wait_for(
+        _shutdown_flush_and_ack(
+            writer=writer,  # type: ignore[arg-type]
+            writer_lock=lock,
+            ack_queue=queue,
+            ack_many_with_retry=_ack_many,
+            clock_ms=lambda: 1_700_000_000_000,
+        ),
+        timeout=1.0,
+    )
+
+    assert queue.qsize() == 0
+    assert set(acked_ids) == {"f-1", "q-1", "q-2"}

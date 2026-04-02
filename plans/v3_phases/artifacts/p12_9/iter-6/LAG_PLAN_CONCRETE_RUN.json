@@ -1,0 +1,65 @@
+{
+  "generated_at_utc": "2026-04-02T14:53:55Z",
+  "aws_account": "194768394273",
+  "aws_region": "us-east-1",
+  "plan": "plans/v3_phases/P12_9_LAG_LOCALIZATION_PLAN.md",
+  "artifact_dir": "plans/v3_phases/artifacts/p12_9/iter-6",
+  "phase1_analyzer": "lag_plan_phase1.json",
+  "cloudwatch_send_deletes": "lag_plan_cw_queries.json",
+  "cloudwatch_persist_deletes": "lag_plan_cw_persist_deletes.json",
+  "phase1_summary": {
+    "off_job_valid": true,
+    "on_job_valid": false,
+    "on_failure_reason_k8s": "BackoffLimitExceeded",
+    "on_log_httpx_read_errors": 2,
+    "on_log_tracebacks": 2,
+    "off_admitted_total": 3451400,
+    "off_offered_admit_rps": 14380.83,
+    "on_sustain_summary": null,
+    "missing_on_end_txt": true,
+    "official_completion_ratio": "NOT_COMPUTABLE — on load job did not succeed; hygiene script requires on_end.txt and valid jobs"
+  },
+  "cloudwatch_send_numberofmessagesdeleted_sum_60s": {
+    "persist_off_artifact_window": {
+      "profile_utc": ["2026-04-02T01:54:17Z", "2026-04-02T01:58:31Z"],
+      "combined_avg_rps_across_send_0_to_7": 8274.714286,
+      "combined_peak_rps": 14691.283333,
+      "datapoints": 7,
+      "active_periods": 6,
+      "raw_points_rps": [0.0, 8136.266667, 14125.75, 14265.583333, 14691.283333, 6304.45, 399.666667]
+    },
+    "persist_on_failed_job_k8s_only_12s": {
+      "profile_utc": ["2026-04-02T01:59:54Z", "2026-04-02T02:00:06Z"],
+      "note": "Load job failed in ~12s; not comparable to 240s sustained test",
+      "combined_avg_rps_across_send_0_to_7": 1793.6125,
+      "datapoints": 4,
+      "active_periods": 3
+    },
+    "exploratory_on_start_txt_plus_240s": {
+      "profile_utc": ["2026-04-02T02:33:22Z", "2026-04-02T02:37:22Z"],
+      "note": "on_start.txt does not match failed job startTime (01:59:54Z); window is not paired with a successful on job log",
+      "combined_avg_rps_across_send_0_to_7": 130.952381,
+      "active_periods": 1
+    }
+  },
+  "cloudwatch_persist_transport_deletes_off_window": {
+    "combined_avg_rps_across_persist_shards_0_to_7": 22.62619,
+    "combined_peak_rps": 158.383333,
+    "note": "During labeled persist-off load window, some persist-queue deletes still occurred (likely backlog drain or other producers); persist_emit toggles L2/worker emit, not necessarily instant writer idle"
+  },
+  "sqs_point_in_time_utc_snapshot": {
+    "inspectio-v3-bulk": {
+      "ApproximateNumberOfMessages": "0",
+      "ApproximateNumberOfMessagesNotVisible": "0"
+    }
+  },
+  "kubectl": {
+    "context": "tzanshinnies@nitzan-inspectio.us-east-1.eksctl.io",
+    "nodes": "No resources found (cluster scaled to zero or empty at query time)"
+  },
+  "verdict": {
+    "where_lag_is_not": "Cannot attribute completion shortfall to writer tuning from this artifact set — persist-on benchmark never produced a valid 240s on run or SUSTAIN_SUMMARY.",
+    "where_lag_is_now": "Primary signal is load-generator / HTTP stability during persist-on: httpx ReadError and job failure before sustained window.",
+    "next_measurement": "Re-run persist-on job until succeeded=1, write on_end.txt, then run scripts/v3_p12_9_iter3_rerun_hygiene.py to get official completion_ratio_percent_on_over_off"
+  }
+}

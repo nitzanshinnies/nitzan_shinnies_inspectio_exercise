@@ -33,6 +33,13 @@ class PersistenceWriterMetrics:
     flush_trigger_forced_total: int = 0
     flush_trigger_occupancy_total: int = 0
     flush_trigger_interval_total: int = 0
+    ack_queue_depth_current: int = 0
+    ack_queue_depth_high_water_mark: int = 0
+    ack_queue_blocked_push_total: int = 0
+    flush_loop_iterations_total: int = 0
+    flush_loop_noop_total: int = 0
+    receive_loop_iterations_total: int = 0
+    pipeline_mode: str = "legacy"
     shard: dict[int, PersistenceWriterShardMetrics] = field(default_factory=dict)
 
     def init_clock(self, *, now_ms: int) -> None:
@@ -94,6 +101,25 @@ class PersistenceWriterMetrics:
             shard_metrics.flush_trigger_interval += 1
             return
         raise ValueError(f"unknown flush trigger: {trigger}")
+
+    def observe_ack_queue_depth(self, *, depth: int) -> None:
+        safe_depth = max(0, depth)
+        self.ack_queue_depth_current = safe_depth
+        self.ack_queue_depth_high_water_mark = max(
+            self.ack_queue_depth_high_water_mark,
+            safe_depth,
+        )
+
+    def observe_ack_queue_blocked_push(self) -> None:
+        self.ack_queue_blocked_push_total += 1
+
+    def observe_flush_loop_iteration(self, *, noop: bool) -> None:
+        self.flush_loop_iterations_total += 1
+        if noop:
+            self.flush_loop_noop_total += 1
+
+    def observe_receive_loop_iteration(self) -> None:
+        self.receive_loop_iterations_total += 1
 
     def observe_ack_batch(
         self, *, shard: int, events: int, latency_ms: int, now_ms: int
@@ -207,6 +233,13 @@ class PersistenceWriterMetrics:
             "flush_trigger_forced_total": self.flush_trigger_forced_total,
             "flush_trigger_interval_total": self.flush_trigger_interval_total,
             "flush_trigger_occupancy_total": self.flush_trigger_occupancy_total,
+            "ack_queue_depth_current": self.ack_queue_depth_current,
+            "ack_queue_depth_high_water_mark": self.ack_queue_depth_high_water_mark,
+            "ack_queue_blocked_push_total": self.ack_queue_blocked_push_total,
+            "flush_loop_iterations_total": self.flush_loop_iterations_total,
+            "flush_loop_noop_total": self.flush_loop_noop_total,
+            "receive_loop_iterations_total": self.receive_loop_iterations_total,
+            "pipeline_mode": self.pipeline_mode,
             "events_buffered": self.events_buffered,
             "events_flushed": self.events_flushed,
             "flush_failures": self.flush_failures,

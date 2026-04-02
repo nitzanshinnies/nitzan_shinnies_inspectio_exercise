@@ -1,0 +1,82 @@
+{
+  "exploratory_completion_ratio_percent_on_txt_over_off": 1.5826,
+  "metric": "AWS/SQS NumberOfMessagesDeleted Sum",
+  "notes": [
+    "persist_off uses off_start.txt/off_end.txt from iter-6 artifacts.",
+    "persist_on_failed_job uses Job status startTime and Failed condition time (BackoffLimitExceeded); load job did not complete 240s.",
+    "on_from_on_start_txt_240s uses on_start.txt + 240s \u2014 NOT paired with a successful on job in this folder; ratio_vs_off is exploratory only."
+  ],
+  "queues": [
+    "inspectio-v3-send-0",
+    "inspectio-v3-send-1",
+    "inspectio-v3-send-2",
+    "inspectio-v3-send-3",
+    "inspectio-v3-send-4",
+    "inspectio-v3-send-5",
+    "inspectio-v3-send-6",
+    "inspectio-v3-send-7"
+  ],
+  "region": "us-east-1",
+  "windows": {
+    "off": {
+      "active_periods": 6,
+      "combined_avg_rps": 8274.714286,
+      "combined_peak_rps": 14691.283333,
+      "datapoints": 7,
+      "label": "persist_off_artifact_window",
+      "period_sec": 60,
+      "profile_end_utc": "2026-04-02T01:58:31Z",
+      "profile_start_utc": "2026-04-02T01:54:17Z",
+      "query_end_utc": "2026-04-02T02:00:31Z",
+      "query_start_utc": "2026-04-02T01:53:17Z",
+      "raw_points_rps": [
+        0.0,
+        8136.266667,
+        14125.75,
+        14265.583333,
+        14691.283333,
+        6304.45,
+        399.666667
+      ]
+    },
+    "on_failed_job": {
+      "active_periods": 3,
+      "combined_avg_rps": 1793.6125,
+      "combined_peak_rps": 6304.45,
+      "datapoints": 4,
+      "label": "persist_on_failed_job_k8s_window_12s",
+      "period_sec": 60,
+      "profile_end_utc": "2026-04-02T02:00:06Z",
+      "profile_start_utc": "2026-04-02T01:59:54Z",
+      "query_end_utc": "2026-04-02T02:02:06Z",
+      "query_start_utc": "2026-04-02T01:58:54Z",
+      "raw_points_rps": [
+        6304.45,
+        399.666667,
+        470.333333,
+        0.0
+      ]
+    },
+    "on_from_on_start_txt_240s": {
+      "active_periods": 1,
+      "combined_avg_rps": 130.952381,
+      "combined_peak_rps": 916.666667,
+      "datapoints": 7,
+      "label": "persist_on_synthetic_240s_from_on_start_txt",
+      "period_sec": 60,
+      "profile_end_utc": "2026-04-02T02:37:22Z",
+      "profile_start_utc": "2026-04-02T02:33:22Z",
+      "query_end_utc": "2026-04-02T02:39:22Z",
+      "query_start_utc": "2026-04-02T02:32:22Z",
+      "raw_points_rps": [
+        0.0,
+        916.666667,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  }
+}

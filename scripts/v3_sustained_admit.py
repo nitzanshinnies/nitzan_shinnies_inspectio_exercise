@@ -15,27 +15,42 @@ import time
 import httpx
 
 
+def _is_transient_load_error(exc: Exception) -> bool:
+    if isinstance(exc, (httpx.TransportError, httpx.HTTPStatusError)):
+        return True
+    if isinstance(exc, RuntimeError) and "client has been closed" in str(exc).lower():
+        return True
+    return False
+
+
 async def _sender(
     client: httpx.AsyncClient,
     base: str,
     body: str,
     batch: int,
     stop_at: float,
-) -> int:
+) -> tuple[int, int]:
     admitted = 0
+    transient_errors = 0
     while time.monotonic() < stop_at:
-        r = await client.post(
-            f"{base}/messages/repeat",
-            params={"count": batch},
-            json={"body": body},
-        )
-        r.raise_for_status()
-        data = r.json()
-        got = data.get("accepted")
-        if got is None:
-            raise RuntimeError(f"bad repeat response: {data!r}")
-        admitted += int(got)
-    return admitted
+        try:
+            r = await client.post(
+                f"{base}/messages/repeat",
+                params={"count": batch},
+                json={"body": body},
+            )
+            r.raise_for_status()
+            data = r.json()
+            got = data.get("accepted")
+            if got is None:
+                raise RuntimeError(f"bad repeat response: {data!r}")
+            admitted += int(got)
+        except Exception as exc:  # noqa: BLE001
+            if not _is_transient_load_error(exc):
+                raise
+            transient_errors += 1
+            await asyncio.sleep(0.01)
+    return admitted, transient_errors
 
 
 async def _run(args: argparse.Namespace) -> None:
@@ -58,12 +73,13 @@ async def _run(args: argparse.Namespace) -> None:
             for _ in range(int(args.concurrency))
         ]
         totals = await asyncio.gather(*tasks)
-    total = sum(totals)
+    total = sum(admitted for admitted, _ in totals)
+    transient_errors = sum(errors for _, errors in totals)
     dur = float(args.duration_sec)
     print(
         f"SUSTAIN_SUMMARY admitted_total={total} duration_sec={dur} "
         f"offered_admit_rps={total / dur:.2f} concurrency={args.concurrency} "
-        f"batch={args.batch}",
+        f"batch={args.batch} transient_errors={transient_errors}",
     )
 
 

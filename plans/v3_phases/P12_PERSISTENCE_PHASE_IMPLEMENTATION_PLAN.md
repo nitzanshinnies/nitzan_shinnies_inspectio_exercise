@@ -4,6 +4,10 @@
 
 Provide a detailed, execution-ready phase plan for AI agents to implement assignment-compliant persistence while preserving high-throughput behavior demonstrated in v3 performance runs.
 
+Session recovery handoff:
+
+- `plans/v3_phases/P12_9_SESSION_RECOVERY_PLAN.md`
+
 This plan extends:
 
 - `plans/ASSIGNMENT.pdf`

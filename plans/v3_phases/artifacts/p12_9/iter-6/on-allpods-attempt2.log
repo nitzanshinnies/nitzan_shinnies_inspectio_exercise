@@ -1,0 +1,1430 @@
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] unhandled exception during asyncio.run() shutdown
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] task: <Task finished name='Task-30' coro=<_sender() done, defined at /app/scripts/v3_sustained_admit.py:18> exception=RuntimeError('Cannot send a request, as the client has been closed.')>
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return runner.run(main)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return self._loop.run_until_complete(task)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return future.result()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 60, in _run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     totals = await asyncio.gather(*tasks)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 32, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r.raise_for_status()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_models.py", line 829, in raise_for_status
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise HTTPStatusError(message, request=request, response=self)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'http://inspectio-l1:8080/messages/repeat?count=200'
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] During handling of the above exception, another exception occurred:
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 27, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r = await client.post(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]         ^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1859, in post
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.request(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1540, in request
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1616, in send
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise RuntimeError("Cannot send a request, as the client has been closed.")
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] RuntimeError: Cannot send a request, as the client has been closed.
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] unhandled exception during asyncio.run() shutdown
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] task: <Task finished name='Task-73' coro=<_sender() done, defined at /app/scripts/v3_sustained_admit.py:18> exception=RuntimeError('Cannot send a request, as the client has been closed.')>
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return runner.run(main)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return self._loop.run_until_complete(task)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return future.result()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 60, in _run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     totals = await asyncio.gather(*tasks)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 32, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r.raise_for_status()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_models.py", line 829, in raise_for_status
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise HTTPStatusError(message, request=request, response=self)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'http://inspectio-l1:8080/messages/repeat?count=200'
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] During handling of the above exception, another exception occurred:
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 27, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r = await client.post(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]         ^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1859, in post
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.request(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1540, in request
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1616, in send
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise RuntimeError("Cannot send a request, as the client has been closed.")
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] RuntimeError: Cannot send a request, as the client has been closed.
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] unhandled exception during asyncio.run() shutdown
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] task: <Task finished name='Task-74' coro=<_sender() done, defined at /app/scripts/v3_sustained_admit.py:18> exception=RuntimeError('Cannot send a request, as the client has been closed.')>
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return runner.run(main)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return self._loop.run_until_complete(task)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return future.result()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 60, in _run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     totals = await asyncio.gather(*tasks)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 32, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r.raise_for_status()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_models.py", line 829, in raise_for_status
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise HTTPStatusError(message, request=request, response=self)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'http://inspectio-l1:8080/messages/repeat?count=200'
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] During handling of the above exception, another exception occurred:
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 27, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r = await client.post(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]         ^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1859, in post
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.request(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1540, in request
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1616, in send
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise RuntimeError("Cannot send a request, as the client has been closed.")
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] RuntimeError: Cannot send a request, as the client has been closed.
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] unhandled exception during asyncio.run() shutdown
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] task: <Task finished name='Task-5' coro=<_sender() done, defined at /app/scripts/v3_sustained_admit.py:18> exception=RuntimeError('Cannot send a request, as the client has been closed.')>
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return runner.run(main)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return self._loop.run_until_complete(task)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return future.result()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 60, in _run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     totals = await asyncio.gather(*tasks)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 32, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r.raise_for_status()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_models.py", line 829, in raise_for_status
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise HTTPStatusError(message, request=request, response=self)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'http://inspectio-l1:8080/messages/repeat?count=200'
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] During handling of the above exception, another exception occurred:
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 27, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r = await client.post(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]         ^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1859, in post
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.request(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1540, in request
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1616, in send
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise RuntimeError("Cannot send a request, as the client has been closed.")
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] RuntimeError: Cannot send a request, as the client has been closed.
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] unhandled exception during asyncio.run() shutdown
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] task: <Task finished name='Task-118' coro=<_sender() done, defined at /app/scripts/v3_sustained_admit.py:18> exception=RuntimeError('Cannot send a request, as the client has been closed.')>
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return runner.run(main)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return self._loop.run_until_complete(task)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return future.result()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 60, in _run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     totals = await asyncio.gather(*tasks)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 32, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r.raise_for_status()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_models.py", line 829, in raise_for_status
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise HTTPStatusError(message, request=request, response=self)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'http://inspectio-l1:8080/messages/repeat?count=200'
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] During handling of the above exception, another exception occurred:
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 27, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r = await client.post(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]         ^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1859, in post
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.request(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1540, in request
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1616, in send
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise RuntimeError("Cannot send a request, as the client has been closed.")
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] RuntimeError: Cannot send a request, as the client has been closed.
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] unhandled exception during asyncio.run() shutdown
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] task: <Task finished name='Task-34' coro=<_sender() done, defined at /app/scripts/v3_sustained_admit.py:18> exception=RuntimeError('Cannot send a request, as the client has been closed.')>
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return runner.run(main)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return self._loop.run_until_complete(task)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return future.result()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 60, in _run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     totals = await asyncio.gather(*tasks)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 32, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r.raise_for_status()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_models.py", line 829, in raise_for_status
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise HTTPStatusError(message, request=request, response=self)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'http://inspectio-l1:8080/messages/repeat?count=200'
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] During handling of the above exception, another exception occurred:
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 27, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r = await client.post(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]         ^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1859, in post
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.request(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1540, in request
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1616, in send
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise RuntimeError("Cannot send a request, as the client has been closed.")
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] RuntimeError: Cannot send a request, as the client has been closed.
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] unhandled exception during asyncio.run() shutdown
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] task: <Task finished name='Task-77' coro=<_sender() done, defined at /app/scripts/v3_sustained_admit.py:18> exception=RuntimeError('Cannot send a request, as the client has been closed.')>
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return runner.run(main)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return self._loop.run_until_complete(task)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return future.result()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 60, in _run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     totals = await asyncio.gather(*tasks)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 32, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r.raise_for_status()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_models.py", line 829, in raise_for_status
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise HTTPStatusError(message, request=request, response=self)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'http://inspectio-l1:8080/messages/repeat?count=200'
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] During handling of the above exception, another exception occurred:
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 27, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r = await client.post(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]         ^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1859, in post
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.request(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1540, in request
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1616, in send
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise RuntimeError("Cannot send a request, as the client has been closed.")
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] RuntimeError: Cannot send a request, as the client has been closed.
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] unhandled exception during asyncio.run() shutdown
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] task: <Task finished name='Task-120' coro=<_sender() done, defined at /app/scripts/v3_sustained_admit.py:18> exception=RuntimeError('Cannot send a request, as the client has been closed.')>
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return runner.run(main)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return self._loop.run_until_complete(task)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return future.result()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 60, in _run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     totals = await asyncio.gather(*tasks)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 32, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r.raise_for_status()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_models.py", line 829, in raise_for_status
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise HTTPStatusError(message, request=request, response=self)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'http://inspectio-l1:8080/messages/repeat?count=200'
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] During handling of the above exception, another exception occurred:
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 27, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r = await client.post(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]         ^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1859, in post
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.request(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1540, in request
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1616, in send
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise RuntimeError("Cannot send a request, as the client has been closed.")
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] RuntimeError: Cannot send a request, as the client has been closed.
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] unhandled exception during asyncio.run() shutdown
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] task: <Task finished name='Task-6' coro=<_sender() done, defined at /app/scripts/v3_sustained_admit.py:18> exception=RuntimeError('Cannot send a request, as the client has been closed.')>
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return runner.run(main)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return self._loop.run_until_complete(task)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return future.result()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 60, in _run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     totals = await asyncio.gather(*tasks)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 32, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r.raise_for_status()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_models.py", line 829, in raise_for_status
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise HTTPStatusError(message, request=request, response=self)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'http://inspectio-l1:8080/messages/repeat?count=200'
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] During handling of the above exception, another exception occurred:
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 27, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r = await client.post(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]         ^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1859, in post
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.request(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1540, in request
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1616, in send
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise RuntimeError("Cannot send a request, as the client has been closed.")
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] RuntimeError: Cannot send a request, as the client has been closed.
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] unhandled exception during asyncio.run() shutdown
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] task: <Task finished name='Task-78' coro=<_sender() done, defined at /app/scripts/v3_sustained_admit.py:18> exception=RuntimeError('Cannot send a request, as the client has been closed.')>
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return runner.run(main)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return self._loop.run_until_complete(task)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return future.result()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 60, in _run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     totals = await asyncio.gather(*tasks)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 32, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r.raise_for_status()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_models.py", line 829, in raise_for_status
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise HTTPStatusError(message, request=request, response=self)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'http://inspectio-l1:8080/messages/repeat?count=200'
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] During handling of the above exception, another exception occurred:
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 27, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r = await client.post(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]         ^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1859, in post
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.request(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1540, in request
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1616, in send
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise RuntimeError("Cannot send a request, as the client has been closed.")
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] RuntimeError: Cannot send a request, as the client has been closed.
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] unhandled exception during asyncio.run() shutdown
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] task: <Task finished name='Task-121' coro=<_sender() done, defined at /app/scripts/v3_sustained_admit.py:18> exception=RuntimeError('Cannot send a request, as the client has been closed.')>
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return runner.run(main)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return self._loop.run_until_complete(task)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return future.result()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 60, in _run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     totals = await asyncio.gather(*tasks)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 32, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r.raise_for_status()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_models.py", line 829, in raise_for_status
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise HTTPStatusError(message, request=request, response=self)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'http://inspectio-l1:8080/messages/repeat?count=200'
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] During handling of the above exception, another exception occurred:
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 27, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r = await client.post(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]         ^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1859, in post
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.request(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1540, in request
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1616, in send
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise RuntimeError("Cannot send a request, as the client has been closed.")
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] RuntimeError: Cannot send a request, as the client has been closed.
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] unhandled exception during asyncio.run() shutdown
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] task: <Task finished name='Task-79' coro=<_sender() done, defined at /app/scripts/v3_sustained_admit.py:18> exception=RuntimeError('Cannot send a request, as the client has been closed.')>
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return runner.run(main)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return self._loop.run_until_complete(task)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return future.result()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 60, in _run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     totals = await asyncio.gather(*tasks)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 32, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r.raise_for_status()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_models.py", line 829, in raise_for_status
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise HTTPStatusError(message, request=request, response=self)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'http://inspectio-l1:8080/messages/repeat?count=200'
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] During handling of the above exception, another exception occurred:
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 27, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r = await client.post(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]         ^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1859, in post
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.request(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1540, in request
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1616, in send
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise RuntimeError("Cannot send a request, as the client has been closed.")
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] RuntimeError: Cannot send a request, as the client has been closed.
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] unhandled exception during asyncio.run() shutdown
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] task: <Task finished name='Task-37' coro=<_sender() done, defined at /app/scripts/v3_sustained_admit.py:18> exception=RuntimeError('Cannot send a request, as the client has been closed.')>
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return runner.run(main)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return self._loop.run_until_complete(task)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return future.result()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 60, in _run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     totals = await asyncio.gather(*tasks)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 32, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r.raise_for_status()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_models.py", line 829, in raise_for_status
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise HTTPStatusError(message, request=request, response=self)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'http://inspectio-l1:8080/messages/repeat?count=200'
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] During handling of the above exception, another exception occurred:
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 27, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r = await client.post(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]         ^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1859, in post
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.request(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1540, in request
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1616, in send
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise RuntimeError("Cannot send a request, as the client has been closed.")
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] RuntimeError: Cannot send a request, as the client has been closed.
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] unhandled exception during asyncio.run() shutdown
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] task: <Task finished name='Task-9' coro=<_sender() done, defined at /app/scripts/v3_sustained_admit.py:18> exception=RuntimeError('Cannot send a request, as the client has been closed.')>
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return runner.run(main)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return self._loop.run_until_complete(task)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return future.result()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 60, in _run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     totals = await asyncio.gather(*tasks)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 32, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r.raise_for_status()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_models.py", line 829, in raise_for_status
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise HTTPStatusError(message, request=request, response=self)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'http://inspectio-l1:8080/messages/repeat?count=200'
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] During handling of the above exception, another exception occurred:
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 27, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r = await client.post(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]         ^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1859, in post
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.request(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1540, in request
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1616, in send
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise RuntimeError("Cannot send a request, as the client has been closed.")
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] RuntimeError: Cannot send a request, as the client has been closed.
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] unhandled exception during asyncio.run() shutdown
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] task: <Task finished name='Task-81' coro=<_sender() done, defined at /app/scripts/v3_sustained_admit.py:18> exception=RuntimeError('Cannot send a request, as the client has been closed.')>
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return runner.run(main)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return self._loop.run_until_complete(task)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return future.result()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 60, in _run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     totals = await asyncio.gather(*tasks)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 32, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r.raise_for_status()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_models.py", line 829, in raise_for_status
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise HTTPStatusError(message, request=request, response=self)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'http://inspectio-l1:8080/messages/repeat?count=200'
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] During handling of the above exception, another exception occurred:
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 27, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r = await client.post(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]         ^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1859, in post
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.request(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1540, in request
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1616, in send
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise RuntimeError("Cannot send a request, as the client has been closed.")
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] RuntimeError: Cannot send a request, as the client has been closed.
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] unhandled exception during asyncio.run() shutdown
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] task: <Task finished name='Task-40' coro=<_sender() done, defined at /app/scripts/v3_sustained_admit.py:18> exception=RuntimeError('Cannot send a request, as the client has been closed.')>
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return runner.run(main)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return self._loop.run_until_complete(task)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return future.result()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 60, in _run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     totals = await asyncio.gather(*tasks)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 32, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r.raise_for_status()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_models.py", line 829, in raise_for_status
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise HTTPStatusError(message, request=request, response=self)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'http://inspectio-l1:8080/messages/repeat?count=200'
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] During handling of the above exception, another exception occurred:
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 27, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r = await client.post(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]         ^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1859, in post
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.request(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1540, in request
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1616, in send
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise RuntimeError("Cannot send a request, as the client has been closed.")
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] RuntimeError: Cannot send a request, as the client has been closed.
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] unhandled exception during asyncio.run() shutdown
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] task: <Task finished name='Task-86' coro=<_sender() done, defined at /app/scripts/v3_sustained_admit.py:18> exception=RuntimeError('Cannot send a request, as the client has been closed.')>
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return runner.run(main)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return self._loop.run_until_complete(task)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return future.result()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 60, in _run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     totals = await asyncio.gather(*tasks)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 32, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r.raise_for_status()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_models.py", line 829, in raise_for_status
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise HTTPStatusError(message, request=request, response=self)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'http://inspectio-l1:8080/messages/repeat?count=200'
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] During handling of the above exception, another exception occurred:
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 27, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r = await client.post(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]         ^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1859, in post
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.request(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1540, in request
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1616, in send
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise RuntimeError("Cannot send a request, as the client has been closed.")
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] RuntimeError: Cannot send a request, as the client has been closed.
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] unhandled exception during asyncio.run() shutdown
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] task: <Task finished name='Task-87' coro=<_sender() done, defined at /app/scripts/v3_sustained_admit.py:18> exception=RuntimeError('Cannot send a request, as the client has been closed.')>
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return runner.run(main)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return self._loop.run_until_complete(task)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return future.result()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 60, in _run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     totals = await asyncio.gather(*tasks)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 32, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r.raise_for_status()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_models.py", line 829, in raise_for_status
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise HTTPStatusError(message, request=request, response=self)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'http://inspectio-l1:8080/messages/repeat?count=200'
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] During handling of the above exception, another exception occurred:
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 27, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r = await client.post(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]         ^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1859, in post
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.request(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1540, in request
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1616, in send
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise RuntimeError("Cannot send a request, as the client has been closed.")
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] RuntimeError: Cannot send a request, as the client has been closed.
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] unhandled exception during asyncio.run() shutdown
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] task: <Task finished name='Task-45' coro=<_sender() done, defined at /app/scripts/v3_sustained_admit.py:18> exception=RuntimeError('Cannot send a request, as the client has been closed.')>
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return runner.run(main)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return self._loop.run_until_complete(task)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return future.result()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 60, in _run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     totals = await asyncio.gather(*tasks)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 32, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r.raise_for_status()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_models.py", line 829, in raise_for_status
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise HTTPStatusError(message, request=request, response=self)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'http://inspectio-l1:8080/messages/repeat?count=200'
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] During handling of the above exception, another exception occurred:
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 27, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r = await client.post(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]         ^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1859, in post
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.request(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1540, in request
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1616, in send
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise RuntimeError("Cannot send a request, as the client has been closed.")
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] RuntimeError: Cannot send a request, as the client has been closed.
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] unhandled exception during asyncio.run() shutdown
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] task: <Task finished name='Task-91' coro=<_sender() done, defined at /app/scripts/v3_sustained_admit.py:18> exception=RuntimeError('Cannot send a request, as the client has been closed.')>
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return runner.run(main)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return self._loop.run_until_complete(task)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return future.result()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 60, in _run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     totals = await asyncio.gather(*tasks)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 32, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r.raise_for_status()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_models.py", line 829, in raise_for_status
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise HTTPStatusError(message, request=request, response=self)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'http://inspectio-l1:8080/messages/repeat?count=200'
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] During handling of the above exception, another exception occurred:
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 27, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r = await client.post(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]         ^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1859, in post
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.request(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1540, in request
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1616, in send
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise RuntimeError("Cannot send a request, as the client has been closed.")
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] RuntimeError: Cannot send a request, as the client has been closed.
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] unhandled exception during asyncio.run() shutdown
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] task: <Task finished name='Task-92' coro=<_sender() done, defined at /app/scripts/v3_sustained_admit.py:18> exception=RuntimeError('Cannot send a request, as the client has been closed.')>
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return runner.run(main)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return self._loop.run_until_complete(task)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return future.result()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 60, in _run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     totals = await asyncio.gather(*tasks)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 32, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r.raise_for_status()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_models.py", line 829, in raise_for_status
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise HTTPStatusError(message, request=request, response=self)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'http://inspectio-l1:8080/messages/repeat?count=200'
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] During handling of the above exception, another exception occurred:
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 27, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r = await client.post(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]         ^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1859, in post
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.request(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1540, in request
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1616, in send
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise RuntimeError("Cannot send a request, as the client has been closed.")
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] RuntimeError: Cannot send a request, as the client has been closed.
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] unhandled exception during asyncio.run() shutdown
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] task: <Task finished name='Task-52' coro=<_sender() done, defined at /app/scripts/v3_sustained_admit.py:18> exception=RuntimeError('Cannot send a request, as the client has been closed.')>
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return runner.run(main)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return self._loop.run_until_complete(task)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return future.result()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 60, in _run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     totals = await asyncio.gather(*tasks)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 32, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r.raise_for_status()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_models.py", line 829, in raise_for_status
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise HTTPStatusError(message, request=request, response=self)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'http://inspectio-l1:8080/messages/repeat?count=200'
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] During handling of the above exception, another exception occurred:
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 27, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r = await client.post(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]         ^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1859, in post
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.request(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1540, in request
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1616, in send
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise RuntimeError("Cannot send a request, as the client has been closed.")
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] RuntimeError: Cannot send a request, as the client has been closed.
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] unhandled exception during asyncio.run() shutdown
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] task: <Task finished name='Task-53' coro=<_sender() done, defined at /app/scripts/v3_sustained_admit.py:18> exception=RuntimeError('Cannot send a request, as the client has been closed.')>
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return runner.run(main)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return self._loop.run_until_complete(task)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return future.result()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 60, in _run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     totals = await asyncio.gather(*tasks)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 32, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r.raise_for_status()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_models.py", line 829, in raise_for_status
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise HTTPStatusError(message, request=request, response=self)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'http://inspectio-l1:8080/messages/repeat?count=200'
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] During handling of the above exception, another exception occurred:
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 27, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r = await client.post(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]         ^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1859, in post
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.request(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1540, in request
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1616, in send
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise RuntimeError("Cannot send a request, as the client has been closed.")
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] RuntimeError: Cannot send a request, as the client has been closed.
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] unhandled exception during asyncio.run() shutdown
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] task: <Task finished name='Task-54' coro=<_sender() done, defined at /app/scripts/v3_sustained_admit.py:18> exception=RuntimeError('Cannot send a request, as the client has been closed.')>
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return runner.run(main)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return self._loop.run_until_complete(task)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return future.result()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 60, in _run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     totals = await asyncio.gather(*tasks)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 32, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r.raise_for_status()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_models.py", line 829, in raise_for_status
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise HTTPStatusError(message, request=request, response=self)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'http://inspectio-l1:8080/messages/repeat?count=200'
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] During handling of the above exception, another exception occurred:
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 27, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r = await client.post(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]         ^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1859, in post
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.request(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1540, in request
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1616, in send
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise RuntimeError("Cannot send a request, as the client has been closed.")
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] RuntimeError: Cannot send a request, as the client has been closed.
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] unhandled exception during asyncio.run() shutdown
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] task: <Task finished name='Task-99' coro=<_sender() done, defined at /app/scripts/v3_sustained_admit.py:18> exception=RuntimeError('Cannot send a request, as the client has been closed.')>
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return runner.run(main)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return self._loop.run_until_complete(task)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return future.result()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 60, in _run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     totals = await asyncio.gather(*tasks)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 32, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r.raise_for_status()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_models.py", line 829, in raise_for_status
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise HTTPStatusError(message, request=request, response=self)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'http://inspectio-l1:8080/messages/repeat?count=200'
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] During handling of the above exception, another exception occurred:
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 27, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r = await client.post(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]         ^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1859, in post
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.request(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1540, in request
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1616, in send
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise RuntimeError("Cannot send a request, as the client has been closed.")
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] RuntimeError: Cannot send a request, as the client has been closed.
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] unhandled exception during asyncio.run() shutdown
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] task: <Task finished name='Task-100' coro=<_sender() done, defined at /app/scripts/v3_sustained_admit.py:18> exception=RuntimeError('Cannot send a request, as the client has been closed.')>
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return runner.run(main)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return self._loop.run_until_complete(task)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return future.result()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 60, in _run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     totals = await asyncio.gather(*tasks)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 32, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r.raise_for_status()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_models.py", line 829, in raise_for_status
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise HTTPStatusError(message, request=request, response=self)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'http://inspectio-l1:8080/messages/repeat?count=200'
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] During handling of the above exception, another exception occurred:
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 27, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r = await client.post(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]         ^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1859, in post
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.request(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1540, in request
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1616, in send
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise RuntimeError("Cannot send a request, as the client has been closed.")
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] RuntimeError: Cannot send a request, as the client has been closed.
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] unhandled exception during asyncio.run() shutdown
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] task: <Task finished name='Task-58' coro=<_sender() done, defined at /app/scripts/v3_sustained_admit.py:18> exception=RuntimeError('Cannot send a request, as the client has been closed.')>
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return runner.run(main)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return self._loop.run_until_complete(task)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return future.result()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 60, in _run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     totals = await asyncio.gather(*tasks)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 32, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r.raise_for_status()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_models.py", line 829, in raise_for_status
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise HTTPStatusError(message, request=request, response=self)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'http://inspectio-l1:8080/messages/repeat?count=200'
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] During handling of the above exception, another exception occurred:
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 27, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r = await client.post(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]         ^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1859, in post
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.request(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1540, in request
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1616, in send
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise RuntimeError("Cannot send a request, as the client has been closed.")
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] RuntimeError: Cannot send a request, as the client has been closed.
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] unhandled exception during asyncio.run() shutdown
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] task: <Task finished name='Task-16' coro=<_sender() done, defined at /app/scripts/v3_sustained_admit.py:18> exception=RuntimeError('Cannot send a request, as the client has been closed.')>
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return runner.run(main)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return self._loop.run_until_complete(task)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return future.result()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 60, in _run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     totals = await asyncio.gather(*tasks)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 32, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r.raise_for_status()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_models.py", line 829, in raise_for_status
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise HTTPStatusError(message, request=request, response=self)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'http://inspectio-l1:8080/messages/repeat?count=200'
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] During handling of the above exception, another exception occurred:
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 27, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r = await client.post(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]         ^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1859, in post
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.request(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1540, in request
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1616, in send
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise RuntimeError("Cannot send a request, as the client has been closed.")
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] RuntimeError: Cannot send a request, as the client has been closed.
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] unhandled exception during asyncio.run() shutdown
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] task: <Task finished name='Task-59' coro=<_sender() done, defined at /app/scripts/v3_sustained_admit.py:18> exception=RuntimeError('Cannot send a request, as the client has been closed.')>
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return runner.run(main)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return self._loop.run_until_complete(task)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return future.result()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 60, in _run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     totals = await asyncio.gather(*tasks)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 32, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r.raise_for_status()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_models.py", line 829, in raise_for_status
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise HTTPStatusError(message, request=request, response=self)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'http://inspectio-l1:8080/messages/repeat?count=200'
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] During handling of the above exception, another exception occurred:
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 27, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r = await client.post(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]         ^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1859, in post
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.request(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1540, in request
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1616, in send
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise RuntimeError("Cannot send a request, as the client has been closed.")
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] RuntimeError: Cannot send a request, as the client has been closed.
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] unhandled exception during asyncio.run() shutdown
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] task: <Task finished name='Task-17' coro=<_sender() done, defined at /app/scripts/v3_sustained_admit.py:18> exception=RuntimeError('Cannot send a request, as the client has been closed.')>
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return runner.run(main)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return self._loop.run_until_complete(task)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return future.result()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 60, in _run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     totals = await asyncio.gather(*tasks)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 32, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r.raise_for_status()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_models.py", line 829, in raise_for_status
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise HTTPStatusError(message, request=request, response=self)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'http://inspectio-l1:8080/messages/repeat?count=200'
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] During handling of the above exception, another exception occurred:
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 27, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r = await client.post(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]         ^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1859, in post
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.request(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1540, in request
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1616, in send
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise RuntimeError("Cannot send a request, as the client has been closed.")
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] RuntimeError: Cannot send a request, as the client has been closed.
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] unhandled exception during asyncio.run() shutdown
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] task: <Task finished name='Task-63' coro=<_sender() done, defined at /app/scripts/v3_sustained_admit.py:18> exception=RuntimeError('Cannot send a request, as the client has been closed.')>
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return runner.run(main)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return self._loop.run_until_complete(task)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return future.result()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 60, in _run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     totals = await asyncio.gather(*tasks)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 32, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r.raise_for_status()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_models.py", line 829, in raise_for_status
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise HTTPStatusError(message, request=request, response=self)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'http://inspectio-l1:8080/messages/repeat?count=200'
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] During handling of the above exception, another exception occurred:
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 27, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r = await client.post(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]         ^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1859, in post
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.request(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1540, in request
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1616, in send
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise RuntimeError("Cannot send a request, as the client has been closed.")
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] RuntimeError: Cannot send a request, as the client has been closed.
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] unhandled exception during asyncio.run() shutdown
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] task: <Task finished name='Task-106' coro=<_sender() done, defined at /app/scripts/v3_sustained_admit.py:18> exception=RuntimeError('Cannot send a request, as the client has been closed.')>
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return runner.run(main)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return self._loop.run_until_complete(task)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return future.result()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 60, in _run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     totals = await asyncio.gather(*tasks)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 32, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r.raise_for_status()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_models.py", line 829, in raise_for_status
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise HTTPStatusError(message, request=request, response=self)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'http://inspectio-l1:8080/messages/repeat?count=200'
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] During handling of the above exception, another exception occurred:
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 27, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r = await client.post(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]         ^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1859, in post
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.request(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1540, in request
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1616, in send
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise RuntimeError("Cannot send a request, as the client has been closed.")
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] RuntimeError: Cannot send a request, as the client has been closed.
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] unhandled exception during asyncio.run() shutdown
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] task: <Task finished name='Task-64' coro=<_sender() done, defined at /app/scripts/v3_sustained_admit.py:18> exception=RuntimeError('Cannot send a request, as the client has been closed.')>
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return runner.run(main)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return self._loop.run_until_complete(task)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return future.result()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 60, in _run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     totals = await asyncio.gather(*tasks)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 32, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r.raise_for_status()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_models.py", line 829, in raise_for_status
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise HTTPStatusError(message, request=request, response=self)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'http://inspectio-l1:8080/messages/repeat?count=200'
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] During handling of the above exception, another exception occurred:
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 27, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r = await client.post(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]         ^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1859, in post
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.request(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1540, in request
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1616, in send
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise RuntimeError("Cannot send a request, as the client has been closed.")
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] RuntimeError: Cannot send a request, as the client has been closed.
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] unhandled exception during asyncio.run() shutdown
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] task: <Task finished name='Task-21' coro=<_sender() done, defined at /app/scripts/v3_sustained_admit.py:18> exception=RuntimeError('Cannot send a request, as the client has been closed.')>
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return runner.run(main)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return self._loop.run_until_complete(task)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return future.result()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 60, in _run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     totals = await asyncio.gather(*tasks)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 32, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r.raise_for_status()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_models.py", line 829, in raise_for_status
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise HTTPStatusError(message, request=request, response=self)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'http://inspectio-l1:8080/messages/repeat?count=200'
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] During handling of the above exception, another exception occurred:
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 27, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r = await client.post(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]         ^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1859, in post
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.request(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1540, in request
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1616, in send
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise RuntimeError("Cannot send a request, as the client has been closed.")
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] RuntimeError: Cannot send a request, as the client has been closed.
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] unhandled exception during asyncio.run() shutdown
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] task: <Task finished name='Task-67' coro=<_sender() done, defined at /app/scripts/v3_sustained_admit.py:18> exception=RuntimeError('Cannot send a request, as the client has been closed.')>
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return runner.run(main)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return self._loop.run_until_complete(task)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return future.result()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 60, in _run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     totals = await asyncio.gather(*tasks)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 32, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r.raise_for_status()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_models.py", line 829, in raise_for_status
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise HTTPStatusError(message, request=request, response=self)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'http://inspectio-l1:8080/messages/repeat?count=200'
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] During handling of the above exception, another exception occurred:
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 27, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r = await client.post(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]         ^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1859, in post
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.request(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1540, in request
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1616, in send
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise RuntimeError("Cannot send a request, as the client has been closed.")
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] RuntimeError: Cannot send a request, as the client has been closed.
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] unhandled exception during asyncio.run() shutdown
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] task: <Task finished name='Task-68' coro=<_sender() done, defined at /app/scripts/v3_sustained_admit.py:18> exception=RuntimeError('Cannot send a request, as the client has been closed.')>
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return runner.run(main)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return self._loop.run_until_complete(task)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return future.result()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 60, in _run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     totals = await asyncio.gather(*tasks)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 32, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r.raise_for_status()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_models.py", line 829, in raise_for_status
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise HTTPStatusError(message, request=request, response=self)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'http://inspectio-l1:8080/messages/repeat?count=200'
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] During handling of the above exception, another exception occurred:
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 27, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r = await client.post(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]         ^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1859, in post
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.request(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1540, in request
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1616, in send
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise RuntimeError("Cannot send a request, as the client has been closed.")
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] RuntimeError: Cannot send a request, as the client has been closed.
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] unhandled exception during asyncio.run() shutdown
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] task: <Task finished name='Task-69' coro=<_sender() done, defined at /app/scripts/v3_sustained_admit.py:18> exception=RuntimeError('Cannot send a request, as the client has been closed.')>
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return runner.run(main)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return self._loop.run_until_complete(task)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return future.result()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 60, in _run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     totals = await asyncio.gather(*tasks)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 32, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r.raise_for_status()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_models.py", line 829, in raise_for_status
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise HTTPStatusError(message, request=request, response=self)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'http://inspectio-l1:8080/messages/repeat?count=200'
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] During handling of the above exception, another exception occurred:
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 27, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r = await client.post(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]         ^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1859, in post
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.request(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1540, in request
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1616, in send
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise RuntimeError("Cannot send a request, as the client has been closed.")
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] RuntimeError: Cannot send a request, as the client has been closed.
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] unhandled exception during asyncio.run() shutdown
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] task: <Task finished name='Task-70' coro=<_sender() done, defined at /app/scripts/v3_sustained_admit.py:18> exception=RuntimeError('Cannot send a request, as the client has been closed.')>
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return runner.run(main)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return self._loop.run_until_complete(task)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return future.result()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 60, in _run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     totals = await asyncio.gather(*tasks)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 32, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r.raise_for_status()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_models.py", line 829, in raise_for_status
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise HTTPStatusError(message, request=request, response=self)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'http://inspectio-l1:8080/messages/repeat?count=200'
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] During handling of the above exception, another exception occurred:
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] 
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 27, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r = await client.post(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]         ^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1859, in post
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.request(
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1540, in request
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1616, in send
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise RuntimeError("Cannot send a request, as the client has been closed.")
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] RuntimeError: Cannot send a request, as the client has been closed.
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] Traceback (most recent call last):
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 93, in <module>
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise SystemExit(main())
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]                      ^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 88, in main
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     asyncio.run(_run(args))
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return runner.run(main)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return self._loop.run_until_complete(task)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     return future.result()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]            ^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 60, in _run
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     totals = await asyncio.gather(*tasks)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/app/scripts/v3_sustained_admit.py", line 32, in _sender
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     r.raise_for_status()
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]   File "/usr/local/lib/python3.11/site-packages/httpx/_models.py", line 829, in raise_for_status
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load]     raise HTTPStatusError(message, request=request, response=self)
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'http://inspectio-l1:8080/messages/repeat?count=200'
+[pod/inspectio-v3-p12-9-iter6-on-lbrp5/load] For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
