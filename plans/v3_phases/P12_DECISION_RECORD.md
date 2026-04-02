@@ -41,6 +41,10 @@ This record satisfies the "Decision Record" lock in
   - `best_effort`: continue message flow, increment lag/drop counters and alert.
   - `strict` (future optional): reject/abort the processing unit.
 
+## 6) Product framing — P12.9 amendment (async backup)
+
+**Strategic intent** (does not replace §1–§5 writer contracts above): persistence materialized in S3 is **pure asynchronous backup**; the **runtime scheduler** uses **in-memory state and SQS** only for steady-state control. **Throughput first**, then **tighten durability** in benchmark-gated steps. Canonical wording: `P12_9_PERSISTENCE_ASYNC_BACKUP_DECISION_RECORD.md`.
+
 ---
 
 Locked in P12.0 and referenced by schemas/recovery comments and tests.
