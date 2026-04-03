@@ -3,7 +3,7 @@
 ## Candidate image and branch
 
 - **Image:** `194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:p12-9-plan-a-perf-20260403040525`
-- **Branch:** `feat/p12-9-plan-a-eks-perf` @ **`18480a6`** at image build time (Plan A integration merges through A.2); artifact bundle committed as **`3c3615e`** on the same branch.
+- **Branch:** `feat/p12-9-plan-a-eks-perf` @ **`18480a6`** at image build time (Plan A integration merges through A.2); artifact bundle committed as **`73c54a8`** on the same branch.
 - **Jobs:** `inspectio-v3-p12-9-iter8-plan-a-off`, `inspectio-v3-p12-9-iter8-plan-a-on` (240s sustain, 120×200, in-cluster L1).
 - **Job pod:** `serviceAccountName: inspectio-app`, `imagePullPolicy: Always`, same `IMG` as all app Deployments.
 
