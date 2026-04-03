@@ -153,6 +153,9 @@ Writer consumes one persistence transport shard queue and writes compressed segm
 - **`INSPECTIO_V3_WRITER_SHARD_ID`** (required for sharded mode, in range `[0, SHARD_COUNT-1]`)
 - **`INSPECTIO_V3_WRITER_RECEIVE_WAIT_SECONDS`**
 - **`INSPECTIO_V3_WRITER_RECEIVE_MAX_EVENTS`**
+- **`INSPECTIO_V3_WRITER_PIPELINE_ENABLE`** (`true` for decoupled `decoupled_v1` writer path)
+- **`INSPECTIO_V3_WRITER_RECEIVE_LOOP_PARALLELISM`** (`1..4`, template uses **`2`** for parallel long-poll receive loops per shard)
+- **`INSPECTIO_V3_WRITER_FLUSH_LOOP_SLEEP_MS`** (milliseconds between flush-loop iterations when idle-ish; default **`10`**)
 - **`INSPECTIO_V3_PERSISTENCE_ACK_DELETE_MAX_CONCURRENCY`** (`1..8`, bounded SQS delete parallelism; template default **`6`** — raise toward **`8`** only after EKS measurement)
 - **`INSPECTIO_V3_WRITER_FLUSH_MAX_EVENTS`**
 - **`INSPECTIO_V3_PERSISTENCE_WRITER_FLUSH_MIN_BATCH_EVENTS`** (`1..FLUSH_MAX`, interval-trigger occupancy floor)
