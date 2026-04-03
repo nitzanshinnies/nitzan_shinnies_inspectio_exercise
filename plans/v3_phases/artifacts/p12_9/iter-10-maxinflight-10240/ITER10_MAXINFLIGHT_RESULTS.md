@@ -51,3 +51,5 @@ An **immediate** post-run hygiene attempt with the same parameters once reported
 ## Artifacts
 
 This directory: timestamps, job logs/JSON, `sustain_summaries.json`, `cw_metrics.json`, `measurement_manifest.json`, `writer_snapshot_extract.json`, writer shard logs, CM/deploy snapshots.
+
+**Follow-up:** **`iter-11-flush-min-batch-48`** lowered flush min batch **64→48** only — **R ≈ 52.01%** (NO-GO vs 52.66%); cluster reverted to **64**. See `../iter-11-flush-min-batch-48/ITER11_FLUSH_MIN_BATCH_RESULTS.md`.
