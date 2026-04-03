@@ -72,12 +72,12 @@ Run **A.1** (ack concurrency) **before** **A.2** (flush sweep): fewer moving par
 **Knobs:**
 
 - **`INSPECTIO_V3_WRITER_FLUSH_LOOP_SLEEP_MS`** (default **10** in `settings.py`)
-- **`INSPECTIO_V3_WRITER_RECEIVE_LOOP_PARALLELISM`** (default **1**, max **4**)
+- **`INSPECTIO_V3_WRITER_RECEIVE_LOOP_PARALLELISM`** (default **1** in `settings.py`, max **4**; k8s template sets **`2`**)
 - **`INSPECTIO_V3_WRITER_PIPELINE_ENABLE`** must remain **`true`** for decoupled mode.
 
 **Steps:**
 
-1. Add to ConfigMap only when justified by `writer_snapshot` (e.g. extreme flush-loop no-ops under load is a **symptom**, not always a bug).
+1. **`deploy/kubernetes/configmap.yaml`** includes explicit **`PIPELINE_ENABLE`**, **`RECEIVE_LOOP_PARALLELISM`**, and **`FLUSH_LOOP_SLEEP_MS`** so EKS clusters do not rely on implicit defaults. Tune upward (**`3`/`4`**) only when justified by `writer_snapshot` / load.
 2. Re-benchmark after change.
 
 ## Task A.4 — Persistence emitter limits (worker)
