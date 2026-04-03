@@ -100,6 +100,32 @@ async def test_publish_retries_then_succeeds() -> None:
 
 @pytest.mark.unit
 @pytest.mark.asyncio
+async def test_successful_publish_records_duration_metrics() -> None:
+    client = _Client(sleep_on_send_sec=0.06)
+    producer = SqsPersistenceTransportProducer(
+        queue_url="q://primary",
+        client=client,
+        durability_mode="best_effort",
+        max_attempts=2,
+        backoff_base_ms=1,
+        backoff_max_ms=2,
+        backoff_jitter_fraction=0.0,
+        max_inflight_events=32,
+        max_batch_events=10,
+    )
+    await producer.publish(_event("e-dur"))
+    assert producer.metrics.publish_success_batches == 1
+    assert producer.metrics.published_ok == 1
+    assert producer.metrics.publish_duration_ms_last >= 50
+    assert producer.metrics.publish_duration_ms_max >= 50
+    assert (
+        producer.metrics.publish_duration_ms_total
+        == producer.metrics.publish_duration_ms_last
+    )
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
 async def test_best_effort_failure_sends_to_dlq_no_crash() -> None:
     client = _Client(fail_times=99, fail_primary_only=True)
     producer = SqsPersistenceTransportProducer(

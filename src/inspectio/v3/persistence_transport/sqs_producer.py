@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import random
+import time
 from collections.abc import Awaitable, Callable, Sequence
 from typing import Any, Literal
 
@@ -96,6 +97,7 @@ class SqsPersistenceTransportProducer(PersistenceTransportProducer):
 
         for attempt in range(self._max_attempts):
             try:
+                publish_started = time.perf_counter()
                 if len(payload_entries) == 1:
                     await self._client.send_message(
                         QueueUrl=self._queue_url,
@@ -110,6 +112,8 @@ class SqsPersistenceTransportProducer(PersistenceTransportProducer):
                         raise PersistenceTransportPublishError(
                             f"send_message_batch failed entries: {resp['Failed']!r}",
                         )
+                publish_ms = int((time.perf_counter() - publish_started) * 1000)
+                self.metrics.observe_publish_duration(duration_ms=publish_ms)
                 self.metrics.published_ok += len(events)
                 return
             except Exception as exc:  # noqa: BLE001

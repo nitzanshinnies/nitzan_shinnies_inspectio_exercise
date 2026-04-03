@@ -233,6 +233,17 @@ async def amain() -> None:
             queue_url,
             settings.writer_shard_id,
         )
+
+        async def receive_many_timed() -> list[PersistenceEventV1]:
+            recv_started = time.perf_counter()
+            batch = await consumer.receive_many(
+                max_events=settings.writer_receive_max_events,
+            )
+            writer.metrics.observe_receive_many_duration(
+                duration_ms=int((time.perf_counter() - recv_started) * 1000),
+            )
+            return batch
+
         last_snapshot_ms = clock_ms()
         queue_age_sample = QueueOldestAgeSample()
         queue_age_sample_interval_ms = (
@@ -286,9 +297,7 @@ async def amain() -> None:
         if not settings.writer_pipeline_enable:
             writer.metrics.pipeline_mode = "legacy"
             while True:
-                events = await consumer.receive_many(
-                    max_events=settings.writer_receive_max_events
-                )
+                events = await receive_many_timed()
                 now_ms = clock_ms()
                 queue_age_sample = await _maybe_refresh_queue_oldest_age(
                     consumer=consumer,
@@ -345,9 +354,7 @@ async def amain() -> None:
         async def _receive_ingest_loop() -> None:
             while True:
                 writer.metrics.observe_receive_loop_iteration()
-                events = await consumer.receive_many(
-                    max_events=settings.writer_receive_max_events
-                )
+                events = await receive_many_timed()
                 now_ms = clock_ms()
                 queue_age_sample_local = await _maybe_refresh_queue_oldest_age(
                     consumer=consumer,

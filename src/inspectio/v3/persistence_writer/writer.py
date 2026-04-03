@@ -175,14 +175,18 @@ class BufferedPersistenceWriter:
 
         for attempt in range(self._write_max_attempts):
             current_operation = "s3_put"
+            s3_segment_put_ms = 0
+            checkpoint_put_ms = 0
             try:
                 # Contract: segment object must be durable before checkpoint advance.
+                t_seg = time.perf_counter()
                 await self._store.put_bytes(
                     key=object_key,
                     data=payload,
                     content_type=SEGMENT_CONTENT_TYPE,
                     content_encoding=SEGMENT_CONTENT_ENCODING,
                 )
+                s3_segment_put_ms = int((time.perf_counter() - t_seg) * 1000)
                 should_write_checkpoint = (
                     self._flushes_since_checkpoint.get(shard, 0) + 1
                     >= self._checkpoint_every_n_flushes
@@ -199,10 +203,12 @@ class BufferedPersistenceWriter:
                         segment_object_key=object_key,
                     )
                     current_operation = "checkpoint_put"
+                    t_cp = time.perf_counter()
                     await self._store.put_json(
                         key=checkpoint_key,
                         data=checkpoint.model_dump(mode="json", by_alias=True),
                     )
+                    checkpoint_put_ms = int((time.perf_counter() - t_cp) * 1000)
                 self.metrics.events_flushed += len(filtered)
                 self.metrics.segments_written += 1
                 if should_write_checkpoint:
@@ -249,6 +255,8 @@ class BufferedPersistenceWriter:
                     buffered_events=0,
                     oldest_buffer_age_ms=oldest_buffer_age_ms,
                     now_ms=self._clock_ms(),
+                    s3_segment_put_duration_ms=s3_segment_put_ms,
+                    checkpoint_put_duration_ms=checkpoint_put_ms,
                 )
                 # Ack all input events: committed+already-committed.
                 return ordered

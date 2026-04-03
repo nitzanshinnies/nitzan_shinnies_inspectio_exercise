@@ -4,7 +4,8 @@
 
 For agent-executable work after recovery, start at:
 
-- **`plans/v3_phases/P12_9_AI_SE_HANDOFF_INDEX.md`** — master index, execution order, promotion gates, links to Plans A–D.
+- **`plans/v3_phases/P12_9_AI_SE_HANDOFF_INDEX.md`** — master index, execution order, promotion gates, links to Plans A–D; **default branch** vs **this file’s frozen Git branch** are reconciled there.
+- **`plans/v3_phases/P12_9_SE_THROUGHPUT_AND_BACKUP_FIX_SPEC.md`** — ordered SE fix contract (tuning → gates; Plan B only if approved).
 
 ## Goal
 
@@ -19,33 +20,56 @@ This file captures:
 
 ---
 
+## Frozen handoff state — 2026-04-03 (saved before host reboot)
+
+Use this block right after reboot; cluster/AWS may differ until you re-check.
+
+### Git (local)
+
+- **Repo:** `/Users/nitzan/Documents/antigravity_ws/nitzan_shinnies_inspectio_exercise`
+- **Branch:** `feat/p12-9-ai-se-plan-d-eks-benchmark`
+- **HEAD:** `a983530` (there are **uncommitted** changes on top — run `git status`)
+
+**Modified (tracked):**
+
+- `plans/v3_phases/P12_9_AI_SE_HANDOFF_INDEX.md`
+- `plans/v3_phases/P12_9_SESSION_RECOVERY_PLAN.md` (this file)
+- `src/inspectio/v3/persistence_transport/metrics.py` — publish duration metrics
+- `src/inspectio/v3/persistence_transport/sqs_producer.py` — wall time per successful SQS publish
+- `src/inspectio/v3/persistence_writer/main.py` — `receive_many` wall-time observation
+- `src/inspectio/v3/persistence_writer/metrics.py` — receive / S3 segment / checkpoint timing in `writer_snapshot`
+- `src/inspectio/v3/persistence_writer/writer.py` — split S3 segment vs checkpoint `perf_counter` timings
+- `tests/unit/test_v3_persistence_transport_sqs_producer.py` — duration metric test
+
+**Untracked / new:**
+
+- `plans/v3_phases/P12_9_EKS_SHUTDOWN_AND_THROUGHPUT_IMPROVEMENT_PLAN.md`
+- `plans/v3_phases/P12_9_SE_THROUGHPUT_AND_BACKUP_FIX_SPEC.md`
+- `plans/v3_phases/artifacts/p12_9/iter-7/` (EKS iter-7 benchmark bundle)
+- `plans/v3_phases/artifacts/p12_9/writer-metrics-20260403/` (writer `writer_snapshot` extract + summaries)
+- `plans/v3_phases/artifacts/p12_9/iter-5/on-allpods-attempt5.log`, `on_job_status_attempt5.json`
+
+**Resume:** `git status` → commit and push when ready, or stash if switching branches.
+
+### EKS (last known before reboot — re-verify)
+
+- **Context:** `tzanshinnies@nitzan-inspectio.us-east-1.eksctl.io`
+- **Last image rolled to app workloads:** `194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:p12-9-writer-metrics-20260403033555`
+- **ConfigMap:** `INSPECTIO_V3_PERSIST_EMIT_ENABLED` was **true**; writer shards **1/1**
+- **Nodegroup `ng-main`:** was scaled **up** for runs (e.g. **16** nodes) — **not** auto-scaled down here; confirm cost after reboot (`eksctl get nodegroup …`)
+- **Cost pause:** `eksctl scale nodegroup --cluster nitzan-inspectio --region us-east-1 --name ng-main --nodes 0 --nodes-min 0` when idle
+
+### Docs index
+
+- Shutdown + architecture diagram + improvement phases: `P12_9_EKS_SHUTDOWN_AND_THROUGHPUT_IMPROVEMENT_PLAN.md`
+- SE fix contract: `P12_9_SE_THROUGHPUT_AND_BACKUP_FIX_SPEC.md`
+- Timing findings + AI SE persistence perf phases: `P12_9_TIMING_FINDINGS_AND_AI_SE_PERSISTENCE_PERF_PLAN.md`
+
+---
+
 ## Current Git/Workspace State
 
-- Repo path: `/Users/nitzan/Documents/antigravity_ws/nitzan_shinnies_inspectio_exercise`
-- Branch: `feat/v3-p12-9-tuning-iter-6-writer-pipeline`
-- Latest commits before uncommitted work:
-  - `b1345fd` `feat(v3): implement P12.9 WS3 iteration 5 flush cadence tuning`
-  - `cbff982` `feat(v3): execute P12.9 WS3 iteration 4 checkpoint cadence run`
-  - `903b0e3` `fix(v3): enforce WS3.1 rerun measurement hygiene protocol`
-
-### Uncommitted modified files
-
-- `scripts/v3_sustained_admit.py`
-- `src/inspectio/v3/persistence_writer/main.py`
-- `src/inspectio/v3/persistence_writer/metrics.py`
-- `src/inspectio/v3/settings.py`
-- `tests/integration/test_v3_persistence_writer_fake_flow.py`
-- `tests/unit/test_v3_persistence_writer_main_observability.py`
-- `tests/unit/test_v3_settings_persistence_writer.py`
-
-### Uncommitted new files
-
-- `tests/unit/test_v3_sustained_admit.py`
-- `plans/v3_phases/P12_9_WS3_4_WRITER_PIPELINE_REPAIR_SPEC.md`
-- `plans/v3_phases/P12_9_ITER6_TEST_EXECUTION_SPEC.md`
-- `plans/v3_phases/artifacts/p12_9/iter-6/` (multiple files)
-- `plans/v3_phases/artifacts/p12_9/iter-5/on-allpods-attempt5.log`
-- `plans/v3_phases/artifacts/p12_9/iter-5/on_job_status_attempt5.json`
+Same as **Frozen handoff state — 2026-04-03** above; that section is authoritative until you update this file again.
 
 ---
 
@@ -112,7 +136,9 @@ The harness resilience fix above is intended to resolve this failure mode.
 
 Run these after reboot to resume immediately:
 
-1. Open workspace and verify branch/worktree:
+0. Read **Frozen handoff state — 2026-04-03** at the top of this file for branch, ECR tag, and artifact paths.
+
+1. Open workspace and verify branch/worktree (expected branch: `feat/p12-9-ai-se-plan-d-eks-benchmark` until you change it):
 
 ```bash
 cd "/Users/nitzan/Documents/antigravity_ws/nitzan_shinnies_inspectio_exercise"
@@ -120,12 +146,14 @@ git rev-parse --abbrev-ref HEAD
 git status --short
 ```
 
-2. Re-run local validation:
+2. Re-run local validation (extend if you touch more modules):
 
 ```bash
 pytest -q \
   tests/unit/test_v3_sustained_admit.py \
+  tests/unit/test_v3_persistence_writer.py \
   tests/unit/test_v3_persistence_writer_main_observability.py \
+  tests/unit/test_v3_persistence_transport_sqs_producer.py \
   tests/integration/test_v3_persistence_writer_fake_flow.py \
   tests/unit/test_v3_settings_persistence_writer.py
 ```

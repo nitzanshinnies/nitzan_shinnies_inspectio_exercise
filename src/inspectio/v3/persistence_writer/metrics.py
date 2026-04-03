@@ -39,6 +39,10 @@ class PersistenceWriterMetrics:
     flush_loop_iterations_total: int = 0
     flush_loop_noop_total: int = 0
     receive_loop_iterations_total: int = 0
+    receive_many_calls: int = 0
+    receive_many_duration_ms_last: int = 0
+    receive_many_duration_ms_max: int = 0
+    receive_many_duration_ms_total: int = 0
     pipeline_mode: str = "legacy"
     shard: dict[int, PersistenceWriterShardMetrics] = field(default_factory=dict)
 
@@ -68,6 +72,8 @@ class PersistenceWriterMetrics:
         buffered_events: int,
         oldest_buffer_age_ms: int,
         now_ms: int,
+        s3_segment_put_duration_ms: int = 0,
+        checkpoint_put_duration_ms: int = 0,
     ) -> None:
         shard_metrics = self._for_shard(shard, now_ms=now_ms)
         shard_metrics.flush_batches += 1
@@ -79,6 +85,20 @@ class PersistenceWriterMetrics:
         shard_metrics.flush_duration_ms_max = max(
             shard_metrics.flush_duration_ms_max, duration_ms
         )
+        seg_ms = max(0, s3_segment_put_duration_ms)
+        shard_metrics.s3_segment_put_duration_ms_last = seg_ms
+        shard_metrics.s3_segment_put_duration_ms_total += seg_ms
+        shard_metrics.s3_segment_put_duration_ms_max = max(
+            shard_metrics.s3_segment_put_duration_ms_max, seg_ms
+        )
+        cp_ms = max(0, checkpoint_put_duration_ms)
+        if cp_ms > 0:
+            shard_metrics.checkpoint_put_duration_ms_last = cp_ms
+            shard_metrics.checkpoint_put_batches += 1
+            shard_metrics.checkpoint_put_duration_ms_total += cp_ms
+            shard_metrics.checkpoint_put_duration_ms_max = max(
+                shard_metrics.checkpoint_put_duration_ms_max, cp_ms
+            )
         shard_metrics.lag_to_durable_commit_ms_last = lag_ms
         shard_metrics.lag_to_durable_commit_ms_max = max(
             shard_metrics.lag_to_durable_commit_ms_max, lag_ms
@@ -120,6 +140,13 @@ class PersistenceWriterMetrics:
 
     def observe_receive_loop_iteration(self) -> None:
         self.receive_loop_iterations_total += 1
+
+    def observe_receive_many_duration(self, *, duration_ms: int) -> None:
+        safe = max(0, duration_ms)
+        self.receive_many_calls += 1
+        self.receive_many_duration_ms_last = safe
+        self.receive_many_duration_ms_max = max(self.receive_many_duration_ms_max, safe)
+        self.receive_many_duration_ms_total += safe
 
     def observe_ack_batch(
         self, *, shard: int, events: int, latency_ms: int, now_ms: int
@@ -219,9 +246,26 @@ class PersistenceWriterMetrics:
                 / max(1, shard_metrics.flush_batches),
                 3,
             )
+            item["avg_s3_segment_put_ms"] = round(
+                shard_metrics.s3_segment_put_duration_ms_total
+                / max(1, shard_metrics.flush_batches),
+                3,
+            )
+            item["avg_checkpoint_put_ms"] = round(
+                shard_metrics.checkpoint_put_duration_ms_total
+                / max(1, shard_metrics.checkpoint_put_batches),
+                3,
+            )
             shard_snapshot[str(shard_id)] = item
         return {
             "snapshot_emitted_at_ms": now_ms,
+            "receive_many_calls": self.receive_many_calls,
+            "receive_many_duration_ms_last": self.receive_many_duration_ms_last,
+            "receive_many_duration_ms_max": self.receive_many_duration_ms_max,
+            "avg_receive_many_ms": round(
+                self.receive_many_duration_ms_total / max(1, self.receive_many_calls),
+                3,
+            ),
             "polls_total": self.polls_total,
             "polls_idle": self.polls_idle,
             "queue_polling_idle_ratio": round(idle_ratio, 6),
@@ -289,3 +333,10 @@ class PersistenceWriterShardMetrics:
     buffered_events: int = 0
     oldest_buffer_age_ms: int = 0
     buffered_events_high_water_mark: int = 0
+    s3_segment_put_duration_ms_last: int = 0
+    s3_segment_put_duration_ms_total: int = 0
+    s3_segment_put_duration_ms_max: int = 0
+    checkpoint_put_duration_ms_last: int = 0
+    checkpoint_put_duration_ms_total: int = 0
+    checkpoint_put_duration_ms_max: int = 0
+    checkpoint_put_batches: int = 0

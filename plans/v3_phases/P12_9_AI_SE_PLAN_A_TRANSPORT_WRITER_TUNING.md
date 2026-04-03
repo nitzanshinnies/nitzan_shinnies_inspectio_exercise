@@ -97,21 +97,26 @@ Run **A.1** (ack concurrency) **before** **A.2** (flush sweep): fewer moving par
 
 ## Tests (local, before each push)
 
-```bash
-pytest -q \
-  tests/unit/test_v3_settings_persistence_writer.py \
-  tests/unit/test_v3_persistence_writer_main_observability.py \
-  tests/integration/test_v3_persistence_writer_fake_flow.py
-```
+**Minimum** pytest set matches **`P12_9_SE_THROUGHPUT_AND_BACKUP_FIX_SPEC.md`** §Tests (writer, settings, fake flow, fault injection, **`test_v3_persistence_transport_sqs_producer`** if producer code paths change, sustained admit).
 
-If touching **`scripts/v3_sustained_admit.py`**, also run **`tests/unit/test_v3_sustained_admit.py`**.
+```bash
+cd nitzan_shinnies_inspectio_exercise
+pytest -q \
+  tests/unit/test_v3_persistence_writer.py \
+  tests/unit/test_v3_persistence_writer_main_observability.py \
+  tests/unit/test_v3_settings_persistence_writer.py \
+  tests/integration/test_v3_persistence_writer_fake_flow.py \
+  tests/integration/test_v3_persistence_fault_injection.py \
+  tests/unit/test_v3_persistence_transport_sqs_producer.py \
+  tests/unit/test_v3_sustained_admit.py
+```
 
 Extend tests if bounds or env aliases change.
 
 ## Definition of done (Plan A)
 
 - At least one **hygiene-valid** full A/B run in a **new** `iter-N` with **R** and admit ratio vs **prior** `iter-*`.
-- **PROMOTE** only if all gates in **`P12_9_AI_SE_HANDOFF_INDEX.md`** hold; else **NO-GO** with rollback note.
+- **True promotion** only if **all** requirements in **`P12_9_AI_SE_HANDOFF_INDEX.md`** hold, including **manual gate 2** (**(R − 44.84) ≥ 5** — hygiene script **`decision`** is **gate 1 only**). Otherwise **NO-GO** with rollback note.
 
 ## References
 

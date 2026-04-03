@@ -1,0 +1,76 @@
+{
+  "per_writer_deploy_shard": {
+    "0": {
+      "snapshots": 9,
+      "max_s3_segment_put_ms": 0,
+      "max_checkpoint_put_ms": 0,
+      "max_flush_wall_ms": 0,
+      "max_ack_ms": 2333,
+      "max_receive_many_ms": 20311,
+      "sum_flush_batches": 0
+    },
+    "1": {
+      "snapshots": 7,
+      "max_s3_segment_put_ms": 0,
+      "max_checkpoint_put_ms": 0,
+      "max_flush_wall_ms": 0,
+      "max_ack_ms": 1496,
+      "max_receive_many_ms": 20136,
+      "sum_flush_batches": 0
+    },
+    "2": {
+      "snapshots": 7,
+      "max_s3_segment_put_ms": 0,
+      "max_checkpoint_put_ms": 0,
+      "max_flush_wall_ms": 0,
+      "max_ack_ms": 2462,
+      "max_receive_many_ms": 20143,
+      "sum_flush_batches": 0
+    },
+    "3": {
+      "snapshots": 7,
+      "max_s3_segment_put_ms": 0,
+      "max_checkpoint_put_ms": 0,
+      "max_flush_wall_ms": 0,
+      "max_ack_ms": 2496,
+      "max_receive_many_ms": 20245,
+      "sum_flush_batches": 0
+    },
+    "4": {
+      "snapshots": 7,
+      "max_s3_segment_put_ms": 109,
+      "max_checkpoint_put_ms": 51,
+      "max_flush_wall_ms": 148,
+      "max_ack_ms": 2174,
+      "max_receive_many_ms": 12198,
+      "sum_flush_batches": 0
+    },
+    "5": {
+      "snapshots": 7,
+      "max_s3_segment_put_ms": 0,
+      "max_checkpoint_put_ms": 0,
+      "max_flush_wall_ms": 0,
+      "max_ack_ms": 2333,
+      "max_receive_many_ms": 20656,
+      "sum_flush_batches": 0
+    },
+    "6": {
+      "snapshots": 7,
+      "max_s3_segment_put_ms": 0,
+      "max_checkpoint_put_ms": 0,
+      "max_flush_wall_ms": 0,
+      "max_ack_ms": 2270,
+      "max_receive_many_ms": 20374,
+      "sum_flush_batches": 0
+    },
+    "7": {
+      "snapshots": 8,
+      "max_s3_segment_put_ms": 0,
+      "max_checkpoint_put_ms": 0,
+      "max_flush_wall_ms": 0,
+      "max_ack_ms": 2635,
+      "max_receive_many_ms": 20148,
+      "sum_flush_batches": 0
+    }
+  }
+}
