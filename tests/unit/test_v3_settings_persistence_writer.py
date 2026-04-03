@@ -18,7 +18,7 @@ def test_writer_settings_minimal_required_fields() -> None:
     assert s.writer_flush_max_events == 500
     assert s.writer_flush_min_batch_events == 1
     assert s.persistence_checkpoint_every_n_flushes == 1
-    assert s.persistence_ack_delete_max_concurrency == 2
+    assert s.persistence_ack_delete_max_concurrency == 6
     assert s.writer_pipeline_enable is True
     assert s.writer_ack_queue_max_events == 20_000
     assert s.writer_flush_loop_sleep_ms == 10

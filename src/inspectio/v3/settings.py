@@ -459,7 +459,7 @@ class V3PersistenceWriterSettings(BaseSettings):
         validation_alias="INSPECTIO_V3_WRITER_RECEIVE_MAX_EVENTS",
     )
     persistence_ack_delete_max_concurrency: int = Field(
-        default=2,
+        default=6,
         ge=1,
         le=8,
         validation_alias="INSPECTIO_V3_PERSISTENCE_ACK_DELETE_MAX_CONCURRENCY",
