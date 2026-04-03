@@ -52,4 +52,4 @@ An **immediate** post-run hygiene attempt with the same parameters once reported
 
 This directory: timestamps, job logs/JSON, `sustain_summaries.json`, `cw_metrics.json`, `measurement_manifest.json`, `writer_snapshot_extract.json`, writer shard logs, CM/deploy snapshots.
 
-**Follow-up:** **`iter-11-flush-min-batch-48`** lowered flush min batch **64→48** only — **R ≈ 52.01%** (NO-GO vs 52.66%); cluster reverted to **64**. See `../iter-11-flush-min-batch-48/ITER11_FLUSH_MIN_BATCH_RESULTS.md`.
+**Follow-up:** **`iter-11-flush-min-batch-48`** lowered flush min batch **64→48** only — **R ≈ 52.01%** (NO-GO vs 52.66%); cluster reverted to **64**. See `../iter-11-flush-min-batch-48/ITER11_FLUSH_MIN_BATCH_RESULTS.md`. **`iter-12-flush-min-batch-80`** raised **64→80** — **R ≈ 59.06%** (PROMOTE); repo CM and live cluster at **80**. See `../iter-12-flush-min-batch-80/ITER12_FLUSH_MIN_BATCH_80_RESULTS.md`.

@@ -35,7 +35,7 @@ Hygiene: `--preload-sec 60 --tail-sec 120` (spec defaults).
 
 ## Next experiment (optional)
 
-Plan A.2: try **80** (fewer, larger batches) as a **separate** `iter-N` if you want to explore the other direction — do **not** stack with other knob changes.
+Done as **`iter-12-flush-min-batch-80`** — see `../iter-12-flush-min-batch-80/ITER12_FLUSH_MIN_BATCH_80_RESULTS.md`.
 
 ## Artifacts
 
