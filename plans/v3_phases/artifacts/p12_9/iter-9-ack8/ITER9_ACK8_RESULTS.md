@@ -48,3 +48,5 @@
 | iter-9 | 8 | 53.35 | PROMOTE |
 
 Artifacts in this folder; repo template and `settings.py` default updated to **8** in the branch that commits this bundle.
+
+**Follow-up:** **`iter-10-maxinflight-10240`** raised **`INSPECTIO_V3_PERSIST_TRANSPORT_MAX_INFLIGHT`** to **10240** only; **R ≈ 55.95%** (hygiene-valid) — see `../iter-10-maxinflight-10240/ITER10_MAXINFLIGHT_RESULTS.md`.

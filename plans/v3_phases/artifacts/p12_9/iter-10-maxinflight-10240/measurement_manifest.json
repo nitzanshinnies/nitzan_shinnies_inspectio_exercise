@@ -1,0 +1,56 @@
+{
+  "benchmark_shape": {
+    "batch": 200,
+    "concurrency": 120,
+    "duration_sec": 240
+  },
+  "cluster_context": "tzanshinnies@nitzan-inspectio.us-east-1.eksctl.io",
+  "image_under_test": "194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:p12-9-plan-a-perf-20260403040525",
+  "job_validity": {
+    "off": {
+      "failed": 0,
+      "succeeded": 1,
+      "valid_single_attempt": true
+    },
+    "on": {
+      "failed": 0,
+      "succeeded": 1,
+      "valid_single_attempt": true
+    }
+  },
+  "measurement_valid": true,
+  "namespace": "inspectio",
+  "on_window_source": "artifact_on_start_txt_and_on_end_txt",
+  "profile": "iter-3-rerun",
+  "query_policy": {
+    "metric": "AWS/SQS NumberOfMessagesDeleted",
+    "period_sec": 60,
+    "preload_sec": 60,
+    "stat": "Sum",
+    "tail_sec": 120
+  },
+  "windows": {
+    "off": {
+      "active_periods": 6,
+      "combined_avg_rps": 4378.729166666667,
+      "combined_peak_rps": 8685.6,
+      "datapoints": 8,
+      "period_sec": 60,
+      "query_end_utc": "2026-04-03T04:51:00Z",
+      "query_start_utc": "2026-04-03T04:43:47Z",
+      "window_end_utc": "2026-04-03T04:49:00Z",
+      "window_start_utc": "2026-04-03T04:44:47Z"
+    },
+    "on": {
+      "active_periods": 5,
+      "combined_avg_rps": 2450.0,
+      "combined_peak_rps": 4269.483333333334,
+      "datapoints": 7,
+      "period_sec": 60,
+      "query_end_utc": "2026-04-03T04:56:58Z",
+      "query_start_utc": "2026-04-03T04:49:41Z",
+      "window_end_utc": "2026-04-03T04:54:58Z",
+      "window_start_utc": "2026-04-03T04:50:41Z"
+    }
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "completion_ratio_percent_on_over_off": 55.952307318999516,
+  "datapoint_count_difference": 1,
+  "decision": "PROMOTE",
+  "decision_threshold_percent": 52.66,
+  "job_validity": {
+    "off": {
+      "failed": 0,
+      "succeeded": 1,
+      "valid_single_attempt": true
+    },
+    "on": {
+      "failed": 0,
+      "succeeded": 1,
+      "valid_single_attempt": true
+    }
+  },
+  "measurement_valid": true,
+  "metric": "AWS/SQS NumberOfMessagesDeleted",
+  "off": {
+    "active_periods": 6,
+    "combined_avg_rps": 4378.729166666667,
+    "combined_peak_rps": 8685.6,
+    "datapoints": 8,
+    "period_sec": 60,
+    "query_end_utc": "2026-04-03T04:51:00Z",
+    "query_start_utc": "2026-04-03T04:43:47Z",
+    "window_end_utc": "2026-04-03T04:49:00Z",
+    "window_start_utc": "2026-04-03T04:44:47Z"
+  },
+  "on": {
+    "active_periods": 5,
+    "combined_avg_rps": 2450.0,
+    "combined_peak_rps": 4269.483333333334,
+    "datapoints": 7,
+    "period_sec": 60,
+    "query_end_utc": "2026-04-03T04:56:58Z",
+    "query_start_utc": "2026-04-03T04:49:41Z",
+    "window_end_utc": "2026-04-03T04:54:58Z",
+    "window_start_utc": "2026-04-03T04:50:41Z"
+  },
+  "queues": [
+    "inspectio-v3-send-0",
+    "inspectio-v3-send-1",
+    "inspectio-v3-send-2",
+    "inspectio-v3-send-3",
+    "inspectio-v3-send-4",
+    "inspectio-v3-send-5",
+    "inspectio-v3-send-6",
+    "inspectio-v3-send-7"
+  ],
+  "validity_checks": {
+    "datapoint_count_diff_lte_1": true,
+    "off_active_periods_gte_5": true,
+    "off_single_success_zero_failed": true,
+    "on_active_periods_gte_5": true,
+    "on_single_success_zero_failed": true,
+    "period_is_60s": true,
+    "stat_is_sum": true
+  }
+}
