@@ -57,7 +57,9 @@ Metric `AWS/SQS NumberOfMessagesDeleted`, **Sum**, **60s**, summed over `inspect
 
 ## Outcome
 
-**NO-GO** on **gate 1** despite Plan A tuning bundle. Compared to **iter-7** (`ITER7_RESULTS.md`), this run shows higher absolute completion RPS (different window/cluster conditions) but a **lower** on/off completion ratio — continue tuning (e.g. ack **8**, emitter/worker knobs) or investigate admit transients (**5** on leg).
+**NO-GO** on **gate 1** despite Plan A tuning bundle. Compared to **iter-7** (`ITER7_RESULTS.md`), this run shows higher absolute completion RPS (different window/cluster conditions) but a **lower** on/off completion ratio.
+
+**Follow-up:** **`iter-9-ack8`** raised **`INSPECTIO_V3_PERSISTENCE_ACK_DELETE_MAX_CONCURRENCY`** to **8** only; **R ≈ 53.35%** → **PROMOTE** on both gates (see `../iter-9-ack8/ITER9_ACK8_RESULTS.md`).
 
 ## Artifacts
 

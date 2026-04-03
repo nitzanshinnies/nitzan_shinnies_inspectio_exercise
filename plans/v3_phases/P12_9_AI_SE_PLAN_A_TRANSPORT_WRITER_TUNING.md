@@ -18,13 +18,13 @@ Improve **persist-on / persist-off completion ratio** and **admit RPS** using **
 
 ## Evidence-driven hypotheses (from iter-6)
 
-1. **`ack_queue_depth` hundreds** with **`ack_latency_ms` ~1–2s** → **SQS `DeleteMessageBatch`** throughput (low **`persistence_ack_delete_max_concurrency`**) may throttle the decoupled ack path. Repo defaults target **`6`** in **`settings.py`** / k8s template; sweep **`6 → 8`** on EKS if needed.
+1. **`ack_queue_depth` hundreds** with **`ack_latency_ms` ~1–2s** → **SQS `DeleteMessageBatch`** throughput (low **`persistence_ack_delete_max_concurrency`**) may throttle the decoupled ack path. Repo defaults target **`8`** in **`settings.py`** / k8s template after **iter-9-ack8**; sweep **down** only with evidence.
 2. **Flush min batch 64 + interval 2000ms** → batching / timer tradeoff vs completion RPS (direction **not** guaranteed; measure).
 3. **Emitter** `max_inflight` / batch sizes on worker → may limit how fast events enter transport under load.
 
 ## ConfigMap key reality check
 
-- **`INSPECTIO_V3_PERSISTENCE_ACK_DELETE_MAX_CONCURRENCY`** is defined in **`deploy/kubernetes/configmap.yaml`** (template default **`"6"`**). If the **live** EKS ConfigMap **omits** this key, the process uses **`settings.py` default (`6`)**—you must **`kubectl patch`** or **`apply`** so the key is **present** when tuning.
+- **`INSPECTIO_V3_PERSISTENCE_ACK_DELETE_MAX_CONCURRENCY`** is defined in **`deploy/kubernetes/configmap.yaml`** (template default **`"8"`**). If the **live** EKS ConfigMap **omits** this key, the process uses **`settings.py` default (`8`)**—you must **`kubectl patch`** or **`apply`** so the key is **present** when tuning.
 - Valid range **1..8** enforced in **`SqsPersistenceTransportConsumer`**.
 
 ## Task order (blast radius)

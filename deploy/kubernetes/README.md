@@ -156,7 +156,7 @@ Writer consumes one persistence transport shard queue and writes compressed segm
 - **`INSPECTIO_V3_WRITER_PIPELINE_ENABLE`** (`true` for decoupled `decoupled_v1` writer path)
 - **`INSPECTIO_V3_WRITER_RECEIVE_LOOP_PARALLELISM`** (`1..4`, template uses **`2`** for parallel long-poll receive loops per shard)
 - **`INSPECTIO_V3_WRITER_FLUSH_LOOP_SLEEP_MS`** (milliseconds between flush-loop iterations when idle-ish; default **`10`**)
-- **`INSPECTIO_V3_PERSISTENCE_ACK_DELETE_MAX_CONCURRENCY`** (`1..8`, bounded SQS delete parallelism; template default **`6`** — raise toward **`8`** only after EKS measurement)
+- **`INSPECTIO_V3_PERSISTENCE_ACK_DELETE_MAX_CONCURRENCY`** (`1..8`, bounded SQS delete parallelism; template default **`8`** after **iter-9-ack8** EKS gate pass — lower only if throttling or cost requires)
 - **`INSPECTIO_V3_WRITER_FLUSH_MAX_EVENTS`**
 - **`INSPECTIO_V3_PERSISTENCE_WRITER_FLUSH_MIN_BATCH_EVENTS`** (`1..FLUSH_MAX`, interval-trigger occupancy floor)
 - **`INSPECTIO_V3_PERSISTENCE_WRITER_FLUSH_INTERVAL_MS`** (legacy alias: `INSPECTIO_V3_WRITER_FLUSH_INTERVAL_MS`; k8s template **`1800`** ms — validate vs completion gates; raising frequency can increase S3 PUTs)

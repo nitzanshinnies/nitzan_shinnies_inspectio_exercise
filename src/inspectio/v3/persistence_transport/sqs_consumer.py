@@ -18,7 +18,7 @@ class SqsPersistenceTransportConsumer(PersistenceTransportConsumer):
         queue_url: str,
         wait_seconds: int,
         receive_max_events: int,
-        ack_delete_max_concurrency: int = 6,
+        ack_delete_max_concurrency: int = 8,
     ) -> None:
         self._client = client
         self._queue_url = queue_url
