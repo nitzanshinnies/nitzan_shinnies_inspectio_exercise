@@ -53,8 +53,8 @@ Run **A.1** (ack concurrency) **before** **A.2** (flush sweep): fewer moving par
 
 **Knobs:**
 
-- **`INSPECTIO_V3_PERSISTENCE_WRITER_FLUSH_MIN_BATCH_EVENTS`** (iter-6 snapshot: **64**)
-- **`INSPECTIO_V3_PERSISTENCE_WRITER_FLUSH_INTERVAL_MS`** (iter-6 snapshot: **2000**)
+- **`INSPECTIO_V3_PERSISTENCE_WRITER_FLUSH_MIN_BATCH_EVENTS`** (iter-6 snapshot: **64**; k8s template unchanged)
+- **`INSPECTIO_V3_PERSISTENCE_WRITER_FLUSH_INTERVAL_MS`** (iter-6 snapshot: **2000**; k8s template now **`1800`** for slightly faster timer-driven flush — **re-validate completion RPS** on EKS; smaller batches increase S3 PUT count)
 
 **Steps:**
 
