@@ -84,7 +84,7 @@ Until explicitly renegotiated, **completion-ratio gates** (report **both** in `I
 
 ## Runbooks (after Plan C)
 
-- `plans/v3_phases/P12_9_OBSERVABILITY_RUNBOOK.md` — create per **Plan C** Task C.4; link stays valid once the file exists.
+- `plans/v3_phases/P12_9_OBSERVABILITY_RUNBOOK.md` — SE triage (completion vs backup vs admit); extend per **Plan C** when new metrics/scripts land.
 
 ---
 
