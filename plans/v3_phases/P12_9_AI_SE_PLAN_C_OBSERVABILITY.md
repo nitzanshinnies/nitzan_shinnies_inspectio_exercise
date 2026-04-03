@@ -55,13 +55,9 @@ When adding metrics in code, **update this table** in the same PR (no orphan cou
 
 ## Task C.4 — Runbook for SE triage
 
-**Do not** edit only under `artifacts/` (generated evidence). Add **`plans/v3_phases/P12_9_OBSERVABILITY_RUNBOOK.md`** with:
+**Do not** edit only under `artifacts/` (generated evidence). **`plans/v3_phases/P12_9_OBSERVABILITY_RUNBOOK.md`** is the canonical triage doc (symptom → layer → checks, gate inputs, `writer_snapshot` fields, example commands).
 
-- If **completion RPS** low and **send visible ≈ 0** → **worker / L2 / expander** path; persistence may not be the limiter.
-- If **persist-transport visible** high → **writer** ack depth, **S3 errors**, **ack delete concurrency**.
-- If **admit** low but **completion** healthy → **L1/L2** admission vs downstream mismatch.
-
-The index **`P12_9_AI_SE_HANDOFF_INDEX.md`** already reserves **`P12_9_OBSERVABILITY_RUNBOOK.md`** under **Runbooks**; no further index edit required once the file exists.
+The index **`P12_9_AI_SE_HANDOFF_INDEX.md`** links it under **Runbooks**; extend the runbook when new counters or scripts land (Task C.2 / C.3).
 
 ## Definition of done
 
