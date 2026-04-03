@@ -1,0 +1,35 @@
+# P12.3 writer workload: consumes persistence transport queue and writes S3 segments+checkpoints.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inspectio-persistence-writer
+  namespace: inspectio
+  labels:
+    app.kubernetes.io/name: inspectio-persistence-writer
+    app.kubernetes.io/part-of: inspectio-v3
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: inspectio-persistence-writer
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: inspectio-persistence-writer
+        app.kubernetes.io/part-of: inspectio-v3
+    spec:
+      serviceAccountName: inspectio-app
+      containers:
+        - name: persistence-writer
+          image: inspectio-v3:latest
+          imagePullPolicy: IfNotPresent
+          command: ["inspectio-v3-persistence-writer"]
+          env:
+            - name: INSPECTIO_V3_WRITER_SHARD_ID
+              value: "0"
+          envFrom:
+            - configMapRef:
+                name: inspectio-v3-config
+            - secretRef:
+                name: inspectio-v3-secrets
+                optional: true

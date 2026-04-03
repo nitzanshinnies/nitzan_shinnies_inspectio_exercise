@@ -1,0 +1,30 @@
+{
+  "metric": "AWS/SQS NumberOfMessagesDeleted",
+  "queues": [
+    "inspectio-v3-send-0",
+    "inspectio-v3-send-1",
+    "inspectio-v3-send-2",
+    "inspectio-v3-send-3",
+    "inspectio-v3-send-4",
+    "inspectio-v3-send-5",
+    "inspectio-v3-send-6",
+    "inspectio-v3-send-7"
+  ],
+  "off": {
+    "window_start_utc": "2026-04-01T08:59:27Z",
+    "window_end_utc": "2026-04-01T09:10:21Z",
+    "period_sec": 60,
+    "points": 11,
+    "combined_avg_rps": 11488.307575757575,
+    "combined_peak_rps": 14113.1
+  },
+  "on": {
+    "window_start_utc": "2026-04-01T09:11:25Z",
+    "window_end_utc": "2026-04-01T09:15:35Z",
+    "period_sec": 60,
+    "points": 4,
+    "combined_avg_rps": 6024.820833333333,
+    "combined_peak_rps": 7103.883333333333
+  },
+  "completion_ratio_percent_on_over_off": 52.44306694962454
+}

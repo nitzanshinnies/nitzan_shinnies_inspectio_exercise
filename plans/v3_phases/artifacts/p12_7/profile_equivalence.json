@@ -1,0 +1,70 @@
+{
+  "configmap_sha256": "b44f7af029479eeafb581857c70277eae1341b5e1f1e70f8a11a53cdf821de15",
+  "deployments": [
+    {
+      "name": "inspectio-api",
+      "replicas": 2,
+      "image": "194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:p12-7-fix-20260331163605"
+    },
+    {
+      "name": "inspectio-expander",
+      "replicas": 1,
+      "image": "194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:p12-7-fix-20260331163605"
+    },
+    {
+      "name": "inspectio-l1",
+      "replicas": 2,
+      "image": "194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:p12-7-fix-20260331163605"
+    },
+    {
+      "name": "inspectio-persistence-writer",
+      "replicas": 1,
+      "image": "194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:p12-7-fix-20260331163605"
+    },
+    {
+      "name": "inspectio-worker-shard-0",
+      "replicas": 1,
+      "image": "194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:p12-7-fix-20260331163605"
+    },
+    {
+      "name": "inspectio-worker-shard-1",
+      "replicas": 1,
+      "image": "194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:p12-7-fix-20260331163605"
+    },
+    {
+      "name": "inspectio-worker-shard-2",
+      "replicas": 1,
+      "image": "194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:p12-7-fix-20260331163605"
+    },
+    {
+      "name": "inspectio-worker-shard-3",
+      "replicas": 1,
+      "image": "194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:p12-7-fix-20260331163605"
+    },
+    {
+      "name": "inspectio-worker-shard-4",
+      "replicas": 1,
+      "image": "194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:p12-7-fix-20260331163605"
+    },
+    {
+      "name": "inspectio-worker-shard-5",
+      "replicas": 1,
+      "image": "194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:p12-7-fix-20260331163605"
+    },
+    {
+      "name": "inspectio-worker-shard-6",
+      "replicas": 1,
+      "image": "194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:p12-7-fix-20260331163605"
+    },
+    {
+      "name": "inspectio-worker-shard-7",
+      "replicas": 1,
+      "image": "194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:p12-7-fix-20260331163605"
+    },
+    {
+      "name": "redis",
+      "replicas": 1,
+      "image": "redis:7-alpine"
+    }
+  ]
+}

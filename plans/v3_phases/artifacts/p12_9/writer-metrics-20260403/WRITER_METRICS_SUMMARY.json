@@ -1,0 +1,166 @@
+{
+  "image": "194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:p12-9-writer-metrics-20260403033555",
+  "snapshot_lines_total": 59,
+  "last_snapshot_per_shard": {
+    "0": {
+      "receive_many_calls": 2427,
+      "receive_many_duration_ms_last": 88,
+      "receive_many_duration_ms_max": 20311,
+      "avg_receive_many_ms": 109.986,
+      "pipeline_mode": "decoupled_v1",
+      "shard_payload_0": {
+        "s3_segment_put_duration_ms_last": 0,
+        "s3_segment_put_duration_ms_max": 0,
+        "avg_s3_segment_put_ms": 0.0,
+        "checkpoint_put_duration_ms_last": 0,
+        "checkpoint_put_duration_ms_max": 0,
+        "avg_checkpoint_put_ms": 0.0,
+        "flush_duration_ms_last": 0,
+        "avg_flush_latency_ms": 0.0,
+        "ack_latency_ms_last": 1410,
+        "ack_latency_ms_max": 2333,
+        "lag_to_durable_commit_ms_last": 0
+      }
+    },
+    "1": {
+      "receive_many_calls": 4735,
+      "receive_many_duration_ms_last": 28,
+      "receive_many_duration_ms_max": 20136,
+      "avg_receive_many_ms": 43.561,
+      "pipeline_mode": "decoupled_v1",
+      "shard_payload_1": {
+        "s3_segment_put_duration_ms_last": 0,
+        "s3_segment_put_duration_ms_max": 0,
+        "avg_s3_segment_put_ms": 0.0,
+        "checkpoint_put_duration_ms_last": 0,
+        "checkpoint_put_duration_ms_max": 0,
+        "avg_checkpoint_put_ms": 0.0,
+        "flush_duration_ms_last": 0,
+        "avg_flush_latency_ms": 0.0,
+        "ack_latency_ms_last": 941,
+        "ack_latency_ms_max": 1496,
+        "lag_to_durable_commit_ms_last": 0
+      }
+    },
+    "2": {
+      "receive_many_calls": 2332,
+      "receive_many_duration_ms_last": 63,
+      "receive_many_duration_ms_max": 20143,
+      "avg_receive_many_ms": 88.851,
+      "pipeline_mode": "decoupled_v1",
+      "shard_payload_2": {
+        "s3_segment_put_duration_ms_last": 0,
+        "s3_segment_put_duration_ms_max": 0,
+        "avg_s3_segment_put_ms": 0.0,
+        "checkpoint_put_duration_ms_last": 0,
+        "checkpoint_put_duration_ms_max": 0,
+        "avg_checkpoint_put_ms": 0.0,
+        "flush_duration_ms_last": 0,
+        "avg_flush_latency_ms": 0.0,
+        "ack_latency_ms_last": 1298,
+        "ack_latency_ms_max": 2462,
+        "lag_to_durable_commit_ms_last": 0
+      }
+    },
+    "3": {
+      "receive_many_calls": 2629,
+      "receive_many_duration_ms_last": 43,
+      "receive_many_duration_ms_max": 20245,
+      "avg_receive_many_ms": 78.61,
+      "pipeline_mode": "decoupled_v1",
+      "shard_payload_3": {
+        "s3_segment_put_duration_ms_last": 0,
+        "s3_segment_put_duration_ms_max": 0,
+        "avg_s3_segment_put_ms": 0.0,
+        "checkpoint_put_duration_ms_last": 0,
+        "checkpoint_put_duration_ms_max": 0,
+        "avg_checkpoint_put_ms": 0.0,
+        "flush_duration_ms_last": 0,
+        "avg_flush_latency_ms": 0.0,
+        "ack_latency_ms_last": 1660,
+        "ack_latency_ms_max": 2496,
+        "lag_to_durable_commit_ms_last": 0
+      }
+    },
+    "4": {
+      "receive_many_calls": 6785,
+      "receive_many_duration_ms_last": 46,
+      "receive_many_duration_ms_max": 12198,
+      "avg_receive_many_ms": 30.179,
+      "pipeline_mode": "decoupled_v1",
+      "shard_payload_4": {
+        "s3_segment_put_duration_ms_last": 29,
+        "s3_segment_put_duration_ms_max": 109,
+        "avg_s3_segment_put_ms": 58.222,
+        "checkpoint_put_duration_ms_last": 28,
+        "checkpoint_put_duration_ms_max": 51,
+        "avg_checkpoint_put_ms": 34.0,
+        "flush_duration_ms_last": 58,
+        "avg_flush_latency_ms": 93.667,
+        "ack_latency_ms_last": 1476,
+        "ack_latency_ms_max": 2174,
+        "lag_to_durable_commit_ms_last": 447428
+      }
+    },
+    "5": {
+      "receive_many_calls": 2552,
+      "receive_many_duration_ms_last": 59,
+      "receive_many_duration_ms_max": 20656,
+      "avg_receive_many_ms": 81.008,
+      "pipeline_mode": "decoupled_v1",
+      "shard_payload_5": {
+        "s3_segment_put_duration_ms_last": 0,
+        "s3_segment_put_duration_ms_max": 0,
+        "avg_s3_segment_put_ms": 0.0,
+        "checkpoint_put_duration_ms_last": 0,
+        "checkpoint_put_duration_ms_max": 0,
+        "avg_checkpoint_put_ms": 0.0,
+        "flush_duration_ms_last": 0,
+        "avg_flush_latency_ms": 0.0,
+        "ack_latency_ms_last": 1206,
+        "ack_latency_ms_max": 2333,
+        "lag_to_durable_commit_ms_last": 0
+      }
+    },
+    "6": {
+      "receive_many_calls": 2260,
+      "receive_many_duration_ms_last": 69,
+      "receive_many_duration_ms_max": 20374,
+      "avg_receive_many_ms": 91.736,
+      "pipeline_mode": "decoupled_v1",
+      "shard_payload_6": {
+        "s3_segment_put_duration_ms_last": 0,
+        "s3_segment_put_duration_ms_max": 0,
+        "avg_s3_segment_put_ms": 0.0,
+        "checkpoint_put_duration_ms_last": 0,
+        "checkpoint_put_duration_ms_max": 0,
+        "avg_checkpoint_put_ms": 0.0,
+        "flush_duration_ms_last": 0,
+        "avg_flush_latency_ms": 0.0,
+        "ack_latency_ms_last": 1569,
+        "ack_latency_ms_max": 2270,
+        "lag_to_durable_commit_ms_last": 0
+      }
+    },
+    "7": {
+      "receive_many_calls": 2383,
+      "receive_many_duration_ms_last": 87,
+      "receive_many_duration_ms_max": 20148,
+      "avg_receive_many_ms": 99.193,
+      "pipeline_mode": "decoupled_v1",
+      "shard_payload_7": {
+        "s3_segment_put_duration_ms_last": 0,
+        "s3_segment_put_duration_ms_max": 0,
+        "avg_s3_segment_put_ms": 0.0,
+        "checkpoint_put_duration_ms_last": 0,
+        "checkpoint_put_duration_ms_max": 0,
+        "avg_checkpoint_put_ms": 0.0,
+        "flush_duration_ms_last": 0,
+        "avg_flush_latency_ms": 0.0,
+        "ack_latency_ms_last": 1612,
+        "ack_latency_ms_max": 2635,
+        "lag_to_durable_commit_ms_last": 0
+      }
+    }
+  }
+}

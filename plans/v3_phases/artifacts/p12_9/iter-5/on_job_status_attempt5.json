@@ -1,0 +1,101 @@
+{
+    "apiVersion": "batch/v1",
+    "kind": "Job",
+    "metadata": {
+        "annotations": {
+            "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"batch/v1\",\"kind\":\"Job\",\"metadata\":{\"annotations\":{},\"name\":\"inspectio-v3-p12-9-iter5-on\",\"namespace\":\"inspectio\"},\"spec\":{\"backoffLimit\":0,\"template\":{\"spec\":{\"containers\":[{\"command\":[\"python\",\"scripts/v3_sustained_admit.py\",\"--api-base\",\"http://inspectio-l1:8080\",\"--duration-sec\",\"240\",\"--concurrency\",\"120\",\"--batch\",\"200\",\"--body-prefix\",\"p12-9-iter5-on\"],\"image\":\"194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:p12-9-iter5-20260401232644\",\"name\":\"load\"}],\"restartPolicy\":\"Never\"}}}}\n"
+        },
+        "creationTimestamp": "2026-04-02T00:42:38Z",
+        "generation": 1,
+        "labels": {
+            "batch.kubernetes.io/controller-uid": "b5525da9-9db0-404d-8485-3f246256e0c8",
+            "batch.kubernetes.io/job-name": "inspectio-v3-p12-9-iter5-on",
+            "controller-uid": "b5525da9-9db0-404d-8485-3f246256e0c8",
+            "job-name": "inspectio-v3-p12-9-iter5-on"
+        },
+        "name": "inspectio-v3-p12-9-iter5-on",
+        "namespace": "inspectio",
+        "resourceVersion": "1058105",
+        "uid": "b5525da9-9db0-404d-8485-3f246256e0c8"
+    },
+    "spec": {
+        "backoffLimit": 0,
+        "completionMode": "NonIndexed",
+        "completions": 1,
+        "manualSelector": false,
+        "parallelism": 1,
+        "podReplacementPolicy": "TerminatingOrFailed",
+        "selector": {
+            "matchLabels": {
+                "batch.kubernetes.io/controller-uid": "b5525da9-9db0-404d-8485-3f246256e0c8"
+            }
+        },
+        "suspend": false,
+        "template": {
+            "metadata": {
+                "labels": {
+                    "batch.kubernetes.io/controller-uid": "b5525da9-9db0-404d-8485-3f246256e0c8",
+                    "batch.kubernetes.io/job-name": "inspectio-v3-p12-9-iter5-on",
+                    "controller-uid": "b5525da9-9db0-404d-8485-3f246256e0c8",
+                    "job-name": "inspectio-v3-p12-9-iter5-on"
+                }
+            },
+            "spec": {
+                "containers": [
+                    {
+                        "command": [
+                            "python",
+                            "scripts/v3_sustained_admit.py",
+                            "--api-base",
+                            "http://inspectio-l1:8080",
+                            "--duration-sec",
+                            "240",
+                            "--concurrency",
+                            "120",
+                            "--batch",
+                            "200",
+                            "--body-prefix",
+                            "p12-9-iter5-on"
+                        ],
+                        "image": "194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:p12-9-iter5-20260401232644",
+                        "imagePullPolicy": "IfNotPresent",
+                        "name": "load",
+                        "resources": {},
+                        "terminationMessagePath": "/dev/termination-log",
+                        "terminationMessagePolicy": "File"
+                    }
+                ],
+                "dnsPolicy": "ClusterFirst",
+                "restartPolicy": "Never",
+                "schedulerName": "default-scheduler",
+                "securityContext": {},
+                "terminationGracePeriodSeconds": 30
+            }
+        }
+    },
+    "status": {
+        "conditions": [
+            {
+                "lastProbeTime": "2026-04-02T00:43:40Z",
+                "lastTransitionTime": "2026-04-02T00:43:40Z",
+                "message": "Job has reached the specified backoff limit",
+                "reason": "BackoffLimitExceeded",
+                "status": "True",
+                "type": "FailureTarget"
+            },
+            {
+                "lastProbeTime": "2026-04-02T00:43:40Z",
+                "lastTransitionTime": "2026-04-02T00:43:40Z",
+                "message": "Job has reached the specified backoff limit",
+                "reason": "BackoffLimitExceeded",
+                "status": "True",
+                "type": "Failed"
+            }
+        ],
+        "failed": 1,
+        "ready": 0,
+        "startTime": "2026-04-02T00:42:38Z",
+        "terminating": 0,
+        "uncountedTerminatedPods": {}
+    }
+}

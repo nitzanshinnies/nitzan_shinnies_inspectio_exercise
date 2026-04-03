@@ -5,11 +5,12 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "inspectio"
 version = "0.0.0"
-description = "Inspectio SMS retry scheduler (greenfield; see plans/)"
+description = "Inspectio SMS retry scheduler (v3; see plans/)"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "aioboto3>=12.0.0",
+    "orjson>=3.9.0",
     "fastapi>=0.109.0",
     "httpx>=0.26.0",
     "pydantic>=2.5.0",
@@ -17,6 +18,11 @@ dependencies = [
     "redis>=5.0.0",
     "uvicorn[standard]>=0.27.0",
 ]
+
+[project.scripts]
+inspectio-v3-expander = "inspectio.v3.expander.main:main"
+inspectio-v3-persistence-writer = "inspectio.v3.persistence_writer.main:main"
+inspectio-v3-worker = "inspectio.v3.worker.main:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=7.4.0", "pytest-asyncio>=0.23.0"]
@@ -26,7 +32,6 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-# Defaults from pytest’s `norecursedirs` plus `v1_obsolete` (archived tree; not imported or built by greenfield tooling).
 norecursedirs = [
     "*.egg",
     ".*",
@@ -37,12 +42,12 @@ norecursedirs = [
     "node_modules",
     "venv",
     "{arch}",
-    "v1_obsolete",
+    "v2_obsolete",
 ]
 testpaths = ["tests"]
 markers = [
-    "unit: no I/O; pure domain, clocks, hashing, journal line parse/build (§28.2)",
-    "integration: I/O to docker services, moto, or LocalStack (§28.2)",
-    "e2e: multi-container stack; optional CI tier (§28.2)",
-    "performance: load scripts / large N; AWS claims only in-cluster (§28.2)",
+    "unit: no I/O; pure domain, clocks, hashing, journal line parse/build",
+    "integration: I/O to docker services, moto, LocalStack, or in-process multi-app ASGI (e.g. L1→L2)",
+    "e2e: multi-container stack; optional CI tier",
+    "performance: load scripts / large N; AWS claims only in-cluster",
 ]

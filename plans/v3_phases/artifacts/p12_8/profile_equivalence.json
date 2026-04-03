@@ -1,0 +1,5 @@
+{
+  "image_tag": "194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:p12-8-rollout-20260331223254",
+  "configmap_sha256": "34fa799faa38c97413f1f9bcc9ea33a5d22d4b83ed39fdef29dd802e317592c5",
+  "statement": "same image/replicas/shards/job shape/region; only persistence emit + writer activation differed"
+}

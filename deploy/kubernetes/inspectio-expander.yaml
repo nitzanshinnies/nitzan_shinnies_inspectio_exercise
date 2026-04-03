@@ -1,0 +1,32 @@
+# Single replica unless P3 multi-replica dedupe is implemented (see README).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inspectio-expander
+  namespace: inspectio
+  labels:
+    app.kubernetes.io/name: inspectio-expander
+    app.kubernetes.io/part-of: inspectio-v3
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: inspectio-expander
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: inspectio-expander
+        app.kubernetes.io/part-of: inspectio-v3
+    spec:
+      serviceAccountName: inspectio-app
+      containers:
+        - name: expander
+          image: inspectio-v3:latest
+          imagePullPolicy: IfNotPresent
+          command: ["inspectio-v3-expander"]
+          envFrom:
+            - configMapRef:
+                name: inspectio-v3-config
+            - secretRef:
+                name: inspectio-v3-secrets
+                optional: true

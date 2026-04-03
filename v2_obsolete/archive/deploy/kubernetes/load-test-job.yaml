@@ -1,0 +1,42 @@
+# In-cluster performance driver. Apply after workloads are healthy.
+# Logs: kubectl -n inspectio logs job/inspectio-load-test -f
+#
+# Tweak args / env below; image must include scripts/ (see deploy/docker/Dockerfile).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: inspectio-load-test
+  namespace: inspectio
+spec:
+  activeDeadlineSeconds: 60
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 86400
+  template:
+    spec:
+      serviceAccountName: inspectio-app
+      restartPolicy: Never
+      containers:
+        - name: driver
+          image: inspectio-app:latest
+          imagePullPolicy: Always
+          env:
+            - name: INSPECTIO_LOAD_TEST_API_BASE
+              value: http://inspectio-api:8000
+          args:
+            - python
+            - scripts/full_flow_load_test.py
+            - --kubernetes
+            - --sizes
+            - "1000"
+            - --chunk-max
+            - "1000"
+            - --http-timeout-sec
+            - "45"
+            - --max-total-sec
+            - "60"
+            - --outcome-timeout-sec
+            - "60"
+            - --outcome-limit
+            - "20000"
+            - --wait-outcomes
+            - --json-summary
