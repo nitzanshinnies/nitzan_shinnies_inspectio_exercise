@@ -91,9 +91,10 @@ Run **A.1** (ack concurrency) **before** **A.2** (flush sweep): fewer moving par
 
 **Steps:**
 
-1. Record **current** EKS values: `kubectl -n inspectio get cm inspectio-v3-config -o yaml`.
-2. Increase **`max_inflight`** in **increments**; re-benchmark each step.
-3. Watch for memory growth and `best_effort` drop paths (logs / metrics).
+1. **`deploy/kubernetes/configmap.yaml`** sets **`INSPECTIO_V3_PERSIST_TRANSPORT_MAX_INFLIGHT`** to **`8192`** (was **`4096`**) as a throughput-oriented template default; `settings.py` already allows up to **`100_000`**.
+2. Record **current** live EKS values: `kubectl -n inspectio get cm inspectio-v3-config -o yaml`.
+3. Increase **`max_inflight`** further in **increments** only with memory headroom; re-benchmark each step.
+4. Watch for memory growth and `best_effort` drop paths (logs / metrics).
 
 ## Tests (local, before each push)
 
