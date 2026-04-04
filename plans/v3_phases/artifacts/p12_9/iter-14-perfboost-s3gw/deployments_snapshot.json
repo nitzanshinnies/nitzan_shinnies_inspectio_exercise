@@ -1,0 +1,2463 @@
+{
+    "apiVersion": "v1",
+    "items": [
+        {
+            "apiVersion": "apps/v1",
+            "kind": "Deployment",
+            "metadata": {
+                "annotations": {
+                    "deployment.kubernetes.io/revision": "115",
+                    "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{},\"labels\":{\"app.kubernetes.io/name\":\"inspectio-api\",\"app.kubernetes.io/part-of\":\"inspectio-v3\"},\"name\":\"inspectio-api\",\"namespace\":\"inspectio\"},\"spec\":{\"replicas\":2,\"selector\":{\"matchLabels\":{\"app.kubernetes.io/name\":\"inspectio-api\"}},\"template\":{\"metadata\":{\"labels\":{\"app.kubernetes.io/name\":\"inspectio-api\",\"app.kubernetes.io/part-of\":\"inspectio-v3\"}},\"spec\":{\"containers\":[{\"args\":[\"uvicorn\",\"inspectio.v3.l2.serve:app\",\"--host\",\"0.0.0.0\",\"--port\",\"8000\"],\"envFrom\":[{\"configMapRef\":{\"name\":\"inspectio-v3-config\"}},{\"secretRef\":{\"name\":\"inspectio-v3-secrets\",\"optional\":true}}],\"image\":\"194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:eks-smoke\",\"imagePullPolicy\":\"IfNotPresent\",\"livenessProbe\":{\"httpGet\":{\"path\":\"/healthz\",\"port\":8000},\"initialDelaySeconds\":15,\"periodSeconds\":20},\"name\":\"api\",\"ports\":[{\"containerPort\":8000}],\"readinessProbe\":{\"httpGet\":{\"path\":\"/healthz\",\"port\":8000},\"initialDelaySeconds\":3,\"periodSeconds\":5}}],\"serviceAccountName\":\"inspectio-app\"}}}}\n"
+                },
+                "creationTimestamp": "2026-03-30T15:55:26Z",
+                "generation": 121,
+                "labels": {
+                    "app.kubernetes.io/name": "inspectio-api",
+                    "app.kubernetes.io/part-of": "inspectio-v3"
+                },
+                "name": "inspectio-api",
+                "namespace": "inspectio",
+                "resourceVersion": "2012615",
+                "uid": "0adf6b38-379f-486d-8aa7-cf0f9d5cf46e"
+            },
+            "spec": {
+                "progressDeadlineSeconds": 600,
+                "replicas": 12,
+                "revisionHistoryLimit": 10,
+                "selector": {
+                    "matchLabels": {
+                        "app.kubernetes.io/name": "inspectio-api"
+                    }
+                },
+                "strategy": {
+                    "rollingUpdate": {
+                        "maxSurge": "25%",
+                        "maxUnavailable": "25%"
+                    },
+                    "type": "RollingUpdate"
+                },
+                "template": {
+                    "metadata": {
+                        "annotations": {
+                            "kubectl.kubernetes.io/restartedAt": "2026-04-04T12:34:42+03:00"
+                        },
+                        "labels": {
+                            "app.kubernetes.io/name": "inspectio-api",
+                            "app.kubernetes.io/part-of": "inspectio-v3"
+                        }
+                    },
+                    "spec": {
+                        "containers": [
+                            {
+                                "args": [
+                                    "uvicorn",
+                                    "inspectio.v3.l2.serve:app",
+                                    "--host",
+                                    "0.0.0.0",
+                                    "--port",
+                                    "8000",
+                                    "--workers",
+                                    "4"
+                                ],
+                                "envFrom": [
+                                    {
+                                        "configMapRef": {
+                                            "name": "inspectio-v3-config"
+                                        }
+                                    },
+                                    {
+                                        "secretRef": {
+                                            "name": "inspectio-v3-secrets",
+                                            "optional": true
+                                        }
+                                    }
+                                ],
+                                "image": "194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:p12-9-perfboost-20260404091726",
+                                "imagePullPolicy": "IfNotPresent",
+                                "livenessProbe": {
+                                    "failureThreshold": 3,
+                                    "httpGet": {
+                                        "path": "/healthz",
+                                        "port": 8000,
+                                        "scheme": "HTTP"
+                                    },
+                                    "initialDelaySeconds": 15,
+                                    "periodSeconds": 20,
+                                    "successThreshold": 1,
+                                    "timeoutSeconds": 1
+                                },
+                                "name": "api",
+                                "ports": [
+                                    {
+                                        "containerPort": 8000,
+                                        "protocol": "TCP"
+                                    }
+                                ],
+                                "readinessProbe": {
+                                    "failureThreshold": 3,
+                                    "httpGet": {
+                                        "path": "/healthz",
+                                        "port": 8000,
+                                        "scheme": "HTTP"
+                                    },
+                                    "initialDelaySeconds": 3,
+                                    "periodSeconds": 5,
+                                    "successThreshold": 1,
+                                    "timeoutSeconds": 1
+                                },
+                                "resources": {},
+                                "terminationMessagePath": "/dev/termination-log",
+                                "terminationMessagePolicy": "File"
+                            }
+                        ],
+                        "dnsPolicy": "ClusterFirst",
+                        "restartPolicy": "Always",
+                        "schedulerName": "default-scheduler",
+                        "securityContext": {},
+                        "serviceAccount": "inspectio-app",
+                        "serviceAccountName": "inspectio-app",
+                        "terminationGracePeriodSeconds": 30
+                    }
+                }
+            },
+            "status": {
+                "availableReplicas": 12,
+                "conditions": [
+                    {
+                        "lastTransitionTime": "2026-04-04T09:19:28Z",
+                        "lastUpdateTime": "2026-04-04T09:19:28Z",
+                        "message": "Deployment has minimum availability.",
+                        "reason": "MinimumReplicasAvailable",
+                        "status": "True",
+                        "type": "Available"
+                    },
+                    {
+                        "lastTransitionTime": "2026-04-02T16:09:47Z",
+                        "lastUpdateTime": "2026-04-04T09:35:00Z",
+                        "message": "ReplicaSet \"inspectio-api-6bfbd85994\" has successfully progressed.",
+                        "reason": "NewReplicaSetAvailable",
+                        "status": "True",
+                        "type": "Progressing"
+                    }
+                ],
+                "observedGeneration": 121,
+                "readyReplicas": 12,
+                "replicas": 12,
+                "updatedReplicas": 12
+            }
+        },
+        {
+            "apiVersion": "apps/v1",
+            "kind": "Deployment",
+            "metadata": {
+                "annotations": {
+                    "deployment.kubernetes.io/revision": "115",
+                    "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{},\"labels\":{\"app.kubernetes.io/name\":\"inspectio-expander\",\"app.kubernetes.io/part-of\":\"inspectio-v3\"},\"name\":\"inspectio-expander\",\"namespace\":\"inspectio\"},\"spec\":{\"replicas\":1,\"selector\":{\"matchLabels\":{\"app.kubernetes.io/name\":\"inspectio-expander\"}},\"template\":{\"metadata\":{\"labels\":{\"app.kubernetes.io/name\":\"inspectio-expander\",\"app.kubernetes.io/part-of\":\"inspectio-v3\"}},\"spec\":{\"containers\":[{\"command\":[\"inspectio-v3-expander\"],\"envFrom\":[{\"configMapRef\":{\"name\":\"inspectio-v3-config\"}},{\"secretRef\":{\"name\":\"inspectio-v3-secrets\",\"optional\":true}}],\"image\":\"194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:eks-smoke\",\"imagePullPolicy\":\"IfNotPresent\",\"name\":\"expander\"}],\"serviceAccountName\":\"inspectio-app\"}}}}\n"
+                },
+                "creationTimestamp": "2026-03-30T15:55:29Z",
+                "generation": 123,
+                "labels": {
+                    "app.kubernetes.io/name": "inspectio-expander",
+                    "app.kubernetes.io/part-of": "inspectio-v3"
+                },
+                "name": "inspectio-expander",
+                "namespace": "inspectio",
+                "resourceVersion": "2011895",
+                "uid": "27baf3b1-4b78-4387-bc40-eb388363177f"
+            },
+            "spec": {
+                "progressDeadlineSeconds": 600,
+                "replicas": 16,
+                "revisionHistoryLimit": 10,
+                "selector": {
+                    "matchLabels": {
+                        "app.kubernetes.io/name": "inspectio-expander"
+                    }
+                },
+                "strategy": {
+                    "rollingUpdate": {
+                        "maxSurge": "25%",
+                        "maxUnavailable": "25%"
+                    },
+                    "type": "RollingUpdate"
+                },
+                "template": {
+                    "metadata": {
+                        "annotations": {
+                            "kubectl.kubernetes.io/restartedAt": "2026-04-04T12:34:43+03:00"
+                        },
+                        "labels": {
+                            "app.kubernetes.io/name": "inspectio-expander",
+                            "app.kubernetes.io/part-of": "inspectio-v3"
+                        }
+                    },
+                    "spec": {
+                        "containers": [
+                            {
+                                "command": [
+                                    "inspectio-v3-expander"
+                                ],
+                                "envFrom": [
+                                    {
+                                        "configMapRef": {
+                                            "name": "inspectio-v3-config"
+                                        }
+                                    },
+                                    {
+                                        "secretRef": {
+                                            "name": "inspectio-v3-secrets",
+                                            "optional": true
+                                        }
+                                    }
+                                ],
+                                "image": "194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:p12-9-perfboost-20260404091726",
+                                "imagePullPolicy": "IfNotPresent",
+                                "name": "expander",
+                                "resources": {},
+                                "terminationMessagePath": "/dev/termination-log",
+                                "terminationMessagePolicy": "File"
+                            }
+                        ],
+                        "dnsPolicy": "ClusterFirst",
+                        "restartPolicy": "Always",
+                        "schedulerName": "default-scheduler",
+                        "securityContext": {},
+                        "serviceAccount": "inspectio-app",
+                        "serviceAccountName": "inspectio-app",
+                        "terminationGracePeriodSeconds": 30
+                    }
+                }
+            },
+            "status": {
+                "availableReplicas": 16,
+                "conditions": [
+                    {
+                        "lastTransitionTime": "2026-04-04T09:19:10Z",
+                        "lastUpdateTime": "2026-04-04T09:19:10Z",
+                        "message": "Deployment has minimum availability.",
+                        "reason": "MinimumReplicasAvailable",
+                        "status": "True",
+                        "type": "Available"
+                    },
+                    {
+                        "lastTransitionTime": "2026-04-02T16:09:23Z",
+                        "lastUpdateTime": "2026-04-04T09:34:49Z",
+                        "message": "ReplicaSet \"inspectio-expander-94c98f765\" has successfully progressed.",
+                        "reason": "NewReplicaSetAvailable",
+                        "status": "True",
+                        "type": "Progressing"
+                    }
+                ],
+                "observedGeneration": 123,
+                "readyReplicas": 16,
+                "replicas": 16,
+                "updatedReplicas": 16
+            }
+        },
+        {
+            "apiVersion": "apps/v1",
+            "kind": "Deployment",
+            "metadata": {
+                "annotations": {
+                    "deployment.kubernetes.io/revision": "114",
+                    "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{},\"labels\":{\"app.kubernetes.io/name\":\"inspectio-l1\",\"app.kubernetes.io/part-of\":\"inspectio-v3\"},\"name\":\"inspectio-l1\",\"namespace\":\"inspectio\"},\"spec\":{\"replicas\":2,\"selector\":{\"matchLabels\":{\"app.kubernetes.io/name\":\"inspectio-l1\"}},\"template\":{\"metadata\":{\"labels\":{\"app.kubernetes.io/name\":\"inspectio-l1\",\"app.kubernetes.io/part-of\":\"inspectio-v3\"}},\"spec\":{\"containers\":[{\"args\":[\"uvicorn\",\"inspectio.v3.l1.serve:app\",\"--host\",\"0.0.0.0\",\"--port\",\"8080\"],\"envFrom\":[{\"configMapRef\":{\"name\":\"inspectio-v3-config\"}},{\"secretRef\":{\"name\":\"inspectio-v3-secrets\",\"optional\":true}}],\"image\":\"194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:eks-smoke\",\"imagePullPolicy\":\"IfNotPresent\",\"livenessProbe\":{\"httpGet\":{\"path\":\"/healthz\",\"port\":8080},\"initialDelaySeconds\":15,\"periodSeconds\":20},\"name\":\"l1\",\"ports\":[{\"containerPort\":8080}],\"readinessProbe\":{\"httpGet\":{\"path\":\"/healthz\",\"port\":8080},\"initialDelaySeconds\":3,\"periodSeconds\":5}}],\"serviceAccountName\":\"inspectio-app\"}}}}\n"
+                },
+                "creationTimestamp": "2026-03-30T15:55:36Z",
+                "generation": 120,
+                "labels": {
+                    "app.kubernetes.io/name": "inspectio-l1",
+                    "app.kubernetes.io/part-of": "inspectio-v3"
+                },
+                "name": "inspectio-l1",
+                "namespace": "inspectio",
+                "resourceVersion": "2012729",
+                "uid": "0247405b-21a2-4c68-87a1-e655e0c968ac"
+            },
+            "spec": {
+                "progressDeadlineSeconds": 600,
+                "replicas": 4,
+                "revisionHistoryLimit": 10,
+                "selector": {
+                    "matchLabels": {
+                        "app.kubernetes.io/name": "inspectio-l1"
+                    }
+                },
+                "strategy": {
+                    "rollingUpdate": {
+                        "maxSurge": "25%",
+                        "maxUnavailable": "25%"
+                    },
+                    "type": "RollingUpdate"
+                },
+                "template": {
+                    "metadata": {
+                        "annotations": {
+                            "kubectl.kubernetes.io/restartedAt": "2026-04-04T12:34:45+03:00"
+                        },
+                        "labels": {
+                            "app.kubernetes.io/name": "inspectio-l1",
+                            "app.kubernetes.io/part-of": "inspectio-v3"
+                        }
+                    },
+                    "spec": {
+                        "containers": [
+                            {
+                                "args": [
+                                    "uvicorn",
+                                    "inspectio.v3.l1.serve:app",
+                                    "--host",
+                                    "0.0.0.0",
+                                    "--port",
+                                    "8080",
+                                    "--workers",
+                                    "4"
+                                ],
+                                "envFrom": [
+                                    {
+                                        "configMapRef": {
+                                            "name": "inspectio-v3-config"
+                                        }
+                                    },
+                                    {
+                                        "secretRef": {
+                                            "name": "inspectio-v3-secrets",
+                                            "optional": true
+                                        }
+                                    }
+                                ],
+                                "image": "194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:p12-9-perfboost-20260404091726",
+                                "imagePullPolicy": "IfNotPresent",
+                                "livenessProbe": {
+                                    "failureThreshold": 3,
+                                    "httpGet": {
+                                        "path": "/healthz",
+                                        "port": 8080,
+                                        "scheme": "HTTP"
+                                    },
+                                    "initialDelaySeconds": 15,
+                                    "periodSeconds": 20,
+                                    "successThreshold": 1,
+                                    "timeoutSeconds": 1
+                                },
+                                "name": "l1",
+                                "ports": [
+                                    {
+                                        "containerPort": 8080,
+                                        "protocol": "TCP"
+                                    }
+                                ],
+                                "readinessProbe": {
+                                    "failureThreshold": 3,
+                                    "httpGet": {
+                                        "path": "/healthz",
+                                        "port": 8080,
+                                        "scheme": "HTTP"
+                                    },
+                                    "initialDelaySeconds": 3,
+                                    "periodSeconds": 5,
+                                    "successThreshold": 1,
+                                    "timeoutSeconds": 1
+                                },
+                                "resources": {},
+                                "terminationMessagePath": "/dev/termination-log",
+                                "terminationMessagePolicy": "File"
+                            }
+                        ],
+                        "dnsPolicy": "ClusterFirst",
+                        "restartPolicy": "Always",
+                        "schedulerName": "default-scheduler",
+                        "securityContext": {},
+                        "serviceAccount": "inspectio-app",
+                        "serviceAccountName": "inspectio-app",
+                        "terminationGracePeriodSeconds": 30
+                    }
+                }
+            },
+            "status": {
+                "availableReplicas": 4,
+                "conditions": [
+                    {
+                        "lastTransitionTime": "2026-04-04T09:19:24Z",
+                        "lastUpdateTime": "2026-04-04T09:19:24Z",
+                        "message": "Deployment has minimum availability.",
+                        "reason": "MinimumReplicasAvailable",
+                        "status": "True",
+                        "type": "Available"
+                    },
+                    {
+                        "lastTransitionTime": "2026-04-02T16:09:46Z",
+                        "lastUpdateTime": "2026-04-04T09:35:02Z",
+                        "message": "ReplicaSet \"inspectio-l1-765d6ccfd4\" has successfully progressed.",
+                        "reason": "NewReplicaSetAvailable",
+                        "status": "True",
+                        "type": "Progressing"
+                    }
+                ],
+                "observedGeneration": 120,
+                "readyReplicas": 4,
+                "replicas": 4,
+                "updatedReplicas": 4
+            }
+        },
+        {
+            "apiVersion": "apps/v1",
+            "kind": "Deployment",
+            "metadata": {
+                "annotations": {
+                    "deployment.kubernetes.io/revision": "88",
+                    "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{},\"labels\":{\"app.kubernetes.io/name\":\"inspectio-persistence-writer\",\"app.kubernetes.io/part-of\":\"inspectio-v3\"},\"name\":\"inspectio-persistence-writer\",\"namespace\":\"inspectio\"},\"spec\":{\"replicas\":1,\"selector\":{\"matchLabels\":{\"app.kubernetes.io/name\":\"inspectio-persistence-writer\"}},\"template\":{\"metadata\":{\"labels\":{\"app.kubernetes.io/name\":\"inspectio-persistence-writer\",\"app.kubernetes.io/part-of\":\"inspectio-v3\"}},\"spec\":{\"containers\":[{\"command\":[\"inspectio-v3-persistence-writer\"],\"envFrom\":[{\"configMapRef\":{\"name\":\"inspectio-v3-config\"}},{\"secretRef\":{\"name\":\"inspectio-v3-secrets\",\"optional\":true}}],\"image\":\"inspectio-v3:latest\",\"imagePullPolicy\":\"IfNotPresent\",\"name\":\"persistence-writer\"}],\"serviceAccountName\":\"inspectio-app\"}}}}\n"
+                },
+                "creationTimestamp": "2026-03-31T13:18:52Z",
+                "generation": 91,
+                "labels": {
+                    "app.kubernetes.io/name": "inspectio-persistence-writer",
+                    "app.kubernetes.io/part-of": "inspectio-v3"
+                },
+                "name": "inspectio-persistence-writer",
+                "namespace": "inspectio",
+                "resourceVersion": "2011767",
+                "uid": "f10f582e-b1b3-4bd0-8e8d-f3ca0fcc0798"
+            },
+            "spec": {
+                "progressDeadlineSeconds": 600,
+                "replicas": 0,
+                "revisionHistoryLimit": 10,
+                "selector": {
+                    "matchLabels": {
+                        "app.kubernetes.io/name": "inspectio-persistence-writer"
+                    }
+                },
+                "strategy": {
+                    "rollingUpdate": {
+                        "maxSurge": "25%",
+                        "maxUnavailable": "25%"
+                    },
+                    "type": "RollingUpdate"
+                },
+                "template": {
+                    "metadata": {
+                        "annotations": {
+                            "kubectl.kubernetes.io/restartedAt": "2026-04-04T12:34:46+03:00"
+                        },
+                        "labels": {
+                            "app.kubernetes.io/name": "inspectio-persistence-writer",
+                            "app.kubernetes.io/part-of": "inspectio-v3"
+                        }
+                    },
+                    "spec": {
+                        "containers": [
+                            {
+                                "command": [
+                                    "inspectio-v3-persistence-writer"
+                                ],
+                                "envFrom": [
+                                    {
+                                        "configMapRef": {
+                                            "name": "inspectio-v3-config"
+                                        }
+                                    },
+                                    {
+                                        "secretRef": {
+                                            "name": "inspectio-v3-secrets",
+                                            "optional": true
+                                        }
+                                    }
+                                ],
+                                "image": "194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:p12-9-perfboost-20260404091726",
+                                "imagePullPolicy": "IfNotPresent",
+                                "name": "persistence-writer",
+                                "resources": {},
+                                "terminationMessagePath": "/dev/termination-log",
+                                "terminationMessagePolicy": "File"
+                            }
+                        ],
+                        "dnsPolicy": "ClusterFirst",
+                        "restartPolicy": "Always",
+                        "schedulerName": "default-scheduler",
+                        "securityContext": {},
+                        "serviceAccount": "inspectio-app",
+                        "serviceAccountName": "inspectio-app",
+                        "terminationGracePeriodSeconds": 30
+                    }
+                }
+            },
+            "status": {
+                "conditions": [
+                    {
+                        "lastTransitionTime": "2026-03-31T19:33:30Z",
+                        "lastUpdateTime": "2026-03-31T19:33:30Z",
+                        "message": "Deployment has minimum availability.",
+                        "reason": "MinimumReplicasAvailable",
+                        "status": "True",
+                        "type": "Available"
+                    },
+                    {
+                        "lastTransitionTime": "2026-03-31T13:18:52Z",
+                        "lastUpdateTime": "2026-04-04T09:34:47Z",
+                        "message": "ReplicaSet \"inspectio-persistence-writer-5f676c8f6d\" has successfully progressed.",
+                        "reason": "NewReplicaSetAvailable",
+                        "status": "True",
+                        "type": "Progressing"
+                    }
+                ],
+                "observedGeneration": 91
+            }
+        },
+        {
+            "apiVersion": "apps/v1",
+            "kind": "Deployment",
+            "metadata": {
+                "annotations": {
+                    "deployment.kubernetes.io/revision": "91",
+                    "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{},\"labels\":{\"app.kubernetes.io/name\":\"inspectio-persistence-writer-shard-0\",\"app.kubernetes.io/part-of\":\"inspectio-v3\",\"inspectio.io/persistence-shard\":\"0\"},\"name\":\"inspectio-persistence-writer-shard-0\",\"namespace\":\"inspectio\"},\"spec\":{\"replicas\":1,\"selector\":{\"matchLabels\":{\"app.kubernetes.io/name\":\"inspectio-persistence-writer-shard-0\"}},\"template\":{\"metadata\":{\"labels\":{\"app.kubernetes.io/name\":\"inspectio-persistence-writer-shard-0\",\"app.kubernetes.io/part-of\":\"inspectio-v3\",\"inspectio.io/persistence-shard\":\"0\"}},\"spec\":{\"containers\":[{\"command\":[\"inspectio-v3-persistence-writer\"],\"env\":[{\"name\":\"INSPECTIO_V3_WRITER_SHARD_ID\",\"value\":\"0\"}],\"envFrom\":[{\"configMapRef\":{\"name\":\"inspectio-v3-config\"}},{\"secretRef\":{\"name\":\"inspectio-v3-secrets\",\"optional\":true}}],\"image\":\"inspectio-v3:latest\",\"imagePullPolicy\":\"IfNotPresent\",\"name\":\"persistence-writer\"}],\"serviceAccountName\":\"inspectio-app\"}}}}\n"
+                },
+                "creationTimestamp": "2026-03-31T19:36:09Z",
+                "generation": 93,
+                "labels": {
+                    "app.kubernetes.io/name": "inspectio-persistence-writer-shard-0",
+                    "app.kubernetes.io/part-of": "inspectio-v3",
+                    "inspectio.io/persistence-shard": "0"
+                },
+                "name": "inspectio-persistence-writer-shard-0",
+                "namespace": "inspectio",
+                "resourceVersion": "2011891",
+                "uid": "320df275-002f-4e75-adf9-ed562ca5ec87"
+            },
+            "spec": {
+                "progressDeadlineSeconds": 600,
+                "replicas": 1,
+                "revisionHistoryLimit": 10,
+                "selector": {
+                    "matchLabels": {
+                        "app.kubernetes.io/name": "inspectio-persistence-writer-shard-0"
+                    }
+                },
+                "strategy": {
+                    "rollingUpdate": {
+                        "maxSurge": "25%",
+                        "maxUnavailable": "25%"
+                    },
+                    "type": "RollingUpdate"
+                },
+                "template": {
+                    "metadata": {
+                        "annotations": {
+                            "kubectl.kubernetes.io/restartedAt": "2026-04-04T12:34:48+03:00"
+                        },
+                        "labels": {
+                            "app.kubernetes.io/name": "inspectio-persistence-writer-shard-0",
+                            "app.kubernetes.io/part-of": "inspectio-v3",
+                            "inspectio.io/persistence-shard": "0"
+                        }
+                    },
+                    "spec": {
+                        "containers": [
+                            {
+                                "command": [
+                                    "inspectio-v3-persistence-writer"
+                                ],
+                                "env": [
+                                    {
+                                        "name": "INSPECTIO_V3_WRITER_SHARD_ID",
+                                        "value": "0"
+                                    }
+                                ],
+                                "envFrom": [
+                                    {
+                                        "configMapRef": {
+                                            "name": "inspectio-v3-config"
+                                        }
+                                    },
+                                    {
+                                        "secretRef": {
+                                            "name": "inspectio-v3-secrets",
+                                            "optional": true
+                                        }
+                                    }
+                                ],
+                                "image": "194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:p12-9-perfboost-20260404091726",
+                                "imagePullPolicy": "IfNotPresent",
+                                "name": "persistence-writer",
+                                "resources": {},
+                                "terminationMessagePath": "/dev/termination-log",
+                                "terminationMessagePolicy": "File"
+                            }
+                        ],
+                        "dnsPolicy": "ClusterFirst",
+                        "restartPolicy": "Always",
+                        "schedulerName": "default-scheduler",
+                        "securityContext": {},
+                        "serviceAccount": "inspectio-app",
+                        "serviceAccountName": "inspectio-app",
+                        "terminationGracePeriodSeconds": 30
+                    }
+                }
+            },
+            "status": {
+                "availableReplicas": 1,
+                "conditions": [
+                    {
+                        "lastTransitionTime": "2026-04-04T09:19:11Z",
+                        "lastUpdateTime": "2026-04-04T09:19:11Z",
+                        "message": "Deployment has minimum availability.",
+                        "reason": "MinimumReplicasAvailable",
+                        "status": "True",
+                        "type": "Available"
+                    },
+                    {
+                        "lastTransitionTime": "2026-04-02T16:09:28Z",
+                        "lastUpdateTime": "2026-04-04T09:34:49Z",
+                        "message": "ReplicaSet \"inspectio-persistence-writer-shard-0-6d8496868b\" has successfully progressed.",
+                        "reason": "NewReplicaSetAvailable",
+                        "status": "True",
+                        "type": "Progressing"
+                    }
+                ],
+                "observedGeneration": 93,
+                "readyReplicas": 1,
+                "replicas": 1,
+                "updatedReplicas": 1
+            }
+        },
+        {
+            "apiVersion": "apps/v1",
+            "kind": "Deployment",
+            "metadata": {
+                "annotations": {
+                    "deployment.kubernetes.io/revision": "90",
+                    "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{},\"labels\":{\"app.kubernetes.io/name\":\"inspectio-persistence-writer-shard-1\",\"app.kubernetes.io/part-of\":\"inspectio-v3\",\"inspectio.io/persistence-shard\":\"1\"},\"name\":\"inspectio-persistence-writer-shard-1\",\"namespace\":\"inspectio\"},\"spec\":{\"replicas\":1,\"selector\":{\"matchLabels\":{\"app.kubernetes.io/name\":\"inspectio-persistence-writer-shard-1\"}},\"template\":{\"metadata\":{\"labels\":{\"app.kubernetes.io/name\":\"inspectio-persistence-writer-shard-1\",\"app.kubernetes.io/part-of\":\"inspectio-v3\",\"inspectio.io/persistence-shard\":\"1\"}},\"spec\":{\"containers\":[{\"command\":[\"inspectio-v3-persistence-writer\"],\"env\":[{\"name\":\"INSPECTIO_V3_WRITER_SHARD_ID\",\"value\":\"1\"}],\"envFrom\":[{\"configMapRef\":{\"name\":\"inspectio-v3-config\"}},{\"secretRef\":{\"name\":\"inspectio-v3-secrets\",\"optional\":true}}],\"image\":\"inspectio-v3:latest\",\"imagePullPolicy\":\"IfNotPresent\",\"name\":\"persistence-writer\"}],\"serviceAccountName\":\"inspectio-app\"}}}}\n"
+                },
+                "creationTimestamp": "2026-03-31T19:36:10Z",
+                "generation": 94,
+                "labels": {
+                    "app.kubernetes.io/name": "inspectio-persistence-writer-shard-1",
+                    "app.kubernetes.io/part-of": "inspectio-v3",
+                    "inspectio.io/persistence-shard": "1"
+                },
+                "name": "inspectio-persistence-writer-shard-1",
+                "namespace": "inspectio",
+                "resourceVersion": "2012100",
+                "uid": "68a38b6b-b58a-4119-bf8d-a59362648c23"
+            },
+            "spec": {
+                "progressDeadlineSeconds": 600,
+                "replicas": 1,
+                "revisionHistoryLimit": 10,
+                "selector": {
+                    "matchLabels": {
+                        "app.kubernetes.io/name": "inspectio-persistence-writer-shard-1"
+                    }
+                },
+                "strategy": {
+                    "rollingUpdate": {
+                        "maxSurge": "25%",
+                        "maxUnavailable": "25%"
+                    },
+                    "type": "RollingUpdate"
+                },
+                "template": {
+                    "metadata": {
+                        "annotations": {
+                            "kubectl.kubernetes.io/restartedAt": "2026-04-04T12:34:49+03:00"
+                        },
+                        "labels": {
+                            "app.kubernetes.io/name": "inspectio-persistence-writer-shard-1",
+                            "app.kubernetes.io/part-of": "inspectio-v3",
+                            "inspectio.io/persistence-shard": "1"
+                        }
+                    },
+                    "spec": {
+                        "containers": [
+                            {
+                                "command": [
+                                    "inspectio-v3-persistence-writer"
+                                ],
+                                "env": [
+                                    {
+                                        "name": "INSPECTIO_V3_WRITER_SHARD_ID",
+                                        "value": "1"
+                                    }
+                                ],
+                                "envFrom": [
+                                    {
+                                        "configMapRef": {
+                                            "name": "inspectio-v3-config"
+                                        }
+                                    },
+                                    {
+                                        "secretRef": {
+                                            "name": "inspectio-v3-secrets",
+                                            "optional": true
+                                        }
+                                    }
+                                ],
+                                "image": "194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:p12-9-perfboost-20260404091726",
+                                "imagePullPolicy": "IfNotPresent",
+                                "name": "persistence-writer",
+                                "resources": {},
+                                "terminationMessagePath": "/dev/termination-log",
+                                "terminationMessagePolicy": "File"
+                            }
+                        ],
+                        "dnsPolicy": "ClusterFirst",
+                        "restartPolicy": "Always",
+                        "schedulerName": "default-scheduler",
+                        "securityContext": {},
+                        "serviceAccount": "inspectio-app",
+                        "serviceAccountName": "inspectio-app",
+                        "terminationGracePeriodSeconds": 30
+                    }
+                }
+            },
+            "status": {
+                "availableReplicas": 1,
+                "conditions": [
+                    {
+                        "lastTransitionTime": "2026-04-04T09:18:49Z",
+                        "lastUpdateTime": "2026-04-04T09:18:49Z",
+                        "message": "Deployment has minimum availability.",
+                        "reason": "MinimumReplicasAvailable",
+                        "status": "True",
+                        "type": "Available"
+                    },
+                    {
+                        "lastTransitionTime": "2026-04-02T16:09:29Z",
+                        "lastUpdateTime": "2026-04-04T09:34:52Z",
+                        "message": "ReplicaSet \"inspectio-persistence-writer-shard-1-77ccd566fb\" has successfully progressed.",
+                        "reason": "NewReplicaSetAvailable",
+                        "status": "True",
+                        "type": "Progressing"
+                    }
+                ],
+                "observedGeneration": 94,
+                "readyReplicas": 1,
+                "replicas": 1,
+                "updatedReplicas": 1
+            }
+        },
+        {
+            "apiVersion": "apps/v1",
+            "kind": "Deployment",
+            "metadata": {
+                "annotations": {
+                    "deployment.kubernetes.io/revision": "90",
+                    "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{},\"labels\":{\"app.kubernetes.io/name\":\"inspectio-persistence-writer-shard-2\",\"app.kubernetes.io/part-of\":\"inspectio-v3\",\"inspectio.io/persistence-shard\":\"2\"},\"name\":\"inspectio-persistence-writer-shard-2\",\"namespace\":\"inspectio\"},\"spec\":{\"replicas\":1,\"selector\":{\"matchLabels\":{\"app.kubernetes.io/name\":\"inspectio-persistence-writer-shard-2\"}},\"template\":{\"metadata\":{\"labels\":{\"app.kubernetes.io/name\":\"inspectio-persistence-writer-shard-2\",\"app.kubernetes.io/part-of\":\"inspectio-v3\",\"inspectio.io/persistence-shard\":\"2\"}},\"spec\":{\"containers\":[{\"command\":[\"inspectio-v3-persistence-writer\"],\"env\":[{\"name\":\"INSPECTIO_V3_WRITER_SHARD_ID\",\"value\":\"2\"}],\"envFrom\":[{\"configMapRef\":{\"name\":\"inspectio-v3-config\"}},{\"secretRef\":{\"name\":\"inspectio-v3-secrets\",\"optional\":true}}],\"image\":\"inspectio-v3:latest\",\"imagePullPolicy\":\"IfNotPresent\",\"name\":\"persistence-writer\"}],\"serviceAccountName\":\"inspectio-app\"}}}}\n"
+                },
+                "creationTimestamp": "2026-03-31T19:36:10Z",
+                "generation": 94,
+                "labels": {
+                    "app.kubernetes.io/name": "inspectio-persistence-writer-shard-2",
+                    "app.kubernetes.io/part-of": "inspectio-v3",
+                    "inspectio.io/persistence-shard": "2"
+                },
+                "name": "inspectio-persistence-writer-shard-2",
+                "namespace": "inspectio",
+                "resourceVersion": "2012223",
+                "uid": "7ff51c92-6752-4009-975a-80ac6ad0dcc2"
+            },
+            "spec": {
+                "progressDeadlineSeconds": 600,
+                "replicas": 1,
+                "revisionHistoryLimit": 10,
+                "selector": {
+                    "matchLabels": {
+                        "app.kubernetes.io/name": "inspectio-persistence-writer-shard-2"
+                    }
+                },
+                "strategy": {
+                    "rollingUpdate": {
+                        "maxSurge": "25%",
+                        "maxUnavailable": "25%"
+                    },
+                    "type": "RollingUpdate"
+                },
+                "template": {
+                    "metadata": {
+                        "annotations": {
+                            "kubectl.kubernetes.io/restartedAt": "2026-04-04T12:34:51+03:00"
+                        },
+                        "labels": {
+                            "app.kubernetes.io/name": "inspectio-persistence-writer-shard-2",
+                            "app.kubernetes.io/part-of": "inspectio-v3",
+                            "inspectio.io/persistence-shard": "2"
+                        }
+                    },
+                    "spec": {
+                        "containers": [
+                            {
+                                "command": [
+                                    "inspectio-v3-persistence-writer"
+                                ],
+                                "env": [
+                                    {
+                                        "name": "INSPECTIO_V3_WRITER_SHARD_ID",
+                                        "value": "2"
+                                    }
+                                ],
+                                "envFrom": [
+                                    {
+                                        "configMapRef": {
+                                            "name": "inspectio-v3-config"
+                                        }
+                                    },
+                                    {
+                                        "secretRef": {
+                                            "name": "inspectio-v3-secrets",
+                                            "optional": true
+                                        }
+                                    }
+                                ],
+                                "image": "194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:p12-9-perfboost-20260404091726",
+                                "imagePullPolicy": "IfNotPresent",
+                                "name": "persistence-writer",
+                                "resources": {},
+                                "terminationMessagePath": "/dev/termination-log",
+                                "terminationMessagePolicy": "File"
+                            }
+                        ],
+                        "dnsPolicy": "ClusterFirst",
+                        "restartPolicy": "Always",
+                        "schedulerName": "default-scheduler",
+                        "securityContext": {},
+                        "serviceAccount": "inspectio-app",
+                        "serviceAccountName": "inspectio-app",
+                        "terminationGracePeriodSeconds": 30
+                    }
+                }
+            },
+            "status": {
+                "availableReplicas": 1,
+                "conditions": [
+                    {
+                        "lastTransitionTime": "2026-04-04T09:18:56Z",
+                        "lastUpdateTime": "2026-04-04T09:18:56Z",
+                        "message": "Deployment has minimum availability.",
+                        "reason": "MinimumReplicasAvailable",
+                        "status": "True",
+                        "type": "Available"
+                    },
+                    {
+                        "lastTransitionTime": "2026-04-02T16:09:27Z",
+                        "lastUpdateTime": "2026-04-04T09:34:54Z",
+                        "message": "ReplicaSet \"inspectio-persistence-writer-shard-2-68875db466\" has successfully progressed.",
+                        "reason": "NewReplicaSetAvailable",
+                        "status": "True",
+                        "type": "Progressing"
+                    }
+                ],
+                "observedGeneration": 94,
+                "readyReplicas": 1,
+                "replicas": 1,
+                "updatedReplicas": 1
+            }
+        },
+        {
+            "apiVersion": "apps/v1",
+            "kind": "Deployment",
+            "metadata": {
+                "annotations": {
+                    "deployment.kubernetes.io/revision": "90",
+                    "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{},\"labels\":{\"app.kubernetes.io/name\":\"inspectio-persistence-writer-shard-3\",\"app.kubernetes.io/part-of\":\"inspectio-v3\",\"inspectio.io/persistence-shard\":\"3\"},\"name\":\"inspectio-persistence-writer-shard-3\",\"namespace\":\"inspectio\"},\"spec\":{\"replicas\":1,\"selector\":{\"matchLabels\":{\"app.kubernetes.io/name\":\"inspectio-persistence-writer-shard-3\"}},\"template\":{\"metadata\":{\"labels\":{\"app.kubernetes.io/name\":\"inspectio-persistence-writer-shard-3\",\"app.kubernetes.io/part-of\":\"inspectio-v3\",\"inspectio.io/persistence-shard\":\"3\"}},\"spec\":{\"containers\":[{\"command\":[\"inspectio-v3-persistence-writer\"],\"env\":[{\"name\":\"INSPECTIO_V3_WRITER_SHARD_ID\",\"value\":\"3\"}],\"envFrom\":[{\"configMapRef\":{\"name\":\"inspectio-v3-config\"}},{\"secretRef\":{\"name\":\"inspectio-v3-secrets\",\"optional\":true}}],\"image\":\"inspectio-v3:latest\",\"imagePullPolicy\":\"IfNotPresent\",\"name\":\"persistence-writer\"}],\"serviceAccountName\":\"inspectio-app\"}}}}\n"
+                },
+                "creationTimestamp": "2026-03-31T19:36:11Z",
+                "generation": 94,
+                "labels": {
+                    "app.kubernetes.io/name": "inspectio-persistence-writer-shard-3",
+                    "app.kubernetes.io/part-of": "inspectio-v3",
+                    "inspectio.io/persistence-shard": "3"
+                },
+                "name": "inspectio-persistence-writer-shard-3",
+                "namespace": "inspectio",
+                "resourceVersion": "2012280",
+                "uid": "cce63132-21b9-4027-b514-772786d3e182"
+            },
+            "spec": {
+                "progressDeadlineSeconds": 600,
+                "replicas": 1,
+                "revisionHistoryLimit": 10,
+                "selector": {
+                    "matchLabels": {
+                        "app.kubernetes.io/name": "inspectio-persistence-writer-shard-3"
+                    }
+                },
+                "strategy": {
+                    "rollingUpdate": {
+                        "maxSurge": "25%",
+                        "maxUnavailable": "25%"
+                    },
+                    "type": "RollingUpdate"
+                },
+                "template": {
+                    "metadata": {
+                        "annotations": {
+                            "kubectl.kubernetes.io/restartedAt": "2026-04-04T12:34:52+03:00"
+                        },
+                        "labels": {
+                            "app.kubernetes.io/name": "inspectio-persistence-writer-shard-3",
+                            "app.kubernetes.io/part-of": "inspectio-v3",
+                            "inspectio.io/persistence-shard": "3"
+                        }
+                    },
+                    "spec": {
+                        "containers": [
+                            {
+                                "command": [
+                                    "inspectio-v3-persistence-writer"
+                                ],
+                                "env": [
+                                    {
+                                        "name": "INSPECTIO_V3_WRITER_SHARD_ID",
+                                        "value": "3"
+                                    }
+                                ],
+                                "envFrom": [
+                                    {
+                                        "configMapRef": {
+                                            "name": "inspectio-v3-config"
+                                        }
+                                    },
+                                    {
+                                        "secretRef": {
+                                            "name": "inspectio-v3-secrets",
+                                            "optional": true
+                                        }
+                                    }
+                                ],
+                                "image": "194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:p12-9-perfboost-20260404091726",
+                                "imagePullPolicy": "IfNotPresent",
+                                "name": "persistence-writer",
+                                "resources": {},
+                                "terminationMessagePath": "/dev/termination-log",
+                                "terminationMessagePolicy": "File"
+                            }
+                        ],
+                        "dnsPolicy": "ClusterFirst",
+                        "restartPolicy": "Always",
+                        "schedulerName": "default-scheduler",
+                        "securityContext": {},
+                        "serviceAccount": "inspectio-app",
+                        "serviceAccountName": "inspectio-app",
+                        "terminationGracePeriodSeconds": 30
+                    }
+                }
+            },
+            "status": {
+                "availableReplicas": 1,
+                "conditions": [
+                    {
+                        "lastTransitionTime": "2026-04-04T09:18:48Z",
+                        "lastUpdateTime": "2026-04-04T09:18:48Z",
+                        "message": "Deployment has minimum availability.",
+                        "reason": "MinimumReplicasAvailable",
+                        "status": "True",
+                        "type": "Available"
+                    },
+                    {
+                        "lastTransitionTime": "2026-04-02T16:09:31Z",
+                        "lastUpdateTime": "2026-04-04T09:34:55Z",
+                        "message": "ReplicaSet \"inspectio-persistence-writer-shard-3-64b597946b\" has successfully progressed.",
+                        "reason": "NewReplicaSetAvailable",
+                        "status": "True",
+                        "type": "Progressing"
+                    }
+                ],
+                "observedGeneration": 94,
+                "readyReplicas": 1,
+                "replicas": 1,
+                "updatedReplicas": 1
+            }
+        },
+        {
+            "apiVersion": "apps/v1",
+            "kind": "Deployment",
+            "metadata": {
+                "annotations": {
+                    "deployment.kubernetes.io/revision": "90",
+                    "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{},\"labels\":{\"app.kubernetes.io/name\":\"inspectio-persistence-writer-shard-4\",\"app.kubernetes.io/part-of\":\"inspectio-v3\",\"inspectio.io/persistence-shard\":\"4\"},\"name\":\"inspectio-persistence-writer-shard-4\",\"namespace\":\"inspectio\"},\"spec\":{\"replicas\":1,\"selector\":{\"matchLabels\":{\"app.kubernetes.io/name\":\"inspectio-persistence-writer-shard-4\"}},\"template\":{\"metadata\":{\"labels\":{\"app.kubernetes.io/name\":\"inspectio-persistence-writer-shard-4\",\"app.kubernetes.io/part-of\":\"inspectio-v3\",\"inspectio.io/persistence-shard\":\"4\"}},\"spec\":{\"containers\":[{\"command\":[\"inspectio-v3-persistence-writer\"],\"env\":[{\"name\":\"INSPECTIO_V3_WRITER_SHARD_ID\",\"value\":\"4\"}],\"envFrom\":[{\"configMapRef\":{\"name\":\"inspectio-v3-config\"}},{\"secretRef\":{\"name\":\"inspectio-v3-secrets\",\"optional\":true}}],\"image\":\"inspectio-v3:latest\",\"imagePullPolicy\":\"IfNotPresent\",\"name\":\"persistence-writer\"}],\"serviceAccountName\":\"inspectio-app\"}}}}\n"
+                },
+                "creationTimestamp": "2026-03-31T19:36:12Z",
+                "generation": 94,
+                "labels": {
+                    "app.kubernetes.io/name": "inspectio-persistence-writer-shard-4",
+                    "app.kubernetes.io/part-of": "inspectio-v3",
+                    "inspectio.io/persistence-shard": "4"
+                },
+                "name": "inspectio-persistence-writer-shard-4",
+                "namespace": "inspectio",
+                "resourceVersion": "2012305",
+                "uid": "fa68886b-5ccb-4d16-9017-c46edab028d7"
+            },
+            "spec": {
+                "progressDeadlineSeconds": 600,
+                "replicas": 1,
+                "revisionHistoryLimit": 10,
+                "selector": {
+                    "matchLabels": {
+                        "app.kubernetes.io/name": "inspectio-persistence-writer-shard-4"
+                    }
+                },
+                "strategy": {
+                    "rollingUpdate": {
+                        "maxSurge": "25%",
+                        "maxUnavailable": "25%"
+                    },
+                    "type": "RollingUpdate"
+                },
+                "template": {
+                    "metadata": {
+                        "annotations": {
+                            "kubectl.kubernetes.io/restartedAt": "2026-04-04T12:34:53+03:00"
+                        },
+                        "labels": {
+                            "app.kubernetes.io/name": "inspectio-persistence-writer-shard-4",
+                            "app.kubernetes.io/part-of": "inspectio-v3",
+                            "inspectio.io/persistence-shard": "4"
+                        }
+                    },
+                    "spec": {
+                        "containers": [
+                            {
+                                "command": [
+                                    "inspectio-v3-persistence-writer"
+                                ],
+                                "env": [
+                                    {
+                                        "name": "INSPECTIO_V3_WRITER_SHARD_ID",
+                                        "value": "4"
+                                    }
+                                ],
+                                "envFrom": [
+                                    {
+                                        "configMapRef": {
+                                            "name": "inspectio-v3-config"
+                                        }
+                                    },
+                                    {
+                                        "secretRef": {
+                                            "name": "inspectio-v3-secrets",
+                                            "optional": true
+                                        }
+                                    }
+                                ],
+                                "image": "194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:p12-9-perfboost-20260404091726",
+                                "imagePullPolicy": "IfNotPresent",
+                                "name": "persistence-writer",
+                                "resources": {},
+                                "terminationMessagePath": "/dev/termination-log",
+                                "terminationMessagePolicy": "File"
+                            }
+                        ],
+                        "dnsPolicy": "ClusterFirst",
+                        "restartPolicy": "Always",
+                        "schedulerName": "default-scheduler",
+                        "securityContext": {},
+                        "serviceAccount": "inspectio-app",
+                        "serviceAccountName": "inspectio-app",
+                        "terminationGracePeriodSeconds": 30
+                    }
+                }
+            },
+            "status": {
+                "availableReplicas": 1,
+                "conditions": [
+                    {
+                        "lastTransitionTime": "2026-04-04T09:18:47Z",
+                        "lastUpdateTime": "2026-04-04T09:18:47Z",
+                        "message": "Deployment has minimum availability.",
+                        "reason": "MinimumReplicasAvailable",
+                        "status": "True",
+                        "type": "Available"
+                    },
+                    {
+                        "lastTransitionTime": "2026-04-02T16:09:31Z",
+                        "lastUpdateTime": "2026-04-04T09:34:56Z",
+                        "message": "ReplicaSet \"inspectio-persistence-writer-shard-4-c99475bcd\" has successfully progressed.",
+                        "reason": "NewReplicaSetAvailable",
+                        "status": "True",
+                        "type": "Progressing"
+                    }
+                ],
+                "observedGeneration": 94,
+                "readyReplicas": 1,
+                "replicas": 1,
+                "updatedReplicas": 1
+            }
+        },
+        {
+            "apiVersion": "apps/v1",
+            "kind": "Deployment",
+            "metadata": {
+                "annotations": {
+                    "deployment.kubernetes.io/revision": "90",
+                    "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{},\"labels\":{\"app.kubernetes.io/name\":\"inspectio-persistence-writer-shard-5\",\"app.kubernetes.io/part-of\":\"inspectio-v3\",\"inspectio.io/persistence-shard\":\"5\"},\"name\":\"inspectio-persistence-writer-shard-5\",\"namespace\":\"inspectio\"},\"spec\":{\"replicas\":1,\"selector\":{\"matchLabels\":{\"app.kubernetes.io/name\":\"inspectio-persistence-writer-shard-5\"}},\"template\":{\"metadata\":{\"labels\":{\"app.kubernetes.io/name\":\"inspectio-persistence-writer-shard-5\",\"app.kubernetes.io/part-of\":\"inspectio-v3\",\"inspectio.io/persistence-shard\":\"5\"}},\"spec\":{\"containers\":[{\"command\":[\"inspectio-v3-persistence-writer\"],\"env\":[{\"name\":\"INSPECTIO_V3_WRITER_SHARD_ID\",\"value\":\"5\"}],\"envFrom\":[{\"configMapRef\":{\"name\":\"inspectio-v3-config\"}},{\"secretRef\":{\"name\":\"inspectio-v3-secrets\",\"optional\":true}}],\"image\":\"inspectio-v3:latest\",\"imagePullPolicy\":\"IfNotPresent\",\"name\":\"persistence-writer\"}],\"serviceAccountName\":\"inspectio-app\"}}}}\n"
+                },
+                "creationTimestamp": "2026-03-31T19:36:13Z",
+                "generation": 94,
+                "labels": {
+                    "app.kubernetes.io/name": "inspectio-persistence-writer-shard-5",
+                    "app.kubernetes.io/part-of": "inspectio-v3",
+                    "inspectio.io/persistence-shard": "5"
+                },
+                "name": "inspectio-persistence-writer-shard-5",
+                "namespace": "inspectio",
+                "resourceVersion": "2012352",
+                "uid": "b58b6603-9d74-4a7a-9b72-664cd06af603"
+            },
+            "spec": {
+                "progressDeadlineSeconds": 600,
+                "replicas": 1,
+                "revisionHistoryLimit": 10,
+                "selector": {
+                    "matchLabels": {
+                        "app.kubernetes.io/name": "inspectio-persistence-writer-shard-5"
+                    }
+                },
+                "strategy": {
+                    "rollingUpdate": {
+                        "maxSurge": "25%",
+                        "maxUnavailable": "25%"
+                    },
+                    "type": "RollingUpdate"
+                },
+                "template": {
+                    "metadata": {
+                        "annotations": {
+                            "kubectl.kubernetes.io/restartedAt": "2026-04-04T12:34:55+03:00"
+                        },
+                        "labels": {
+                            "app.kubernetes.io/name": "inspectio-persistence-writer-shard-5",
+                            "app.kubernetes.io/part-of": "inspectio-v3",
+                            "inspectio.io/persistence-shard": "5"
+                        }
+                    },
+                    "spec": {
+                        "containers": [
+                            {
+                                "command": [
+                                    "inspectio-v3-persistence-writer"
+                                ],
+                                "env": [
+                                    {
+                                        "name": "INSPECTIO_V3_WRITER_SHARD_ID",
+                                        "value": "5"
+                                    }
+                                ],
+                                "envFrom": [
+                                    {
+                                        "configMapRef": {
+                                            "name": "inspectio-v3-config"
+                                        }
+                                    },
+                                    {
+                                        "secretRef": {
+                                            "name": "inspectio-v3-secrets",
+                                            "optional": true
+                                        }
+                                    }
+                                ],
+                                "image": "194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:p12-9-perfboost-20260404091726",
+                                "imagePullPolicy": "IfNotPresent",
+                                "name": "persistence-writer",
+                                "resources": {},
+                                "terminationMessagePath": "/dev/termination-log",
+                                "terminationMessagePolicy": "File"
+                            }
+                        ],
+                        "dnsPolicy": "ClusterFirst",
+                        "restartPolicy": "Always",
+                        "schedulerName": "default-scheduler",
+                        "securityContext": {},
+                        "serviceAccount": "inspectio-app",
+                        "serviceAccountName": "inspectio-app",
+                        "terminationGracePeriodSeconds": 30
+                    }
+                }
+            },
+            "status": {
+                "availableReplicas": 1,
+                "conditions": [
+                    {
+                        "lastTransitionTime": "2026-04-04T09:19:45Z",
+                        "lastUpdateTime": "2026-04-04T09:19:45Z",
+                        "message": "Deployment has minimum availability.",
+                        "reason": "MinimumReplicasAvailable",
+                        "status": "True",
+                        "type": "Available"
+                    },
+                    {
+                        "lastTransitionTime": "2026-04-02T16:11:02Z",
+                        "lastUpdateTime": "2026-04-04T09:34:57Z",
+                        "message": "ReplicaSet \"inspectio-persistence-writer-shard-5-5c44754df\" has successfully progressed.",
+                        "reason": "NewReplicaSetAvailable",
+                        "status": "True",
+                        "type": "Progressing"
+                    }
+                ],
+                "observedGeneration": 94,
+                "readyReplicas": 1,
+                "replicas": 1,
+                "updatedReplicas": 1
+            }
+        },
+        {
+            "apiVersion": "apps/v1",
+            "kind": "Deployment",
+            "metadata": {
+                "annotations": {
+                    "deployment.kubernetes.io/revision": "90",
+                    "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{},\"labels\":{\"app.kubernetes.io/name\":\"inspectio-persistence-writer-shard-6\",\"app.kubernetes.io/part-of\":\"inspectio-v3\",\"inspectio.io/persistence-shard\":\"6\"},\"name\":\"inspectio-persistence-writer-shard-6\",\"namespace\":\"inspectio\"},\"spec\":{\"replicas\":1,\"selector\":{\"matchLabels\":{\"app.kubernetes.io/name\":\"inspectio-persistence-writer-shard-6\"}},\"template\":{\"metadata\":{\"labels\":{\"app.kubernetes.io/name\":\"inspectio-persistence-writer-shard-6\",\"app.kubernetes.io/part-of\":\"inspectio-v3\",\"inspectio.io/persistence-shard\":\"6\"}},\"spec\":{\"containers\":[{\"command\":[\"inspectio-v3-persistence-writer\"],\"env\":[{\"name\":\"INSPECTIO_V3_WRITER_SHARD_ID\",\"value\":\"6\"}],\"envFrom\":[{\"configMapRef\":{\"name\":\"inspectio-v3-config\"}},{\"secretRef\":{\"name\":\"inspectio-v3-secrets\",\"optional\":true}}],\"image\":\"inspectio-v3:latest\",\"imagePullPolicy\":\"IfNotPresent\",\"name\":\"persistence-writer\"}],\"serviceAccountName\":\"inspectio-app\"}}}}\n"
+                },
+                "creationTimestamp": "2026-03-31T19:36:14Z",
+                "generation": 94,
+                "labels": {
+                    "app.kubernetes.io/name": "inspectio-persistence-writer-shard-6",
+                    "app.kubernetes.io/part-of": "inspectio-v3",
+                    "inspectio.io/persistence-shard": "6"
+                },
+                "name": "inspectio-persistence-writer-shard-6",
+                "namespace": "inspectio",
+                "resourceVersion": "2012394",
+                "uid": "3f1e56a6-016e-4043-ac8e-60d079465dfb"
+            },
+            "spec": {
+                "progressDeadlineSeconds": 600,
+                "replicas": 1,
+                "revisionHistoryLimit": 10,
+                "selector": {
+                    "matchLabels": {
+                        "app.kubernetes.io/name": "inspectio-persistence-writer-shard-6"
+                    }
+                },
+                "strategy": {
+                    "rollingUpdate": {
+                        "maxSurge": "25%",
+                        "maxUnavailable": "25%"
+                    },
+                    "type": "RollingUpdate"
+                },
+                "template": {
+                    "metadata": {
+                        "annotations": {
+                            "kubectl.kubernetes.io/restartedAt": "2026-04-04T12:34:56+03:00"
+                        },
+                        "labels": {
+                            "app.kubernetes.io/name": "inspectio-persistence-writer-shard-6",
+                            "app.kubernetes.io/part-of": "inspectio-v3",
+                            "inspectio.io/persistence-shard": "6"
+                        }
+                    },
+                    "spec": {
+                        "containers": [
+                            {
+                                "command": [
+                                    "inspectio-v3-persistence-writer"
+                                ],
+                                "env": [
+                                    {
+                                        "name": "INSPECTIO_V3_WRITER_SHARD_ID",
+                                        "value": "6"
+                                    }
+                                ],
+                                "envFrom": [
+                                    {
+                                        "configMapRef": {
+                                            "name": "inspectio-v3-config"
+                                        }
+                                    },
+                                    {
+                                        "secretRef": {
+                                            "name": "inspectio-v3-secrets",
+                                            "optional": true
+                                        }
+                                    }
+                                ],
+                                "image": "194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:p12-9-perfboost-20260404091726",
+                                "imagePullPolicy": "IfNotPresent",
+                                "name": "persistence-writer",
+                                "resources": {},
+                                "terminationMessagePath": "/dev/termination-log",
+                                "terminationMessagePolicy": "File"
+                            }
+                        ],
+                        "dnsPolicy": "ClusterFirst",
+                        "restartPolicy": "Always",
+                        "schedulerName": "default-scheduler",
+                        "securityContext": {},
+                        "serviceAccount": "inspectio-app",
+                        "serviceAccountName": "inspectio-app",
+                        "terminationGracePeriodSeconds": 30
+                    }
+                }
+            },
+            "status": {
+                "availableReplicas": 1,
+                "conditions": [
+                    {
+                        "lastTransitionTime": "2026-04-04T09:18:49Z",
+                        "lastUpdateTime": "2026-04-04T09:18:49Z",
+                        "message": "Deployment has minimum availability.",
+                        "reason": "MinimumReplicasAvailable",
+                        "status": "True",
+                        "type": "Available"
+                    },
+                    {
+                        "lastTransitionTime": "2026-04-02T16:09:51Z",
+                        "lastUpdateTime": "2026-04-04T09:34:58Z",
+                        "message": "ReplicaSet \"inspectio-persistence-writer-shard-6-b9fb77b95\" has successfully progressed.",
+                        "reason": "NewReplicaSetAvailable",
+                        "status": "True",
+                        "type": "Progressing"
+                    }
+                ],
+                "observedGeneration": 94,
+                "readyReplicas": 1,
+                "replicas": 1,
+                "updatedReplicas": 1
+            }
+        },
+        {
+            "apiVersion": "apps/v1",
+            "kind": "Deployment",
+            "metadata": {
+                "annotations": {
+                    "deployment.kubernetes.io/revision": "90",
+                    "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{},\"labels\":{\"app.kubernetes.io/name\":\"inspectio-persistence-writer-shard-7\",\"app.kubernetes.io/part-of\":\"inspectio-v3\",\"inspectio.io/persistence-shard\":\"7\"},\"name\":\"inspectio-persistence-writer-shard-7\",\"namespace\":\"inspectio\"},\"spec\":{\"replicas\":1,\"selector\":{\"matchLabels\":{\"app.kubernetes.io/name\":\"inspectio-persistence-writer-shard-7\"}},\"template\":{\"metadata\":{\"labels\":{\"app.kubernetes.io/name\":\"inspectio-persistence-writer-shard-7\",\"app.kubernetes.io/part-of\":\"inspectio-v3\",\"inspectio.io/persistence-shard\":\"7\"}},\"spec\":{\"containers\":[{\"command\":[\"inspectio-v3-persistence-writer\"],\"env\":[{\"name\":\"INSPECTIO_V3_WRITER_SHARD_ID\",\"value\":\"7\"}],\"envFrom\":[{\"configMapRef\":{\"name\":\"inspectio-v3-config\"}},{\"secretRef\":{\"name\":\"inspectio-v3-secrets\",\"optional\":true}}],\"image\":\"inspectio-v3:latest\",\"imagePullPolicy\":\"IfNotPresent\",\"name\":\"persistence-writer\"}],\"serviceAccountName\":\"inspectio-app\"}}}}\n"
+                },
+                "creationTimestamp": "2026-03-31T19:36:14Z",
+                "generation": 94,
+                "labels": {
+                    "app.kubernetes.io/name": "inspectio-persistence-writer-shard-7",
+                    "app.kubernetes.io/part-of": "inspectio-v3",
+                    "inspectio.io/persistence-shard": "7"
+                },
+                "name": "inspectio-persistence-writer-shard-7",
+                "namespace": "inspectio",
+                "resourceVersion": "2012567",
+                "uid": "04d70a81-9dc9-4ae9-8311-bc6135e9379c"
+            },
+            "spec": {
+                "progressDeadlineSeconds": 600,
+                "replicas": 1,
+                "revisionHistoryLimit": 10,
+                "selector": {
+                    "matchLabels": {
+                        "app.kubernetes.io/name": "inspectio-persistence-writer-shard-7"
+                    }
+                },
+                "strategy": {
+                    "rollingUpdate": {
+                        "maxSurge": "25%",
+                        "maxUnavailable": "25%"
+                    },
+                    "type": "RollingUpdate"
+                },
+                "template": {
+                    "metadata": {
+                        "annotations": {
+                            "kubectl.kubernetes.io/restartedAt": "2026-04-04T12:34:58+03:00"
+                        },
+                        "labels": {
+                            "app.kubernetes.io/name": "inspectio-persistence-writer-shard-7",
+                            "app.kubernetes.io/part-of": "inspectio-v3",
+                            "inspectio.io/persistence-shard": "7"
+                        }
+                    },
+                    "spec": {
+                        "containers": [
+                            {
+                                "command": [
+                                    "inspectio-v3-persistence-writer"
+                                ],
+                                "env": [
+                                    {
+                                        "name": "INSPECTIO_V3_WRITER_SHARD_ID",
+                                        "value": "7"
+                                    }
+                                ],
+                                "envFrom": [
+                                    {
+                                        "configMapRef": {
+                                            "name": "inspectio-v3-config"
+                                        }
+                                    },
+                                    {
+                                        "secretRef": {
+                                            "name": "inspectio-v3-secrets",
+                                            "optional": true
+                                        }
+                                    }
+                                ],
+                                "image": "194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:p12-9-perfboost-20260404091726",
+                                "imagePullPolicy": "IfNotPresent",
+                                "name": "persistence-writer",
+                                "resources": {},
+                                "terminationMessagePath": "/dev/termination-log",
+                                "terminationMessagePolicy": "File"
+                            }
+                        ],
+                        "dnsPolicy": "ClusterFirst",
+                        "restartPolicy": "Always",
+                        "schedulerName": "default-scheduler",
+                        "securityContext": {},
+                        "serviceAccount": "inspectio-app",
+                        "serviceAccountName": "inspectio-app",
+                        "terminationGracePeriodSeconds": 30
+                    }
+                }
+            },
+            "status": {
+                "availableReplicas": 1,
+                "conditions": [
+                    {
+                        "lastTransitionTime": "2026-04-04T09:19:11Z",
+                        "lastUpdateTime": "2026-04-04T09:19:11Z",
+                        "message": "Deployment has minimum availability.",
+                        "reason": "MinimumReplicasAvailable",
+                        "status": "True",
+                        "type": "Available"
+                    },
+                    {
+                        "lastTransitionTime": "2026-04-02T16:09:52Z",
+                        "lastUpdateTime": "2026-04-04T09:35:00Z",
+                        "message": "ReplicaSet \"inspectio-persistence-writer-shard-7-7c7c5c6564\" has successfully progressed.",
+                        "reason": "NewReplicaSetAvailable",
+                        "status": "True",
+                        "type": "Progressing"
+                    }
+                ],
+                "observedGeneration": 94,
+                "readyReplicas": 1,
+                "replicas": 1,
+                "updatedReplicas": 1
+            }
+        },
+        {
+            "apiVersion": "apps/v1",
+            "kind": "Deployment",
+            "metadata": {
+                "annotations": {
+                    "deployment.kubernetes.io/revision": "108",
+                    "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{},\"labels\":{\"app.kubernetes.io/name\":\"inspectio-worker-shard-0\",\"app.kubernetes.io/part-of\":\"inspectio-v3\"},\"name\":\"inspectio-worker-shard-0\",\"namespace\":\"inspectio\"},\"spec\":{\"replicas\":1,\"selector\":{\"matchLabels\":{\"app.kubernetes.io/name\":\"inspectio-worker-shard-0\"}},\"template\":{\"metadata\":{\"labels\":{\"app.kubernetes.io/name\":\"inspectio-worker-shard-0\",\"app.kubernetes.io/part-of\":\"inspectio-v3\"}},\"spec\":{\"containers\":[{\"command\":[\"inspectio-v3-worker\"],\"env\":[{\"name\":\"INSPECTIO_V3_WORKER_SEND_QUEUE_URL\",\"value\":\"https://sqs.us-east-1.amazonaws.com/194768394273/inspectio-v3-send-0\"}],\"envFrom\":[{\"configMapRef\":{\"name\":\"inspectio-v3-config\"}},{\"secretRef\":{\"name\":\"inspectio-v3-secrets\",\"optional\":true}}],\"image\":\"194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:eks-sustain\",\"imagePullPolicy\":\"IfNotPresent\",\"name\":\"worker\"}],\"serviceAccountName\":\"inspectio-app\"}}}}\n"
+                },
+                "creationTimestamp": "2026-03-30T16:40:14Z",
+                "generation": 115,
+                "labels": {
+                    "app.kubernetes.io/name": "inspectio-worker-shard-0",
+                    "app.kubernetes.io/part-of": "inspectio-v3"
+                },
+                "name": "inspectio-worker-shard-0",
+                "namespace": "inspectio",
+                "resourceVersion": "2015232",
+                "uid": "3aa08e2b-2477-478e-81d4-11e1c9684460"
+            },
+            "spec": {
+                "progressDeadlineSeconds": 600,
+                "replicas": 24,
+                "revisionHistoryLimit": 10,
+                "selector": {
+                    "matchLabels": {
+                        "app.kubernetes.io/name": "inspectio-worker-shard-0"
+                    }
+                },
+                "strategy": {
+                    "rollingUpdate": {
+                        "maxSurge": "25%",
+                        "maxUnavailable": "25%"
+                    },
+                    "type": "RollingUpdate"
+                },
+                "template": {
+                    "metadata": {
+                        "annotations": {
+                            "kubectl.kubernetes.io/restartedAt": "2026-04-04T12:34:59+03:00"
+                        },
+                        "labels": {
+                            "app.kubernetes.io/name": "inspectio-worker-shard-0",
+                            "app.kubernetes.io/part-of": "inspectio-v3"
+                        }
+                    },
+                    "spec": {
+                        "containers": [
+                            {
+                                "command": [
+                                    "inspectio-v3-worker"
+                                ],
+                                "env": [
+                                    {
+                                        "name": "INSPECTIO_V3_WORKER_SEND_QUEUE_URL",
+                                        "value": "https://sqs.us-east-1.amazonaws.com/194768394273/inspectio-v3-send-0"
+                                    },
+                                    {
+                                        "name": "INSPECTIO_V3_WORKER_LOG_LEVEL",
+                                        "value": "WARNING"
+                                    }
+                                ],
+                                "envFrom": [
+                                    {
+                                        "configMapRef": {
+                                            "name": "inspectio-v3-config"
+                                        }
+                                    },
+                                    {
+                                        "secretRef": {
+                                            "name": "inspectio-v3-secrets",
+                                            "optional": true
+                                        }
+                                    }
+                                ],
+                                "image": "194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:p12-9-perfboost-20260404091726",
+                                "imagePullPolicy": "IfNotPresent",
+                                "name": "worker",
+                                "resources": {},
+                                "terminationMessagePath": "/dev/termination-log",
+                                "terminationMessagePolicy": "File"
+                            }
+                        ],
+                        "dnsPolicy": "ClusterFirst",
+                        "restartPolicy": "Always",
+                        "schedulerName": "default-scheduler",
+                        "securityContext": {},
+                        "serviceAccount": "inspectio-app",
+                        "serviceAccountName": "inspectio-app",
+                        "terminationGracePeriodSeconds": 30
+                    }
+                }
+            },
+            "status": {
+                "availableReplicas": 24,
+                "conditions": [
+                    {
+                        "lastTransitionTime": "2026-04-04T09:18:57Z",
+                        "lastUpdateTime": "2026-04-04T09:18:57Z",
+                        "message": "Deployment has minimum availability.",
+                        "reason": "MinimumReplicasAvailable",
+                        "status": "True",
+                        "type": "Available"
+                    },
+                    {
+                        "lastTransitionTime": "2026-04-02T16:09:25Z",
+                        "lastUpdateTime": "2026-04-04T09:35:33Z",
+                        "message": "ReplicaSet \"inspectio-worker-shard-0-6fc47795b6\" has successfully progressed.",
+                        "reason": "NewReplicaSetAvailable",
+                        "status": "True",
+                        "type": "Progressing"
+                    }
+                ],
+                "observedGeneration": 115,
+                "readyReplicas": 24,
+                "replicas": 24,
+                "updatedReplicas": 24
+            }
+        },
+        {
+            "apiVersion": "apps/v1",
+            "kind": "Deployment",
+            "metadata": {
+                "annotations": {
+                    "deployment.kubernetes.io/revision": "108",
+                    "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{},\"labels\":{\"app.kubernetes.io/name\":\"inspectio-worker-shard-1\",\"app.kubernetes.io/part-of\":\"inspectio-v3\"},\"name\":\"inspectio-worker-shard-1\",\"namespace\":\"inspectio\"},\"spec\":{\"replicas\":1,\"selector\":{\"matchLabels\":{\"app.kubernetes.io/name\":\"inspectio-worker-shard-1\"}},\"template\":{\"metadata\":{\"labels\":{\"app.kubernetes.io/name\":\"inspectio-worker-shard-1\",\"app.kubernetes.io/part-of\":\"inspectio-v3\"}},\"spec\":{\"containers\":[{\"command\":[\"inspectio-v3-worker\"],\"env\":[{\"name\":\"INSPECTIO_V3_WORKER_SEND_QUEUE_URL\",\"value\":\"https://sqs.us-east-1.amazonaws.com/194768394273/inspectio-v3-send-1\"}],\"envFrom\":[{\"configMapRef\":{\"name\":\"inspectio-v3-config\"}},{\"secretRef\":{\"name\":\"inspectio-v3-secrets\",\"optional\":true}}],\"image\":\"194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:eks-sustain\",\"imagePullPolicy\":\"IfNotPresent\",\"name\":\"worker\"}],\"serviceAccountName\":\"inspectio-app\"}}}}\n"
+                },
+                "creationTimestamp": "2026-03-30T16:40:15Z",
+                "generation": 115,
+                "labels": {
+                    "app.kubernetes.io/name": "inspectio-worker-shard-1",
+                    "app.kubernetes.io/part-of": "inspectio-v3"
+                },
+                "name": "inspectio-worker-shard-1",
+                "namespace": "inspectio",
+                "resourceVersion": "2016864",
+                "uid": "061c0bc5-ef56-42b7-9cfd-787c9515f59c"
+            },
+            "spec": {
+                "progressDeadlineSeconds": 600,
+                "replicas": 24,
+                "revisionHistoryLimit": 10,
+                "selector": {
+                    "matchLabels": {
+                        "app.kubernetes.io/name": "inspectio-worker-shard-1"
+                    }
+                },
+                "strategy": {
+                    "rollingUpdate": {
+                        "maxSurge": "25%",
+                        "maxUnavailable": "25%"
+                    },
+                    "type": "RollingUpdate"
+                },
+                "template": {
+                    "metadata": {
+                        "annotations": {
+                            "kubectl.kubernetes.io/restartedAt": "2026-04-04T12:35:00+03:00"
+                        },
+                        "labels": {
+                            "app.kubernetes.io/name": "inspectio-worker-shard-1",
+                            "app.kubernetes.io/part-of": "inspectio-v3"
+                        }
+                    },
+                    "spec": {
+                        "containers": [
+                            {
+                                "command": [
+                                    "inspectio-v3-worker"
+                                ],
+                                "env": [
+                                    {
+                                        "name": "INSPECTIO_V3_WORKER_SEND_QUEUE_URL",
+                                        "value": "https://sqs.us-east-1.amazonaws.com/194768394273/inspectio-v3-send-1"
+                                    },
+                                    {
+                                        "name": "INSPECTIO_V3_WORKER_LOG_LEVEL",
+                                        "value": "WARNING"
+                                    }
+                                ],
+                                "envFrom": [
+                                    {
+                                        "configMapRef": {
+                                            "name": "inspectio-v3-config"
+                                        }
+                                    },
+                                    {
+                                        "secretRef": {
+                                            "name": "inspectio-v3-secrets",
+                                            "optional": true
+                                        }
+                                    }
+                                ],
+                                "image": "194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:p12-9-perfboost-20260404091726",
+                                "imagePullPolicy": "IfNotPresent",
+                                "name": "worker",
+                                "resources": {},
+                                "terminationMessagePath": "/dev/termination-log",
+                                "terminationMessagePolicy": "File"
+                            }
+                        ],
+                        "dnsPolicy": "ClusterFirst",
+                        "restartPolicy": "Always",
+                        "schedulerName": "default-scheduler",
+                        "securityContext": {},
+                        "serviceAccount": "inspectio-app",
+                        "serviceAccountName": "inspectio-app",
+                        "terminationGracePeriodSeconds": 30
+                    }
+                }
+            },
+            "status": {
+                "availableReplicas": 24,
+                "conditions": [
+                    {
+                        "lastTransitionTime": "2026-04-04T09:19:07Z",
+                        "lastUpdateTime": "2026-04-04T09:19:07Z",
+                        "message": "Deployment has minimum availability.",
+                        "reason": "MinimumReplicasAvailable",
+                        "status": "True",
+                        "type": "Available"
+                    },
+                    {
+                        "lastTransitionTime": "2026-04-02T16:09:22Z",
+                        "lastUpdateTime": "2026-04-04T09:36:13Z",
+                        "message": "ReplicaSet \"inspectio-worker-shard-1-7d44577d79\" has successfully progressed.",
+                        "reason": "NewReplicaSetAvailable",
+                        "status": "True",
+                        "type": "Progressing"
+                    }
+                ],
+                "observedGeneration": 115,
+                "readyReplicas": 24,
+                "replicas": 24,
+                "updatedReplicas": 24
+            }
+        },
+        {
+            "apiVersion": "apps/v1",
+            "kind": "Deployment",
+            "metadata": {
+                "annotations": {
+                    "deployment.kubernetes.io/revision": "108",
+                    "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{},\"labels\":{\"app.kubernetes.io/name\":\"inspectio-worker-shard-2\",\"app.kubernetes.io/part-of\":\"inspectio-v3\"},\"name\":\"inspectio-worker-shard-2\",\"namespace\":\"inspectio\"},\"spec\":{\"replicas\":1,\"selector\":{\"matchLabels\":{\"app.kubernetes.io/name\":\"inspectio-worker-shard-2\"}},\"template\":{\"metadata\":{\"labels\":{\"app.kubernetes.io/name\":\"inspectio-worker-shard-2\",\"app.kubernetes.io/part-of\":\"inspectio-v3\"}},\"spec\":{\"containers\":[{\"command\":[\"inspectio-v3-worker\"],\"env\":[{\"name\":\"INSPECTIO_V3_WORKER_SEND_QUEUE_URL\",\"value\":\"https://sqs.us-east-1.amazonaws.com/194768394273/inspectio-v3-send-2\"}],\"envFrom\":[{\"configMapRef\":{\"name\":\"inspectio-v3-config\"}},{\"secretRef\":{\"name\":\"inspectio-v3-secrets\",\"optional\":true}}],\"image\":\"194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:eks-sustain\",\"imagePullPolicy\":\"IfNotPresent\",\"name\":\"worker\"}],\"serviceAccountName\":\"inspectio-app\"}}}}\n"
+                },
+                "creationTimestamp": "2026-03-30T16:40:16Z",
+                "generation": 115,
+                "labels": {
+                    "app.kubernetes.io/name": "inspectio-worker-shard-2",
+                    "app.kubernetes.io/part-of": "inspectio-v3"
+                },
+                "name": "inspectio-worker-shard-2",
+                "namespace": "inspectio",
+                "resourceVersion": "2016766",
+                "uid": "c099bf1c-6905-4ad0-8810-f386903434bf"
+            },
+            "spec": {
+                "progressDeadlineSeconds": 600,
+                "replicas": 24,
+                "revisionHistoryLimit": 10,
+                "selector": {
+                    "matchLabels": {
+                        "app.kubernetes.io/name": "inspectio-worker-shard-2"
+                    }
+                },
+                "strategy": {
+                    "rollingUpdate": {
+                        "maxSurge": "25%",
+                        "maxUnavailable": "25%"
+                    },
+                    "type": "RollingUpdate"
+                },
+                "template": {
+                    "metadata": {
+                        "annotations": {
+                            "kubectl.kubernetes.io/restartedAt": "2026-04-04T12:35:01+03:00"
+                        },
+                        "labels": {
+                            "app.kubernetes.io/name": "inspectio-worker-shard-2",
+                            "app.kubernetes.io/part-of": "inspectio-v3"
+                        }
+                    },
+                    "spec": {
+                        "containers": [
+                            {
+                                "command": [
+                                    "inspectio-v3-worker"
+                                ],
+                                "env": [
+                                    {
+                                        "name": "INSPECTIO_V3_WORKER_SEND_QUEUE_URL",
+                                        "value": "https://sqs.us-east-1.amazonaws.com/194768394273/inspectio-v3-send-2"
+                                    },
+                                    {
+                                        "name": "INSPECTIO_V3_WORKER_LOG_LEVEL",
+                                        "value": "WARNING"
+                                    }
+                                ],
+                                "envFrom": [
+                                    {
+                                        "configMapRef": {
+                                            "name": "inspectio-v3-config"
+                                        }
+                                    },
+                                    {
+                                        "secretRef": {
+                                            "name": "inspectio-v3-secrets",
+                                            "optional": true
+                                        }
+                                    }
+                                ],
+                                "image": "194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:p12-9-perfboost-20260404091726",
+                                "imagePullPolicy": "IfNotPresent",
+                                "name": "worker",
+                                "resources": {},
+                                "terminationMessagePath": "/dev/termination-log",
+                                "terminationMessagePolicy": "File"
+                            }
+                        ],
+                        "dnsPolicy": "ClusterFirst",
+                        "restartPolicy": "Always",
+                        "schedulerName": "default-scheduler",
+                        "securityContext": {},
+                        "serviceAccount": "inspectio-app",
+                        "serviceAccountName": "inspectio-app",
+                        "terminationGracePeriodSeconds": 30
+                    }
+                }
+            },
+            "status": {
+                "availableReplicas": 24,
+                "conditions": [
+                    {
+                        "lastTransitionTime": "2026-04-04T09:19:09Z",
+                        "lastUpdateTime": "2026-04-04T09:19:09Z",
+                        "message": "Deployment has minimum availability.",
+                        "reason": "MinimumReplicasAvailable",
+                        "status": "True",
+                        "type": "Available"
+                    },
+                    {
+                        "lastTransitionTime": "2026-04-02T16:25:35Z",
+                        "lastUpdateTime": "2026-04-04T09:36:11Z",
+                        "message": "ReplicaSet \"inspectio-worker-shard-2-55b7d485c4\" has successfully progressed.",
+                        "reason": "NewReplicaSetAvailable",
+                        "status": "True",
+                        "type": "Progressing"
+                    }
+                ],
+                "observedGeneration": 115,
+                "readyReplicas": 24,
+                "replicas": 24,
+                "updatedReplicas": 24
+            }
+        },
+        {
+            "apiVersion": "apps/v1",
+            "kind": "Deployment",
+            "metadata": {
+                "annotations": {
+                    "deployment.kubernetes.io/revision": "108",
+                    "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{},\"labels\":{\"app.kubernetes.io/name\":\"inspectio-worker-shard-3\",\"app.kubernetes.io/part-of\":\"inspectio-v3\"},\"name\":\"inspectio-worker-shard-3\",\"namespace\":\"inspectio\"},\"spec\":{\"replicas\":1,\"selector\":{\"matchLabels\":{\"app.kubernetes.io/name\":\"inspectio-worker-shard-3\"}},\"template\":{\"metadata\":{\"labels\":{\"app.kubernetes.io/name\":\"inspectio-worker-shard-3\",\"app.kubernetes.io/part-of\":\"inspectio-v3\"}},\"spec\":{\"containers\":[{\"command\":[\"inspectio-v3-worker\"],\"env\":[{\"name\":\"INSPECTIO_V3_WORKER_SEND_QUEUE_URL\",\"value\":\"https://sqs.us-east-1.amazonaws.com/194768394273/inspectio-v3-send-3\"}],\"envFrom\":[{\"configMapRef\":{\"name\":\"inspectio-v3-config\"}},{\"secretRef\":{\"name\":\"inspectio-v3-secrets\",\"optional\":true}}],\"image\":\"194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:eks-sustain\",\"imagePullPolicy\":\"IfNotPresent\",\"name\":\"worker\"}],\"serviceAccountName\":\"inspectio-app\"}}}}\n"
+                },
+                "creationTimestamp": "2026-03-30T16:40:17Z",
+                "generation": 115,
+                "labels": {
+                    "app.kubernetes.io/name": "inspectio-worker-shard-3",
+                    "app.kubernetes.io/part-of": "inspectio-v3"
+                },
+                "name": "inspectio-worker-shard-3",
+                "namespace": "inspectio",
+                "resourceVersion": "2017061",
+                "uid": "a1c151d2-016e-4161-bb13-3886f85deafd"
+            },
+            "spec": {
+                "progressDeadlineSeconds": 600,
+                "replicas": 24,
+                "revisionHistoryLimit": 10,
+                "selector": {
+                    "matchLabels": {
+                        "app.kubernetes.io/name": "inspectio-worker-shard-3"
+                    }
+                },
+                "strategy": {
+                    "rollingUpdate": {
+                        "maxSurge": "25%",
+                        "maxUnavailable": "25%"
+                    },
+                    "type": "RollingUpdate"
+                },
+                "template": {
+                    "metadata": {
+                        "annotations": {
+                            "kubectl.kubernetes.io/restartedAt": "2026-04-04T12:35:03+03:00"
+                        },
+                        "labels": {
+                            "app.kubernetes.io/name": "inspectio-worker-shard-3",
+                            "app.kubernetes.io/part-of": "inspectio-v3"
+                        }
+                    },
+                    "spec": {
+                        "containers": [
+                            {
+                                "command": [
+                                    "inspectio-v3-worker"
+                                ],
+                                "env": [
+                                    {
+                                        "name": "INSPECTIO_V3_WORKER_SEND_QUEUE_URL",
+                                        "value": "https://sqs.us-east-1.amazonaws.com/194768394273/inspectio-v3-send-3"
+                                    },
+                                    {
+                                        "name": "INSPECTIO_V3_WORKER_LOG_LEVEL",
+                                        "value": "WARNING"
+                                    }
+                                ],
+                                "envFrom": [
+                                    {
+                                        "configMapRef": {
+                                            "name": "inspectio-v3-config"
+                                        }
+                                    },
+                                    {
+                                        "secretRef": {
+                                            "name": "inspectio-v3-secrets",
+                                            "optional": true
+                                        }
+                                    }
+                                ],
+                                "image": "194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:p12-9-perfboost-20260404091726",
+                                "imagePullPolicy": "IfNotPresent",
+                                "name": "worker",
+                                "resources": {},
+                                "terminationMessagePath": "/dev/termination-log",
+                                "terminationMessagePolicy": "File"
+                            }
+                        ],
+                        "dnsPolicy": "ClusterFirst",
+                        "restartPolicy": "Always",
+                        "schedulerName": "default-scheduler",
+                        "securityContext": {},
+                        "serviceAccount": "inspectio-app",
+                        "serviceAccountName": "inspectio-app",
+                        "terminationGracePeriodSeconds": 30
+                    }
+                }
+            },
+            "status": {
+                "availableReplicas": 24,
+                "conditions": [
+                    {
+                        "lastTransitionTime": "2026-04-04T09:18:59Z",
+                        "lastUpdateTime": "2026-04-04T09:18:59Z",
+                        "message": "Deployment has minimum availability.",
+                        "reason": "MinimumReplicasAvailable",
+                        "status": "True",
+                        "type": "Available"
+                    },
+                    {
+                        "lastTransitionTime": "2026-04-02T16:25:35Z",
+                        "lastUpdateTime": "2026-04-04T09:36:29Z",
+                        "message": "ReplicaSet \"inspectio-worker-shard-3-7746d4d6b\" has successfully progressed.",
+                        "reason": "NewReplicaSetAvailable",
+                        "status": "True",
+                        "type": "Progressing"
+                    }
+                ],
+                "observedGeneration": 115,
+                "readyReplicas": 24,
+                "replicas": 24,
+                "updatedReplicas": 24
+            }
+        },
+        {
+            "apiVersion": "apps/v1",
+            "kind": "Deployment",
+            "metadata": {
+                "annotations": {
+                    "deployment.kubernetes.io/revision": "99",
+                    "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{},\"labels\":{\"app.kubernetes.io/name\":\"inspectio-worker-shard-4\",\"app.kubernetes.io/part-of\":\"inspectio-v3\"},\"name\":\"inspectio-worker-shard-4\",\"namespace\":\"inspectio\"},\"spec\":{\"replicas\":24,\"selector\":{\"matchLabels\":{\"app.kubernetes.io/name\":\"inspectio-worker-shard-4\"}},\"template\":{\"metadata\":{\"labels\":{\"app.kubernetes.io/name\":\"inspectio-worker-shard-4\",\"app.kubernetes.io/part-of\":\"inspectio-v3\"}},\"spec\":{\"containers\":[{\"command\":[\"inspectio-v3-worker\"],\"env\":[{\"name\":\"INSPECTIO_V3_WORKER_SEND_QUEUE_URL\",\"value\":\"https://sqs.us-east-1.amazonaws.com/194768394273/inspectio-v3-send-4\"}],\"envFrom\":[{\"configMapRef\":{\"name\":\"inspectio-v3-config\"}},{\"secretRef\":{\"name\":\"inspectio-v3-secrets\",\"optional\":true}}],\"image\":\"194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:eks-10k3\",\"imagePullPolicy\":\"Always\",\"name\":\"worker\"}],\"serviceAccountName\":\"inspectio-app\"}}}}\n"
+                },
+                "creationTimestamp": "2026-03-31T08:06:13Z",
+                "generation": 102,
+                "labels": {
+                    "app.kubernetes.io/name": "inspectio-worker-shard-4",
+                    "app.kubernetes.io/part-of": "inspectio-v3"
+                },
+                "name": "inspectio-worker-shard-4",
+                "namespace": "inspectio",
+                "resourceVersion": "2016952",
+                "uid": "d3e530f6-85ab-4b81-a28f-29d27e57ef91"
+            },
+            "spec": {
+                "progressDeadlineSeconds": 600,
+                "replicas": 24,
+                "revisionHistoryLimit": 10,
+                "selector": {
+                    "matchLabels": {
+                        "app.kubernetes.io/name": "inspectio-worker-shard-4"
+                    }
+                },
+                "strategy": {
+                    "rollingUpdate": {
+                        "maxSurge": "25%",
+                        "maxUnavailable": "25%"
+                    },
+                    "type": "RollingUpdate"
+                },
+                "template": {
+                    "metadata": {
+                        "annotations": {
+                            "kubectl.kubernetes.io/restartedAt": "2026-04-04T12:35:04+03:00"
+                        },
+                        "labels": {
+                            "app.kubernetes.io/name": "inspectio-worker-shard-4",
+                            "app.kubernetes.io/part-of": "inspectio-v3"
+                        }
+                    },
+                    "spec": {
+                        "containers": [
+                            {
+                                "command": [
+                                    "inspectio-v3-worker"
+                                ],
+                                "env": [
+                                    {
+                                        "name": "INSPECTIO_V3_WORKER_SEND_QUEUE_URL",
+                                        "value": "https://sqs.us-east-1.amazonaws.com/194768394273/inspectio-v3-send-4"
+                                    }
+                                ],
+                                "envFrom": [
+                                    {
+                                        "configMapRef": {
+                                            "name": "inspectio-v3-config"
+                                        }
+                                    },
+                                    {
+                                        "secretRef": {
+                                            "name": "inspectio-v3-secrets",
+                                            "optional": true
+                                        }
+                                    }
+                                ],
+                                "image": "194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:p12-9-perfboost-20260404091726",
+                                "imagePullPolicy": "Always",
+                                "name": "worker",
+                                "resources": {},
+                                "terminationMessagePath": "/dev/termination-log",
+                                "terminationMessagePolicy": "File"
+                            }
+                        ],
+                        "dnsPolicy": "ClusterFirst",
+                        "restartPolicy": "Always",
+                        "schedulerName": "default-scheduler",
+                        "securityContext": {},
+                        "serviceAccount": "inspectio-app",
+                        "serviceAccountName": "inspectio-app",
+                        "terminationGracePeriodSeconds": 30
+                    }
+                }
+            },
+            "status": {
+                "availableReplicas": 24,
+                "conditions": [
+                    {
+                        "lastTransitionTime": "2026-04-04T09:19:09Z",
+                        "lastUpdateTime": "2026-04-04T09:19:09Z",
+                        "message": "Deployment has minimum availability.",
+                        "reason": "MinimumReplicasAvailable",
+                        "status": "True",
+                        "type": "Available"
+                    },
+                    {
+                        "lastTransitionTime": "2026-04-02T16:25:42Z",
+                        "lastUpdateTime": "2026-04-04T09:36:18Z",
+                        "message": "ReplicaSet \"inspectio-worker-shard-4-6688b88cfc\" has successfully progressed.",
+                        "reason": "NewReplicaSetAvailable",
+                        "status": "True",
+                        "type": "Progressing"
+                    }
+                ],
+                "observedGeneration": 102,
+                "readyReplicas": 24,
+                "replicas": 24,
+                "updatedReplicas": 24
+            }
+        },
+        {
+            "apiVersion": "apps/v1",
+            "kind": "Deployment",
+            "metadata": {
+                "annotations": {
+                    "deployment.kubernetes.io/revision": "99",
+                    "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{},\"labels\":{\"app.kubernetes.io/name\":\"inspectio-worker-shard-5\",\"app.kubernetes.io/part-of\":\"inspectio-v3\"},\"name\":\"inspectio-worker-shard-5\",\"namespace\":\"inspectio\"},\"spec\":{\"replicas\":24,\"selector\":{\"matchLabels\":{\"app.kubernetes.io/name\":\"inspectio-worker-shard-5\"}},\"template\":{\"metadata\":{\"labels\":{\"app.kubernetes.io/name\":\"inspectio-worker-shard-5\",\"app.kubernetes.io/part-of\":\"inspectio-v3\"}},\"spec\":{\"containers\":[{\"command\":[\"inspectio-v3-worker\"],\"env\":[{\"name\":\"INSPECTIO_V3_WORKER_SEND_QUEUE_URL\",\"value\":\"https://sqs.us-east-1.amazonaws.com/194768394273/inspectio-v3-send-5\"}],\"envFrom\":[{\"configMapRef\":{\"name\":\"inspectio-v3-config\"}},{\"secretRef\":{\"name\":\"inspectio-v3-secrets\",\"optional\":true}}],\"image\":\"194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:eks-10k3\",\"imagePullPolicy\":\"Always\",\"name\":\"worker\"}],\"serviceAccountName\":\"inspectio-app\"}}}}\n"
+                },
+                "creationTimestamp": "2026-03-31T08:06:15Z",
+                "generation": 102,
+                "labels": {
+                    "app.kubernetes.io/name": "inspectio-worker-shard-5",
+                    "app.kubernetes.io/part-of": "inspectio-v3"
+                },
+                "name": "inspectio-worker-shard-5",
+                "namespace": "inspectio",
+                "resourceVersion": "2016912",
+                "uid": "713280f4-ecfa-4bf6-a4d6-94a16ef8cbff"
+            },
+            "spec": {
+                "progressDeadlineSeconds": 600,
+                "replicas": 24,
+                "revisionHistoryLimit": 10,
+                "selector": {
+                    "matchLabels": {
+                        "app.kubernetes.io/name": "inspectio-worker-shard-5"
+                    }
+                },
+                "strategy": {
+                    "rollingUpdate": {
+                        "maxSurge": "25%",
+                        "maxUnavailable": "25%"
+                    },
+                    "type": "RollingUpdate"
+                },
+                "template": {
+                    "metadata": {
+                        "annotations": {
+                            "kubectl.kubernetes.io/restartedAt": "2026-04-04T12:35:06+03:00"
+                        },
+                        "labels": {
+                            "app.kubernetes.io/name": "inspectio-worker-shard-5",
+                            "app.kubernetes.io/part-of": "inspectio-v3"
+                        }
+                    },
+                    "spec": {
+                        "containers": [
+                            {
+                                "command": [
+                                    "inspectio-v3-worker"
+                                ],
+                                "env": [
+                                    {
+                                        "name": "INSPECTIO_V3_WORKER_SEND_QUEUE_URL",
+                                        "value": "https://sqs.us-east-1.amazonaws.com/194768394273/inspectio-v3-send-5"
+                                    }
+                                ],
+                                "envFrom": [
+                                    {
+                                        "configMapRef": {
+                                            "name": "inspectio-v3-config"
+                                        }
+                                    },
+                                    {
+                                        "secretRef": {
+                                            "name": "inspectio-v3-secrets",
+                                            "optional": true
+                                        }
+                                    }
+                                ],
+                                "image": "194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:p12-9-perfboost-20260404091726",
+                                "imagePullPolicy": "Always",
+                                "name": "worker",
+                                "resources": {},
+                                "terminationMessagePath": "/dev/termination-log",
+                                "terminationMessagePolicy": "File"
+                            }
+                        ],
+                        "dnsPolicy": "ClusterFirst",
+                        "restartPolicy": "Always",
+                        "schedulerName": "default-scheduler",
+                        "securityContext": {},
+                        "serviceAccount": "inspectio-app",
+                        "serviceAccountName": "inspectio-app",
+                        "terminationGracePeriodSeconds": 30
+                    }
+                }
+            },
+            "status": {
+                "availableReplicas": 24,
+                "conditions": [
+                    {
+                        "lastTransitionTime": "2026-04-04T09:18:57Z",
+                        "lastUpdateTime": "2026-04-04T09:18:57Z",
+                        "message": "Deployment has minimum availability.",
+                        "reason": "MinimumReplicasAvailable",
+                        "status": "True",
+                        "type": "Available"
+                    },
+                    {
+                        "lastTransitionTime": "2026-04-02T16:09:06Z",
+                        "lastUpdateTime": "2026-04-04T09:36:17Z",
+                        "message": "ReplicaSet \"inspectio-worker-shard-5-b8779f85c\" has successfully progressed.",
+                        "reason": "NewReplicaSetAvailable",
+                        "status": "True",
+                        "type": "Progressing"
+                    }
+                ],
+                "observedGeneration": 102,
+                "readyReplicas": 24,
+                "replicas": 24,
+                "updatedReplicas": 24
+            }
+        },
+        {
+            "apiVersion": "apps/v1",
+            "kind": "Deployment",
+            "metadata": {
+                "annotations": {
+                    "deployment.kubernetes.io/revision": "99",
+                    "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{},\"labels\":{\"app.kubernetes.io/name\":\"inspectio-worker-shard-6\",\"app.kubernetes.io/part-of\":\"inspectio-v3\"},\"name\":\"inspectio-worker-shard-6\",\"namespace\":\"inspectio\"},\"spec\":{\"replicas\":24,\"selector\":{\"matchLabels\":{\"app.kubernetes.io/name\":\"inspectio-worker-shard-6\"}},\"template\":{\"metadata\":{\"labels\":{\"app.kubernetes.io/name\":\"inspectio-worker-shard-6\",\"app.kubernetes.io/part-of\":\"inspectio-v3\"}},\"spec\":{\"containers\":[{\"command\":[\"inspectio-v3-worker\"],\"env\":[{\"name\":\"INSPECTIO_V3_WORKER_SEND_QUEUE_URL\",\"value\":\"https://sqs.us-east-1.amazonaws.com/194768394273/inspectio-v3-send-6\"}],\"envFrom\":[{\"configMapRef\":{\"name\":\"inspectio-v3-config\"}},{\"secretRef\":{\"name\":\"inspectio-v3-secrets\",\"optional\":true}}],\"image\":\"194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:eks-10k3\",\"imagePullPolicy\":\"Always\",\"name\":\"worker\"}],\"serviceAccountName\":\"inspectio-app\"}}}}\n"
+                },
+                "creationTimestamp": "2026-03-31T08:06:18Z",
+                "generation": 102,
+                "labels": {
+                    "app.kubernetes.io/name": "inspectio-worker-shard-6",
+                    "app.kubernetes.io/part-of": "inspectio-v3"
+                },
+                "name": "inspectio-worker-shard-6",
+                "namespace": "inspectio",
+                "resourceVersion": "2016907",
+                "uid": "ac618b5a-cb75-427a-a678-a725c1dd9978"
+            },
+            "spec": {
+                "progressDeadlineSeconds": 600,
+                "replicas": 24,
+                "revisionHistoryLimit": 10,
+                "selector": {
+                    "matchLabels": {
+                        "app.kubernetes.io/name": "inspectio-worker-shard-6"
+                    }
+                },
+                "strategy": {
+                    "rollingUpdate": {
+                        "maxSurge": "25%",
+                        "maxUnavailable": "25%"
+                    },
+                    "type": "RollingUpdate"
+                },
+                "template": {
+                    "metadata": {
+                        "annotations": {
+                            "kubectl.kubernetes.io/restartedAt": "2026-04-04T12:35:07+03:00"
+                        },
+                        "labels": {
+                            "app.kubernetes.io/name": "inspectio-worker-shard-6",
+                            "app.kubernetes.io/part-of": "inspectio-v3"
+                        }
+                    },
+                    "spec": {
+                        "containers": [
+                            {
+                                "command": [
+                                    "inspectio-v3-worker"
+                                ],
+                                "env": [
+                                    {
+                                        "name": "INSPECTIO_V3_WORKER_SEND_QUEUE_URL",
+                                        "value": "https://sqs.us-east-1.amazonaws.com/194768394273/inspectio-v3-send-6"
+                                    }
+                                ],
+                                "envFrom": [
+                                    {
+                                        "configMapRef": {
+                                            "name": "inspectio-v3-config"
+                                        }
+                                    },
+                                    {
+                                        "secretRef": {
+                                            "name": "inspectio-v3-secrets",
+                                            "optional": true
+                                        }
+                                    }
+                                ],
+                                "image": "194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:p12-9-perfboost-20260404091726",
+                                "imagePullPolicy": "Always",
+                                "name": "worker",
+                                "resources": {},
+                                "terminationMessagePath": "/dev/termination-log",
+                                "terminationMessagePolicy": "File"
+                            }
+                        ],
+                        "dnsPolicy": "ClusterFirst",
+                        "restartPolicy": "Always",
+                        "schedulerName": "default-scheduler",
+                        "securityContext": {},
+                        "serviceAccount": "inspectio-app",
+                        "serviceAccountName": "inspectio-app",
+                        "terminationGracePeriodSeconds": 30
+                    }
+                }
+            },
+            "status": {
+                "availableReplicas": 24,
+                "conditions": [
+                    {
+                        "lastTransitionTime": "2026-04-04T09:18:58Z",
+                        "lastUpdateTime": "2026-04-04T09:18:58Z",
+                        "message": "Deployment has minimum availability.",
+                        "reason": "MinimumReplicasAvailable",
+                        "status": "True",
+                        "type": "Available"
+                    },
+                    {
+                        "lastTransitionTime": "2026-04-02T16:25:43Z",
+                        "lastUpdateTime": "2026-04-04T09:36:16Z",
+                        "message": "ReplicaSet \"inspectio-worker-shard-6-58bf69945d\" has successfully progressed.",
+                        "reason": "NewReplicaSetAvailable",
+                        "status": "True",
+                        "type": "Progressing"
+                    }
+                ],
+                "observedGeneration": 102,
+                "readyReplicas": 24,
+                "replicas": 24,
+                "updatedReplicas": 24
+            }
+        },
+        {
+            "apiVersion": "apps/v1",
+            "kind": "Deployment",
+            "metadata": {
+                "annotations": {
+                    "deployment.kubernetes.io/revision": "99",
+                    "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{},\"labels\":{\"app.kubernetes.io/name\":\"inspectio-worker-shard-7\",\"app.kubernetes.io/part-of\":\"inspectio-v3\"},\"name\":\"inspectio-worker-shard-7\",\"namespace\":\"inspectio\"},\"spec\":{\"replicas\":24,\"selector\":{\"matchLabels\":{\"app.kubernetes.io/name\":\"inspectio-worker-shard-7\"}},\"template\":{\"metadata\":{\"labels\":{\"app.kubernetes.io/name\":\"inspectio-worker-shard-7\",\"app.kubernetes.io/part-of\":\"inspectio-v3\"}},\"spec\":{\"containers\":[{\"command\":[\"inspectio-v3-worker\"],\"env\":[{\"name\":\"INSPECTIO_V3_WORKER_SEND_QUEUE_URL\",\"value\":\"https://sqs.us-east-1.amazonaws.com/194768394273/inspectio-v3-send-7\"}],\"envFrom\":[{\"configMapRef\":{\"name\":\"inspectio-v3-config\"}},{\"secretRef\":{\"name\":\"inspectio-v3-secrets\",\"optional\":true}}],\"image\":\"194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:eks-10k3\",\"imagePullPolicy\":\"Always\",\"name\":\"worker\"}],\"serviceAccountName\":\"inspectio-app\"}}}}\n"
+                },
+                "creationTimestamp": "2026-03-31T08:06:20Z",
+                "generation": 102,
+                "labels": {
+                    "app.kubernetes.io/name": "inspectio-worker-shard-7",
+                    "app.kubernetes.io/part-of": "inspectio-v3"
+                },
+                "name": "inspectio-worker-shard-7",
+                "namespace": "inspectio",
+                "resourceVersion": "2016948",
+                "uid": "4b9f1a4f-333e-4b9d-ab67-84e2ef84899f"
+            },
+            "spec": {
+                "progressDeadlineSeconds": 600,
+                "replicas": 24,
+                "revisionHistoryLimit": 10,
+                "selector": {
+                    "matchLabels": {
+                        "app.kubernetes.io/name": "inspectio-worker-shard-7"
+                    }
+                },
+                "strategy": {
+                    "rollingUpdate": {
+                        "maxSurge": "25%",
+                        "maxUnavailable": "25%"
+                    },
+                    "type": "RollingUpdate"
+                },
+                "template": {
+                    "metadata": {
+                        "annotations": {
+                            "kubectl.kubernetes.io/restartedAt": "2026-04-04T12:35:09+03:00"
+                        },
+                        "labels": {
+                            "app.kubernetes.io/name": "inspectio-worker-shard-7",
+                            "app.kubernetes.io/part-of": "inspectio-v3"
+                        }
+                    },
+                    "spec": {
+                        "containers": [
+                            {
+                                "command": [
+                                    "inspectio-v3-worker"
+                                ],
+                                "env": [
+                                    {
+                                        "name": "INSPECTIO_V3_WORKER_SEND_QUEUE_URL",
+                                        "value": "https://sqs.us-east-1.amazonaws.com/194768394273/inspectio-v3-send-7"
+                                    }
+                                ],
+                                "envFrom": [
+                                    {
+                                        "configMapRef": {
+                                            "name": "inspectio-v3-config"
+                                        }
+                                    },
+                                    {
+                                        "secretRef": {
+                                            "name": "inspectio-v3-secrets",
+                                            "optional": true
+                                        }
+                                    }
+                                ],
+                                "image": "194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:p12-9-perfboost-20260404091726",
+                                "imagePullPolicy": "Always",
+                                "name": "worker",
+                                "resources": {},
+                                "terminationMessagePath": "/dev/termination-log",
+                                "terminationMessagePolicy": "File"
+                            }
+                        ],
+                        "dnsPolicy": "ClusterFirst",
+                        "restartPolicy": "Always",
+                        "schedulerName": "default-scheduler",
+                        "securityContext": {},
+                        "serviceAccount": "inspectio-app",
+                        "serviceAccountName": "inspectio-app",
+                        "terminationGracePeriodSeconds": 30
+                    }
+                }
+            },
+            "status": {
+                "availableReplicas": 24,
+                "conditions": [
+                    {
+                        "lastTransitionTime": "2026-04-04T09:19:10Z",
+                        "lastUpdateTime": "2026-04-04T09:19:10Z",
+                        "message": "Deployment has minimum availability.",
+                        "reason": "MinimumReplicasAvailable",
+                        "status": "True",
+                        "type": "Available"
+                    },
+                    {
+                        "lastTransitionTime": "2026-04-02T16:09:20Z",
+                        "lastUpdateTime": "2026-04-04T09:36:18Z",
+                        "message": "ReplicaSet \"inspectio-worker-shard-7-7f8967cbb\" has successfully progressed.",
+                        "reason": "NewReplicaSetAvailable",
+                        "status": "True",
+                        "type": "Progressing"
+                    }
+                ],
+                "observedGeneration": 102,
+                "readyReplicas": 24,
+                "replicas": 24,
+                "updatedReplicas": 24
+            }
+        },
+        {
+            "apiVersion": "apps/v1",
+            "kind": "Deployment",
+            "metadata": {
+                "annotations": {
+                    "deployment.kubernetes.io/revision": "67",
+                    "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{},\"labels\":{\"app.kubernetes.io/name\":\"redis\",\"app.kubernetes.io/part-of\":\"inspectio-v3\"},\"name\":\"redis\",\"namespace\":\"inspectio\"},\"spec\":{\"replicas\":1,\"selector\":{\"matchLabels\":{\"app.kubernetes.io/name\":\"redis\"}},\"template\":{\"metadata\":{\"labels\":{\"app.kubernetes.io/name\":\"redis\",\"app.kubernetes.io/part-of\":\"inspectio-v3\"}},\"spec\":{\"containers\":[{\"image\":\"redis:7-alpine\",\"name\":\"redis\",\"ports\":[{\"containerPort\":6379}]}]}}}}\n"
+                },
+                "creationTimestamp": "2026-03-30T15:55:19Z",
+                "generation": 69,
+                "labels": {
+                    "app.kubernetes.io/name": "redis",
+                    "app.kubernetes.io/part-of": "inspectio-v3"
+                },
+                "name": "redis",
+                "namespace": "inspectio",
+                "resourceVersion": "2015057",
+                "uid": "b7b3b04b-93b0-428b-8831-b081974c8448"
+            },
+            "spec": {
+                "progressDeadlineSeconds": 600,
+                "replicas": 1,
+                "revisionHistoryLimit": 10,
+                "selector": {
+                    "matchLabels": {
+                        "app.kubernetes.io/name": "redis"
+                    }
+                },
+                "strategy": {
+                    "rollingUpdate": {
+                        "maxSurge": "25%",
+                        "maxUnavailable": "25%"
+                    },
+                    "type": "RollingUpdate"
+                },
+                "template": {
+                    "metadata": {
+                        "annotations": {
+                            "kubectl.kubernetes.io/restartedAt": "2026-04-04T12:35:11+03:00"
+                        },
+                        "labels": {
+                            "app.kubernetes.io/name": "redis",
+                            "app.kubernetes.io/part-of": "inspectio-v3"
+                        }
+                    },
+                    "spec": {
+                        "containers": [
+                            {
+                                "image": "redis:7-alpine",
+                                "imagePullPolicy": "IfNotPresent",
+                                "name": "redis",
+                                "ports": [
+                                    {
+                                        "containerPort": 6379,
+                                        "protocol": "TCP"
+                                    }
+                                ],
+                                "resources": {},
+                                "terminationMessagePath": "/dev/termination-log",
+                                "terminationMessagePolicy": "File"
+                            }
+                        ],
+                        "dnsPolicy": "ClusterFirst",
+                        "restartPolicy": "Always",
+                        "schedulerName": "default-scheduler",
+                        "securityContext": {},
+                        "terminationGracePeriodSeconds": 30
+                    }
+                }
+            },
+            "status": {
+                "availableReplicas": 1,
+                "conditions": [
+                    {
+                        "lastTransitionTime": "2026-04-04T09:18:57Z",
+                        "lastUpdateTime": "2026-04-04T09:18:57Z",
+                        "message": "Deployment has minimum availability.",
+                        "reason": "MinimumReplicasAvailable",
+                        "status": "True",
+                        "type": "Available"
+                    },
+                    {
+                        "lastTransitionTime": "2026-03-31T22:18:12Z",
+                        "lastUpdateTime": "2026-04-04T09:35:30Z",
+                        "message": "ReplicaSet \"redis-6c5cbf669f\" has successfully progressed.",
+                        "reason": "NewReplicaSetAvailable",
+                        "status": "True",
+                        "type": "Progressing"
+                    }
+                ],
+                "observedGeneration": 69,
+                "readyReplicas": 1,
+                "replicas": 1,
+                "updatedReplicas": 1
+            }
+        }
+    ],
+    "kind": "List",
+    "metadata": {
+        "resourceVersion": ""
+    }
+}
