@@ -1,4 +1,4 @@
-# Normative image for inspectio-api | inspectio-worker | inspectio-notification (§29).
+# v3 app image (scaffold). Replaces archived v2 image at v2_obsolete/archive/deploy/docker/Dockerfile.
 FROM python:3.11-slim-bookworm
 
 WORKDIR /app
@@ -11,4 +11,4 @@ COPY src ./src
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir .
 
-CMD ["python", "-m", "inspectio.worker.main"]
+CMD ["python", "-c", "print('inspectio v3: no long-running entrypoint yet')"]

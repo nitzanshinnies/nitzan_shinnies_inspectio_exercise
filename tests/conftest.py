@@ -1,3 +1,3 @@
 """Pytest configuration for repo-root tests."""
 
-collect_ignore = []
+collect_ignore: list[str] = []
