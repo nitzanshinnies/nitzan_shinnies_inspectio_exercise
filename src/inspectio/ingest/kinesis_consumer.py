@@ -12,6 +12,7 @@ from inspectio.journal.records import JournalRecordV1
 from inspectio.worker.handlers import IngestJournalHandler
 
 PARTITION_KEY_WIDTH = 5
+MIN_WORKER_REPLICAS = 1
 
 
 def partition_key_for_shard(shard_id: int) -> str:
@@ -167,11 +168,21 @@ class KinesisBatchFetcher:
         kinesis_client: KinesisClient,
         stream_name: str,
         max_records_per_shard: int = 1000,
+        worker_index: int = 0,
+        worker_replicas: int = 1,
     ) -> None:
         self._kinesis_client = kinesis_client
         self._stream_name = stream_name
         self._max_records_per_shard = max_records_per_shard
+        self._worker_index = worker_index
+        self._worker_replicas = worker_replicas
         self._iterators_by_shard_id: dict[str, str] = {}
+        if self._worker_replicas < MIN_WORKER_REPLICAS:
+            msg = f"worker_replicas must be >= {MIN_WORKER_REPLICAS}"
+            raise ValueError(msg)
+        if self._worker_index < 0 or self._worker_index >= self._worker_replicas:
+            msg = f"worker_index must be in [0, {self._worker_replicas})"
+            raise ValueError(msg)
 
     async def fetch_records(self) -> list[KinesisRawRecord]:
         """Poll each shard once and return all rows found in this pass."""
@@ -203,7 +214,16 @@ class KinesisBatchFetcher:
     async def _list_shard_ids(self) -> list[str]:
         response = await self._kinesis_client.list_shards(StreamName=self._stream_name)
         shards = response.get("Shards", [])
-        return [str(item["ShardId"]) for item in shards]
+        out: list[str] = []
+        for item in shards:
+            shard_id = str(item["ShardId"])
+            if _is_owned_kinesis_shard(
+                shard_id=shard_id,
+                worker_index=self._worker_index,
+                worker_replicas=self._worker_replicas,
+            ):
+                out.append(shard_id)
+        return out
 
     async def _get_or_create_iterator(self, shard_id: str) -> str | None:
         existing = self._iterators_by_shard_id.get(shard_id)
@@ -220,3 +240,26 @@ class KinesisBatchFetcher:
         iterator_str = str(iterator)
         self._iterators_by_shard_id[shard_id] = iterator_str
         return iterator_str
+
+
+def _is_owned_kinesis_shard(
+    *,
+    shard_id: str,
+    worker_index: int,
+    worker_replicas: int,
+) -> bool:
+    shard_ordinal = _parse_kinesis_shard_ordinal(shard_id)
+    if shard_ordinal is None:
+        return True
+    return shard_ordinal % worker_replicas == worker_index
+
+
+def _parse_kinesis_shard_ordinal(shard_id: str) -> int | None:
+    # Typical shard id is "shardId-000000000123".
+    parts = shard_id.rsplit("-", 1)
+    if len(parts) != 2:
+        return None
+    suffix = parts[1]
+    if not suffix.isdigit():
+        return None
+    return int(suffix, 10)

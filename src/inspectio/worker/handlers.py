@@ -99,7 +99,13 @@ class IngestJournalHandler:
             ),
             shard_id=message.shard_id,
         )
-        return records + self._runtime.journal_since(start)
+        runtime_records = self._runtime.journal_since(start)
+        reindexed_runtime_records = [
+            line.model_copy(update={"record_index": next_record_index()})
+            for line in runtime_records
+        ]
+        self._runtime.journal[start:] = reindexed_runtime_records
+        return records + reindexed_runtime_records
 
 
 class RedisIdempotencyStore:
