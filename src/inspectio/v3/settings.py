@@ -333,6 +333,10 @@ class V3PersistenceSettings(BaseSettings):
         le=10,
         validation_alias="INSPECTIO_V3_PERSIST_TRANSPORT_BATCH_MAX_EVENTS",
     )
+    expose_persistence_transport_metrics: bool = Field(
+        default=False,
+        validation_alias="INSPECTIO_V3_EXPOSE_PERSISTENCE_TRANSPORT_METRICS",
+    )
 
     @field_validator(
         "persist_transport_queue_url", "persist_transport_dlq_url", mode="before"

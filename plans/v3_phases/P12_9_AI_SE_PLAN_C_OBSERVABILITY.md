@@ -27,6 +27,7 @@ Aligned with `P12_9_PERSISTENCE_ASYNC_BACKUP_DECISION_RECORD.md`.
 | **Writer ingest vs flush** | `ingest_events_per_sec`, `receive_events_total`, `flush_batches`, `flush_failures`, `s3_errors` | `writer_snapshot` JSON | Distinguish “receiving” vs “S3 failing” |
 | **Pipeline mode** | `pipeline_mode` | `writer_snapshot` | Must show expected mode (`decoupled_v1`) |
 | **Emitter drops (best_effort)** | If present: counters or logs on reject | `persistence_emitter` / transport producer | If absent, Task C.2 adds |
+| **L2 transport producer (in-process)** | `GET /internal/persistence-transport-metrics` when **`INSPECTIO_V3_EXPOSE_PERSISTENCE_TRANSPORT_METRICS=true`** | `inspectio-api` pods; JSON from `SqsPersistenceTransportProducer.metrics` + `current_inflight_events` (per **uvicorn worker**) | Phase C / architect §9: correlate **`dropped_backpressure`**, **`publish_failures`**, publish duration with **`R`** |
 
 ## Task C.1 — Keep this table authoritative
 

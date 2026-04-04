@@ -4,9 +4,16 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Callable
+from typing import Any
 
 from inspectio.v3.persistence_emitter.protocol import PersistenceEventEmitter
 from inspectio.v3.persistence_transport.protocol import PersistenceTransportProducer
+from inspectio.v3.persistence_transport.sharded_router import (
+    ShardedPersistenceTransportProducer,
+)
+from inspectio.v3.persistence_transport.sqs_producer import (
+    SqsPersistenceTransportProducer,
+)
 from inspectio.v3.schemas.persistence_event import (
     EVENT_TYPE_ATTEMPT_RESULT,
     EVENT_TYPE_ENQUEUED,
@@ -27,6 +34,20 @@ class TransportPersistenceEventEmitter(PersistenceEventEmitter):
         self._producer = producer
         self._clock_ms = clock_ms
         self._next_seq_by_shard: dict[int, int] = {}
+
+    async def persistence_transport_observability_snapshot(self) -> dict[str, Any]:
+        """Snapshot of underlying transport producer(s) (in-process)."""
+        producer = self._producer
+        if isinstance(producer, ShardedPersistenceTransportProducer):
+            inner = await producer.observability_snapshot()
+        elif isinstance(producer, SqsPersistenceTransportProducer):
+            inner = await producer.observability_snapshot()
+        else:
+            inner = {
+                "kind": "unknown_persistence_transport_producer",
+                "type": type(producer).__name__,
+            }
+        return {"persistence_transport": inner}
 
     async def emit_enqueued(
         self,

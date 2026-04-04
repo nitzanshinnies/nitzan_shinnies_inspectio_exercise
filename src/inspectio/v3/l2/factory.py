@@ -53,6 +53,14 @@ class _PersistenceEmitterRelay:
     async def emit_terminal(self, **kwargs: object) -> None:
         await self.impl.emit_terminal(**kwargs)
 
+    async def persistence_transport_observability_snapshot(
+        self,
+    ) -> dict[str, object] | None:
+        impl = self.impl
+        if isinstance(impl, TransportPersistenceEventEmitter):
+            return await impl.persistence_transport_observability_snapshot()
+        return None
+
 
 def create_l2_app_from_env() -> FastAPI:
     """SQS bulk enqueue + optional Redis outcomes (else empty GET lists)."""
@@ -137,5 +145,6 @@ def create_l2_app_from_env() -> FastAPI:
         shard_count=shard_count,
         outcomes_reader=outcomes_reader,
         persistence_emitter=emitter_relay,
+        expose_persistence_transport_metrics=persistence_settings.expose_persistence_transport_metrics,
         lifespan=lifespan,
     )

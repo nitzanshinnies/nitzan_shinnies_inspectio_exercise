@@ -7,6 +7,7 @@ import json
 
 import pytest
 
+from inspectio.v3.persistence_emitter.transport import TransportPersistenceEventEmitter
 from inspectio.v3.persistence_transport.errors import (
     PersistenceTransportBackpressureError,
     PersistenceTransportPublishError,
@@ -122,6 +123,55 @@ async def test_successful_publish_records_duration_metrics() -> None:
         producer.metrics.publish_duration_ms_total
         == producer.metrics.publish_duration_ms_last
     )
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_observability_snapshot_reflects_counters() -> None:
+    client = _Client()
+    producer = SqsPersistenceTransportProducer(
+        queue_url="q://primary",
+        client=client,
+        durability_mode="strict",
+        max_attempts=2,
+        backoff_base_ms=1,
+        backoff_max_ms=2,
+        backoff_jitter_fraction=0.0,
+        max_inflight_events=32,
+        max_batch_events=10,
+    )
+    await producer.publish(_event("e-snap"))
+    snap = await producer.observability_snapshot()
+    assert snap["kind"] == "sqs_persistence_transport_producer"
+    assert snap["durability_mode"] == "strict"
+    assert snap["max_inflight_events"] == 32
+    assert snap["current_inflight_events"] == 0
+    assert snap["metrics"]["published_ok"] == 1
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_transport_emitter_observability_wraps_sqs_producer() -> None:
+    client = _Client()
+    producer = SqsPersistenceTransportProducer(
+        queue_url="q://primary",
+        client=client,
+        durability_mode="best_effort",
+        max_attempts=2,
+        backoff_base_ms=1,
+        backoff_max_ms=2,
+        backoff_jitter_fraction=0.0,
+        max_inflight_events=8,
+        max_batch_events=10,
+    )
+    emitter = TransportPersistenceEventEmitter(
+        producer=producer,
+        clock_ms=lambda: 0,
+    )
+    outer = await emitter.persistence_transport_observability_snapshot()
+    inner = outer["persistence_transport"]
+    assert inner["kind"] == "sqs_persistence_transport_producer"
+    assert inner["max_inflight_events"] == 8
 
 
 @pytest.mark.unit

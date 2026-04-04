@@ -19,3 +19,4 @@ class L2Dependencies:
     outcomes_reader: OutcomesReadPort
     persistence_emitter: PersistenceEventEmitter
     shard_count: int
+    expose_persistence_transport_metrics: bool = False

@@ -16,6 +16,7 @@ def test_persistence_settings_defaults_safe_baseline() -> None:
     assert settings.persist_transport_queue_url is None
     assert settings.persist_transport_max_attempts == 4
     assert settings.persist_transport_batch_max_events == 10
+    assert settings.expose_persistence_transport_metrics is False
 
 
 @pytest.mark.unit

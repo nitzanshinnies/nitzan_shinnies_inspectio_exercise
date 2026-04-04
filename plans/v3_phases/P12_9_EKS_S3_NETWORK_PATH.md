@@ -52,6 +52,24 @@ Observed routes included:
 2. Confirm **subnet → route table** mapping for **EKS node subnets** (ensures the above statement applies to pod egress).
 3. If buckets ever move to **SSE-KMS**, add **VPC interface endpoints** for KMS where required by policy (separate from S3 gateway).
 
+### Creating the S3 gateway endpoint (example CLI)
+
+Replace **`vpc-0caf3ad198a12638f`** / **`rtb-…`** if your VPC differs. Associate the endpoint with **every private route table** that EKS **worker** subnets use.
+
+```bash
+REGION=us-east-1
+VPC_ID=vpc-0caf3ad198a12638f
+EP_ID=$(aws ec2 create-vpc-endpoint --region "$REGION" --vpc-id "$VPC_ID" \
+  --service-name com.amazonaws.us-east-1.s3 \
+  --vpc-endpoint-type Gateway \
+  --query 'VpcEndpoint.VpcEndpointId' --output text)
+# Repeat for each private route table used by node subnets:
+aws ec2 modify-vpc-endpoint --region "$REGION" --vpc-endpoint-id "$EP_ID" \
+  --add-route-table-ids rtb-07aa93f931078123a
+```
+
+Then re-run **`describe-vpc-endpoints`** and update the **“VPC endpoints”** section above.
+
 ---
 
 *This document satisfies **`ARCHITECT_PLAN_PERSISTENCE_AND_PLATFORM.md` §5 Phase D** “documented network path” for the captured environment.*

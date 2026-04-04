@@ -143,6 +143,7 @@ The API/worker emitter path now supports queue-based durability handoff:
 - **`INSPECTIO_V3_PERSIST_TRANSPORT_BACKOFF_JITTER`**
 - **`INSPECTIO_V3_PERSIST_TRANSPORT_MAX_INFLIGHT`** (L2/worker emitter backpressure cap; k8s template **`10240`** after **iter-10** EKS — watch RSS if raising further)
 - **`INSPECTIO_V3_PERSIST_TRANSPORT_BATCH_MAX_EVENTS`** (1..10)
+- **`INSPECTIO_V3_EXPOSE_PERSISTENCE_TRANSPORT_METRICS`**: when **`true`**, L2 serves **`GET /internal/persistence-transport-metrics`** (in-process **`PersistenceTransportMetrics`** per **uvicorn worker**). Default **`false`** in code; template may set **`true`** for EKS triage (Plan C).
 
 ## P12.3 / P12.8 writer envs
 

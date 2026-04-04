@@ -126,7 +126,7 @@ For execution sequencing and file pointers, start with **`P12_9_AI_SE_HANDOFF_IN
 | **A** — Baselines | **Advanced** | `plans/v3_phases/artifacts/p12_9/iter-6/ITER6_RESULTS.md` remains the historical **NO-GO** baseline; **`iter-7` … `iter-13`** folders document subsequent methodology and promotions/regressions per `P12_9_AI_SE_HANDOFF_INDEX.md`. |
 | **A** — Shard skew | **Partially closed** | **`iter-13-architect-phase-cd`**: **`shard_skew_summary.json`** + per-shard `writer_*_last_snapshot.log` — **mild** skew (e.g. logical shard **6** ~**20%** below max `receive_events_total`); not “one hot / rest idle”. See **`ITER13_ARCHITECT_PHASE_CD_RESULTS.md`**. |
 | **B** — Plan A tuning | **Advanced** | EKS **Plan A** bundle experiments archived under **`iter-8-plan-a-perf`** through **`iter-12-flush-min-batch-80`** (ack delete concurrency, persist transport `max_inflight`, writer flush min batch). **`iter-12`** (**flush min batch 80**) reported **R ≈ 59%**, **PROMOTE** vs gates; repo **`deploy/kubernetes/configmap.yaml`** updated for promoted settings on that branch. **`iter-11`** (flush min 48) **NO-GO** — documented there. |
-| **C** — Producer coupling | **Open (instrumentation)** | **`iter-13-architect-phase-cd`**: **`PersistenceTransportMetrics`** remain **in-process** only (not on **`/healthz`**). **R ≈ 66%** in that window does **not** close Phase C with producer numbers — add **Plan C** emission (log/metrics) and re-run one **`iter-N`**. See **`ITER13_ARCHITECT_PHASE_CD_RESULTS.md`**. |
+| **C** — Producer coupling | **Open (correlation)** | **Code:** L2 exposes **`GET /internal/persistence-transport-metrics`** when **`INSPECTIO_V3_EXPOSE_PERSISTENCE_TRANSPORT_METRICS=true`** (see **`P12_9_AI_SE_PLAN_C_OBSERVABILITY.md`**). **Caveat:** one **uvicorn worker** per response; aggregate via kubectl across API pods if needed. **Next:** re-run **`iter-N`** and correlate **`dropped_backpressure` / `publish_failures`** with **R**. **`iter-13`** predates this endpoint. |
 | **D** — S3 / VPC path | **Documented** | **`P12_9_EKS_S3_NETWORK_PATH.md`**: cluster + bucket **`us-east-1`**, **no** VPC endpoints on cluster VPC at capture (S3 via **NAT** for private egress pattern); gateway endpoint suggested as optional hygiene. |
 
 ### Infra / cost
@@ -135,7 +135,7 @@ For execution sequencing and file pointers, start with **`P12_9_AI_SE_HANDOFF_IN
 
 ### Next actions (recommended order)
 
-1. **Phase C (close the loop)** — Emit **`PersistenceTransportMetrics`** (or equivalent) from L2/API during load; correlate with **`R`** on one **`iter-N`**. References: **`P12_9_TIMING_FINDINGS_AND_AI_SE_PERSISTENCE_PERF_PLAN.md`** §Phase 3, **`P12_9_LAG_LOCALIZATION_PLAN.md`**, **`P12_9_AI_SE_PLAN_C_OBSERVABILITY.md`**.
+1. **Phase C (close the loop)** — Use **`GET /internal/persistence-transport-metrics`** on **`inspectio-api`** (ConfigMap flag) during/after load; correlate with **`R`** on a new **`iter-N`**. Build/push image containing this route before EKS validation. References: **`P12_9_TIMING_FINDINGS_AND_AI_SE_PERSISTENCE_PERF_PLAN.md`** §Phase 3, **`P12_9_LAG_LOCALIZATION_PLAN.md`**, **`P12_9_AI_SE_PLAN_C_OBSERVABILITY.md`**.
 2. **Phase D (optional hardening)** — Add **S3 gateway endpoint** + validate route tables if NAT cost/latency matters; re-record **`P12_9_EKS_S3_NETWORK_PATH.md`** after change.
 3. **Phase E** — **Hold** until Phase **C** is closed with numbers **or** the maintainer **explicitly waives** per **`P12_9_AI_SE_HANDOFF_INDEX.md`**.
 
