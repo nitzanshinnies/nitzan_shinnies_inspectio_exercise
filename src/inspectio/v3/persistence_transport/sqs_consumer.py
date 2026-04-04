@@ -47,3 +47,14 @@ class SqsPersistenceTransportConsumer(PersistenceTransportConsumer):
                 QueueUrl=self._queue_url,
                 ReceiptHandle=rh,
             )
+
+    async def queue_oldest_age_ms(self) -> int | None:
+        resp = await self._client.get_queue_attributes(
+            QueueUrl=self._queue_url,
+            AttributeNames=["ApproximateAgeOfOldestMessage"],
+        )
+        attrs = resp.get("Attributes", {})
+        raw_seconds = attrs.get("ApproximateAgeOfOldestMessage")
+        if raw_seconds is None:
+            return None
+        return max(0, int(raw_seconds) * 1000)
