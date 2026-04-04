@@ -76,7 +76,7 @@
 
 | Goal | Activities | Exit criteria |
 |------|------------|----------------|
-| Remove avoidable latency | Confirm **VPC gateway endpoint** for S3 on EKS paths; document bucket region vs cluster region. | Documented network path; no unexplained cross-region S3. |
+| Remove avoidable latency | Confirm **VPC gateway endpoint** for S3 on EKS paths; document bucket region vs cluster region. | **Captured:** `P12_9_EKS_S3_NETWORK_PATH.md` (same-region bucket; **no** gateway endpoint at capture — NAT egress). Re-validate after endpoint changes. |
 | Encryption trade | If SSE-KMS on hot objects, A/B **p99 PUT** vs SSE-S3 where policy allows. | Decision recorded with metric delta. |
 | Advanced S3 | **Multipart** only if segment sizes warrant; **S3 Express One Zone** only if latency/request rate and **single-AZ** semantics are accepted. | ADR or plan addendum with durability statement. |
 
@@ -117,26 +117,27 @@ For execution sequencing and file pointers, start with **`P12_9_AI_SE_HANDOFF_IN
 
 ## 9. Execution status (living)
 
-**As of 2026-04-03** — reconciles this document with archived P12.9 evidence and current infra.
+**As of 2026-04-04** — reconciles this document with archived P12.9 evidence and current infra.
 
 ### Completed or materially advanced
 
 | Phase | Status | Evidence / notes |
 |-------|--------|-------------------|
-| **A** — Baselines | **Advanced** | `plans/v3_phases/artifacts/p12_9/iter-6/ITER6_RESULTS.md` remains the historical **NO-GO** baseline; **`iter-7` … `iter-12`** folders document subsequent methodology and promotions/regressions per `P12_9_AI_SE_HANDOFF_INDEX.md`. |
-| **A** — Shard skew | **Open** | Timing-plan **Phase 4** diagnostic not closed with a single “confirmed / ruled out” write-up tied to fresh **`writer_snapshot`** series across shards; use next EKS run to collect comparable extracts. |
+| **A** — Baselines | **Advanced** | `plans/v3_phases/artifacts/p12_9/iter-6/ITER6_RESULTS.md` remains the historical **NO-GO** baseline; **`iter-7` … `iter-13`** folders document subsequent methodology and promotions/regressions per `P12_9_AI_SE_HANDOFF_INDEX.md`. |
+| **A** — Shard skew | **Partially closed** | **`iter-13-architect-phase-cd`**: **`shard_skew_summary.json`** + per-shard `writer_*_last_snapshot.log` — **mild** skew (e.g. logical shard **6** ~**20%** below max `receive_events_total`); not “one hot / rest idle”. See **`ITER13_ARCHITECT_PHASE_CD_RESULTS.md`**. |
 | **B** — Plan A tuning | **Advanced** | EKS **Plan A** bundle experiments archived under **`iter-8-plan-a-perf`** through **`iter-12-flush-min-batch-80`** (ack delete concurrency, persist transport `max_inflight`, writer flush min batch). **`iter-12`** (**flush min batch 80**) reported **R ≈ 59%**, **PROMOTE** vs gates; repo **`deploy/kubernetes/configmap.yaml`** updated for promoted settings on that branch. **`iter-11`** (flush min 48) **NO-GO** — documented there. |
+| **C** — Producer coupling | **Open (instrumentation)** | **`iter-13-architect-phase-cd`**: **`PersistenceTransportMetrics`** remain **in-process** only (not on **`/healthz`**). **R ≈ 66%** in that window does **not** close Phase C with producer numbers — add **Plan C** emission (log/metrics) and re-run one **`iter-N`**. See **`ITER13_ARCHITECT_PHASE_CD_RESULTS.md`**. |
+| **D** — S3 / VPC path | **Documented** | **`P12_9_EKS_S3_NETWORK_PATH.md`**: cluster + bucket **`us-east-1`**, **no** VPC endpoints on cluster VPC at capture (S3 via **NAT** for private egress pattern); gateway endpoint suggested as optional hygiene. |
 
-### Prerequisite before more load work
+### Infra / cost
 
-- **EKS workers:** Cluster context **`tzanshinnies@nitzan-inspectio.us-east-1.eksctl.io`** may have **zero** ready nodes (cost pause: `eksctl scale nodegroup --cluster nitzan-inspectio --region us-east-1 --name ng-main --nodes 0 --nodes-min 0`). **Scale `ng-main` back out** (desired/min > 0) before any in-cluster benchmark or Phase **C**/**D** validation that needs pods. See **`P12_9_SESSION_RECOVERY_PLAN.md`** for recycle + benchmark hygiene.
+- **EKS workers:** For **`iter-2026-04-04`**, **`ng-main`** was scaled **out** (8 → 16 nodes) to relieve **pod capacity** (e.g. **Redis** scheduling). For **cost pause**, scale again: `eksctl scale nodegroup --cluster nitzan-inspectio --region us-east-1 --name ng-main --nodes 0 --nodes-min 0`. See **`P12_9_SESSION_RECOVERY_PLAN.md`**.
 
 ### Next actions (recommended order)
 
-1. **Phase C** — Treat **producer + `await emit`** as the next investigation: correlate **`PersistenceTransportMetrics`** (publish duration, backpressure, failures) with **`R`** under the **current** promoted ConfigMap; follow **`P12_9_TIMING_FINDINGS_AND_AI_SE_PERSISTENCE_PERF_PLAN.md`** §Phase 3 and **`P12_9_LAG_LOCALIZATION_PLAN.md`**. Exit: publish path **ruled in or out** as primary throttle with numbers, not only iter-10-style max_inflight tuning.
-2. **Phase A (skew)** — From the same run window, archive **`writer_snapshot_extract.json`** (or jsonl) **per writer shard** and either **confirm** uneven flush/load across shards or **rule out** with a short addendum under `artifacts/p12_9/` (link from the next **`ITERn_RESULTS.md`**).
-3. **Phase D** — **Document** the data-plane path: VPC **gateway endpoint for S3** present or absent on the EKS VPC, bucket **region** vs cluster **`us-east-1`**, and any NAT-only egress path (checklist in a PR description or a one-page addendum under `plans/v3_phases/` if the maintainer prefers it tracked in-repo). No load test required for the static checklist.
-4. **Phase E** — **Hold** until Phase **C** (+ **D** if network ambiguity remains) outcomes are recorded **or** the maintainer **explicitly waives** per **`P12_9_AI_SE_HANDOFF_INDEX.md`**.
+1. **Phase C (close the loop)** — Emit **`PersistenceTransportMetrics`** (or equivalent) from L2/API during load; correlate with **`R`** on one **`iter-N`**. References: **`P12_9_TIMING_FINDINGS_AND_AI_SE_PERSISTENCE_PERF_PLAN.md`** §Phase 3, **`P12_9_LAG_LOCALIZATION_PLAN.md`**, **`P12_9_AI_SE_PLAN_C_OBSERVABILITY.md`**.
+2. **Phase D (optional hardening)** — Add **S3 gateway endpoint** + validate route tables if NAT cost/latency matters; re-record **`P12_9_EKS_S3_NETWORK_PATH.md`** after change.
+3. **Phase E** — **Hold** until Phase **C** is closed with numbers **or** the maintainer **explicitly waives** per **`P12_9_AI_SE_HANDOFF_INDEX.md`**.
 
 ### Branch / merge note
 

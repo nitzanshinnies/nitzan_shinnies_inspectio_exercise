@@ -88,7 +88,7 @@ Until explicitly renegotiated, **completion-ratio gates** (report **both** in `I
 
 ## Architect roadmap (status)
 
-- `plans/v3_phases/ARCHITECT_PLAN_PERSISTENCE_AND_PLATFORM.md` **§9** — phase completion vs **next actions** (skew diagnostic, Phase C/D/E ordering, EKS scale prerequisite). Reconciled with evidence through **`iter-12`** as of **2026-04-03**.
+- `plans/v3_phases/ARCHITECT_PLAN_PERSISTENCE_AND_PLATFORM.md` **§9** — phase completion vs **next actions** (Phase C instrumentation, Phase D S3 path, Phase E hold). Reconciled through **`iter-13-architect-phase-cd`** and **`P12_9_EKS_S3_NETWORK_PATH.md`** as of **2026-04-04**.
 
 ---
 

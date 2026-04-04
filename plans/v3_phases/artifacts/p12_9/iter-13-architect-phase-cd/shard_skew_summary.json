@@ -1,0 +1,66 @@
+[
+  {
+    "deploy_shard_log": "writer_shard_0_last_snapshot",
+    "logical_shard": "0",
+    "receive_events_total": 117972,
+    "ingest_events_per_sec": 309.711,
+    "ack_events_total": 117852,
+    "ack_latency_ms_max": 2255
+  },
+  {
+    "deploy_shard_log": "writer_shard_1_last_snapshot",
+    "logical_shard": "1",
+    "receive_events_total": 107367,
+    "ingest_events_per_sec": 286.682,
+    "ack_events_total": 107047,
+    "ack_latency_ms_max": 2281
+  },
+  {
+    "deploy_shard_log": "writer_shard_2_last_snapshot",
+    "logical_shard": "2",
+    "receive_events_total": 109704,
+    "ingest_events_per_sec": 287.52,
+    "ack_events_total": 109164,
+    "ack_latency_ms_max": 2233
+  },
+  {
+    "deploy_shard_log": "writer_shard_3_last_snapshot",
+    "logical_shard": "3",
+    "receive_events_total": 110986,
+    "ingest_events_per_sec": 294.269,
+    "ack_events_total": 110526,
+    "ack_latency_ms_max": 2134
+  },
+  {
+    "deploy_shard_log": "writer_shard_4_last_snapshot",
+    "logical_shard": "4",
+    "receive_events_total": 110492,
+    "ingest_events_per_sec": 293.256,
+    "ack_events_total": 109932,
+    "ack_latency_ms_max": 2880
+  },
+  {
+    "deploy_shard_log": "writer_shard_5_last_snapshot",
+    "logical_shard": "5",
+    "receive_events_total": 108583,
+    "ingest_events_per_sec": 292.351,
+    "ack_events_total": 108023,
+    "ack_latency_ms_max": 1962
+  },
+  {
+    "deploy_shard_log": "writer_shard_6_last_snapshot",
+    "logical_shard": "6",
+    "receive_events_total": 94152,
+    "ingest_events_per_sec": 252.956,
+    "ack_events_total": 93812,
+    "ack_latency_ms_max": 2886
+  },
+  {
+    "deploy_shard_log": "writer_shard_7_last_snapshot",
+    "logical_shard": "7",
+    "receive_events_total": 106373,
+    "ingest_events_per_sec": 286.726,
+    "ack_events_total": 105783,
+    "ack_latency_ms_max": 2286
+  }
+]
