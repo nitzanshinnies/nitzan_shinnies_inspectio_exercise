@@ -29,9 +29,20 @@ aws ec2 describe-vpc-endpoints --region us-east-1 \
   --filters "Name=vpc-id,Values=vpc-0caf3ad198a12638f"
 ```
 
-**Result at capture time:** **No VPC endpoints** attached to this VPC (empty list).
+**Historical note (2026-04-04 pre-change):** **No** VPC endpoints were present (empty list).
 
-Implication: **no S3 Gateway Endpoint** on the cluster VPC. Traffic from **private** subnets to **S3 public endpoints** typically leaves via **NAT gateway** (unless replaced by other routing).
+### S3 gateway endpoint (applied **2026-04-04**)
+
+| Field | Value |
+|-------|--------|
+| **VPC endpoint ID** | `vpce-08ff97d249c7fad7b` |
+| **Service** | `com.amazonaws.us-east-1.s3` |
+| **Type** | Gateway |
+| **Route tables associated** | `rtb-07aa93f931078123a`, `rtb-084c8bff2bdf690f7`, `rtb-01bb51df278bbc719` (covers all **EKS cluster subnets** for `nitzan-inspectio`) |
+
+**Re-verify after VPC or subnet changes:** `aws ec2 describe-vpc-endpoints --vpc-endpoint-ids vpce-08ff97d249c7fad7b --region us-east-1`.
+
+Implication: **S3** traffic from subnets using those route tables uses the **gateway endpoint** (no **NAT** hop for S3 prefixes), which typically improves **latency and cost** for persistence-writer **PUT** traffic.
 
 ---
 
@@ -42,15 +53,15 @@ Observed routes included:
 - **`0.0.0.0/0` → NAT** (`nat-040c5979dc616fd16`) on private-style route tables.
 - **`0.0.0.0/0` → Internet Gateway** (`igw-051cb88dd8569bcda`) on at least one route table (public subnet pattern).
 
-**Architectural note:** S3 **Gateway** endpoints are **free** and keep S3 traffic off the NAT for supported prefixes; absence here means **NAT bandwidth/charge** and **extra hop** for private pods talking to S3. Adding a gateway endpoint is a common cost/latency hygiene step (validate with network team + route tables).
+**Architectural note:** S3 **Gateway** endpoints are **free** and keep **S3 prefix** traffic off the **NAT**. With **`vpce-08ff97d249c7fad7b`** attached to the route tables above, pods in those subnets use the endpoint for **S3**; other egress (e.g. **SQS**, **STS**) may still use **NAT** where applicable.
 
 ---
 
 ## Follow-ups (optional)
 
-1. Add **`com.amazonaws.us-east-1.s3` Gateway** endpoint to **`vpc-0caf3ad198a12638f`**, associate with **private** route tables used by worker/writer subnets, and re-measure **persistence writer** PUT p99 if needed.
-2. Confirm **subnet → route table** mapping for **EKS node subnets** (ensures the above statement applies to pod egress).
-3. If buckets ever move to **SSE-KMS**, add **VPC interface endpoints** for KMS where required by policy (separate from S3 gateway).
+1. After **major subnet / node group** changes, confirm **route table ↔ endpoint** associations still cover **all node subnets**.
+2. If buckets ever move to **SSE-KMS**, add **VPC interface endpoints** for KMS where required by policy (separate from S3 gateway).
+3. Run a fresh **`iter-N`** to quantify **R** / writer timing **after** endpoint + image rollout (see architect §9).
 
 ### Creating the S3 gateway endpoint (example CLI)
 
