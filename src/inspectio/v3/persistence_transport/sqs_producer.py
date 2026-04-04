@@ -7,6 +7,7 @@ import json
 import random
 import time
 from collections.abc import Awaitable, Callable, Sequence
+from dataclasses import asdict
 from typing import Any, Literal
 
 from botocore.exceptions import ClientError
@@ -57,6 +58,19 @@ class SqsPersistenceTransportProducer(PersistenceTransportProducer):
         self._inflight = 0
         self._inflight_lock = asyncio.Lock()
         self.metrics = PersistenceTransportMetrics()
+
+    async def observability_snapshot(self) -> dict[str, Any]:
+        """In-process counters + current inflight (one uvicorn worker process)."""
+        async with self._inflight_lock:
+            inflight = self._inflight
+        return {
+            "kind": "sqs_persistence_transport_producer",
+            "durability_mode": self._durability_mode,
+            "max_batch_events": self._max_batch_events,
+            "max_inflight_events": self._max_inflight_events,
+            "current_inflight_events": inflight,
+            "metrics": asdict(self.metrics),
+        }
 
     async def publish(self, event: PersistenceEventV1) -> None:
         await self.publish_many([event])

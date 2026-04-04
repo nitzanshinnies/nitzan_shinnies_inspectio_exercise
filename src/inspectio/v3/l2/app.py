@@ -25,6 +25,7 @@ def create_l2_app(
     idempotency_ttl_ms: int = 3_600_000,
     outcomes_reader: OutcomesReadPort | None = None,
     persistence_emitter: PersistenceEventEmitter | None = None,
+    expose_persistence_transport_metrics: bool = False,
     lifespan: Callable[[FastAPI], AsyncIterator[None]] | None = None,
 ) -> FastAPI:
     """Build L2 with injectable clock and enqueue; idempotency is in-process only (P1)."""
@@ -38,6 +39,7 @@ def create_l2_app(
         outcomes_reader=reader,
         persistence_emitter=emitter,
         shard_count=shard_count,
+        expose_persistence_transport_metrics=expose_persistence_transport_metrics,
     )
     kwargs: dict[str, object] = {"title": "Inspectio L2", "version": "0.0.0"}
     if lifespan is not None:

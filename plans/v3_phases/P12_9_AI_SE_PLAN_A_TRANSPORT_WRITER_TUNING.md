@@ -18,13 +18,13 @@ Improve **persist-on / persist-off completion ratio** and **admit RPS** using **
 
 ## Evidence-driven hypotheses (from iter-6)
 
-1. **`ack_queue_depth` hundreds** with **`ack_latency_ms` ~1–2s** → **SQS `DeleteMessageBatch`** throughput (default **`persistence_ack_delete_max_concurrency=2`**) may throttle the decoupled ack path.
+1. **`ack_queue_depth` hundreds** with **`ack_latency_ms` ~1–2s** → **SQS `DeleteMessageBatch`** throughput (low **`persistence_ack_delete_max_concurrency`**) may throttle the decoupled ack path. Repo defaults target **`8`** in **`settings.py`** / k8s template after **iter-9-ack8**; sweep **down** only with evidence.
 2. **Flush min batch 64 + interval 2000ms** → batching / timer tradeoff vs completion RPS (direction **not** guaranteed; measure).
 3. **Emitter** `max_inflight` / batch sizes on worker → may limit how fast events enter transport under load.
 
 ## ConfigMap key reality check
 
-- **`INSPECTIO_V3_PERSISTENCE_ACK_DELETE_MAX_CONCURRENCY`** is defined in **`deploy/kubernetes/configmap.yaml`** (template default `"2"`). If the **live** EKS ConfigMap **omits** this key, the process uses **`settings.py` default (2)**—you must **`kubectl patch`** or **`apply`** so the key is **present** when tuning.
+- **`INSPECTIO_V3_PERSISTENCE_ACK_DELETE_MAX_CONCURRENCY`** is defined in **`deploy/kubernetes/configmap.yaml`** (template default **`"8"`**). If the **live** EKS ConfigMap **omits** this key, the process uses **`settings.py` default (`8`)**—you must **`kubectl patch`** or **`apply`** so the key is **present** when tuning.
 - Valid range **1..8** enforced in **`SqsPersistenceTransportConsumer`**.
 
 ## Task order (blast radius)
@@ -53,8 +53,8 @@ Run **A.1** (ack concurrency) **before** **A.2** (flush sweep): fewer moving par
 
 **Knobs:**
 
-- **`INSPECTIO_V3_PERSISTENCE_WRITER_FLUSH_MIN_BATCH_EVENTS`** (iter-6 snapshot: **64**)
-- **`INSPECTIO_V3_PERSISTENCE_WRITER_FLUSH_INTERVAL_MS`** (iter-6 snapshot: **2000**)
+- **`INSPECTIO_V3_PERSISTENCE_WRITER_FLUSH_MIN_BATCH_EVENTS`** (iter-6 snapshot: **64**; k8s template unchanged)
+- **`INSPECTIO_V3_PERSISTENCE_WRITER_FLUSH_INTERVAL_MS`** (iter-6 snapshot: **2000**; k8s template now **`1800`** for slightly faster timer-driven flush — **re-validate completion RPS** on EKS; smaller batches increase S3 PUT count)
 
 **Steps:**
 
@@ -72,12 +72,12 @@ Run **A.1** (ack concurrency) **before** **A.2** (flush sweep): fewer moving par
 **Knobs:**
 
 - **`INSPECTIO_V3_WRITER_FLUSH_LOOP_SLEEP_MS`** (default **10** in `settings.py`)
-- **`INSPECTIO_V3_WRITER_RECEIVE_LOOP_PARALLELISM`** (default **1**, max **4**)
+- **`INSPECTIO_V3_WRITER_RECEIVE_LOOP_PARALLELISM`** (default **1** in `settings.py`, max **4**; k8s template sets **`2`**)
 - **`INSPECTIO_V3_WRITER_PIPELINE_ENABLE`** must remain **`true`** for decoupled mode.
 
 **Steps:**
 
-1. Add to ConfigMap only when justified by `writer_snapshot` (e.g. extreme flush-loop no-ops under load is a **symptom**, not always a bug).
+1. **`deploy/kubernetes/configmap.yaml`** includes explicit **`PIPELINE_ENABLE`**, **`RECEIVE_LOOP_PARALLELISM`**, and **`FLUSH_LOOP_SLEEP_MS`** so EKS clusters do not rely on implicit defaults. Tune upward (**`3`/`4`**) only when justified by `writer_snapshot` / load.
 2. Re-benchmark after change.
 
 ## Task A.4 — Persistence emitter limits (worker)
@@ -91,9 +91,10 @@ Run **A.1** (ack concurrency) **before** **A.2** (flush sweep): fewer moving par
 
 **Steps:**
 
-1. Record **current** EKS values: `kubectl -n inspectio get cm inspectio-v3-config -o yaml`.
-2. Increase **`max_inflight`** in **increments**; re-benchmark each step.
-3. Watch for memory growth and `best_effort` drop paths (logs / metrics).
+1. **`deploy/kubernetes/configmap.yaml`** sets **`INSPECTIO_V3_PERSIST_TRANSPORT_MAX_INFLIGHT`** to **`10240`** (raised from **`8192`** after **iter-10** EKS); `settings.py` already allows up to **`100_000`**.
+2. Record **current** live EKS values: `kubectl -n inspectio get cm inspectio-v3-config -o yaml`.
+3. Increase **`max_inflight`** further in **increments** only with memory headroom; re-benchmark each step.
+4. Watch for memory growth and `best_effort` drop paths (logs / metrics).
 
 ## Tests (local, before each push)
 

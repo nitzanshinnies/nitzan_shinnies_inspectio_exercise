@@ -141,8 +141,9 @@ The API/worker emitter path now supports queue-based durability handoff:
 - **`INSPECTIO_V3_PERSIST_TRANSPORT_BACKOFF_BASE_MS`**
 - **`INSPECTIO_V3_PERSIST_TRANSPORT_BACKOFF_MAX_MS`**
 - **`INSPECTIO_V3_PERSIST_TRANSPORT_BACKOFF_JITTER`**
-- **`INSPECTIO_V3_PERSIST_TRANSPORT_MAX_INFLIGHT`** (backpressure cap)
+- **`INSPECTIO_V3_PERSIST_TRANSPORT_MAX_INFLIGHT`** (L2/worker emitter backpressure cap; k8s template **`10240`** after **iter-10** EKS — watch RSS if raising further)
 - **`INSPECTIO_V3_PERSIST_TRANSPORT_BATCH_MAX_EVENTS`** (1..10)
+- **`INSPECTIO_V3_EXPOSE_PERSISTENCE_TRANSPORT_METRICS`**: when **`true`**, L2 serves **`GET /internal/persistence-transport-metrics`** (in-process **`PersistenceTransportMetrics`** per **uvicorn worker**). Default **`false`** in code; template may set **`true`** for EKS triage (Plan C).
 
 ## P12.3 / P12.8 writer envs
 
@@ -153,10 +154,13 @@ Writer consumes one persistence transport shard queue and writes compressed segm
 - **`INSPECTIO_V3_WRITER_SHARD_ID`** (required for sharded mode, in range `[0, SHARD_COUNT-1]`)
 - **`INSPECTIO_V3_WRITER_RECEIVE_WAIT_SECONDS`**
 - **`INSPECTIO_V3_WRITER_RECEIVE_MAX_EVENTS`**
-- **`INSPECTIO_V3_PERSISTENCE_ACK_DELETE_MAX_CONCURRENCY`** (`1..8`, bounded SQS delete parallelism)
+- **`INSPECTIO_V3_WRITER_PIPELINE_ENABLE`** (`true` for decoupled `decoupled_v1` writer path)
+- **`INSPECTIO_V3_WRITER_RECEIVE_LOOP_PARALLELISM`** (`1..4`, template uses **`2`** for parallel long-poll receive loops per shard)
+- **`INSPECTIO_V3_WRITER_FLUSH_LOOP_SLEEP_MS`** (milliseconds between flush-loop iterations when idle-ish; default **`10`**)
+- **`INSPECTIO_V3_PERSISTENCE_ACK_DELETE_MAX_CONCURRENCY`** (`1..8`, bounded SQS delete parallelism; template default **`8`** after **iter-9-ack8** EKS gate pass — lower only if throttling or cost requires)
 - **`INSPECTIO_V3_WRITER_FLUSH_MAX_EVENTS`**
 - **`INSPECTIO_V3_PERSISTENCE_WRITER_FLUSH_MIN_BATCH_EVENTS`** (`1..FLUSH_MAX`, interval-trigger occupancy floor)
-- **`INSPECTIO_V3_PERSISTENCE_WRITER_FLUSH_INTERVAL_MS`** (legacy alias: `INSPECTIO_V3_WRITER_FLUSH_INTERVAL_MS`)
+- **`INSPECTIO_V3_PERSISTENCE_WRITER_FLUSH_INTERVAL_MS`** (legacy alias: `INSPECTIO_V3_WRITER_FLUSH_INTERVAL_MS`; k8s template **`1800`** ms — validate vs completion gates; raising frequency can increase S3 PUTs)
 - **`INSPECTIO_V3_PERSISTENCE_CHECKPOINT_EVERY_N_FLUSHES`** (`1..20`, `1` keeps checkpoint-per-flush behavior)
 - **`INSPECTIO_V3_WRITER_DEDUPE_EVENT_ID_CAP`**
 - **`INSPECTIO_V3_WRITER_WRITE_MAX_ATTEMPTS`**

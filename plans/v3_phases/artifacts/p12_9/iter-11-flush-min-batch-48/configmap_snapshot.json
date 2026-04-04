@@ -1,0 +1,48 @@
+{
+    "apiVersion": "v1",
+    "data": {
+        "AWS_DEFAULT_REGION": "us-east-1",
+        "INSPECTIO_L2_BASE_URL": "http://inspectio-api:8000",
+        "INSPECTIO_V3_BULK_QUEUE_URL": "https://sqs.us-east-1.amazonaws.com/194768394273/inspectio-v3-bulk",
+        "INSPECTIO_V3_BULK_VISIBILITY_TIMEOUT": "120",
+        "INSPECTIO_V3_EXPANDER_BULK_RECEIVE_MAX": "10",
+        "INSPECTIO_V3_EXPANDER_PUBLISH_CONCURRENCY": "96",
+        "INSPECTIO_V3_EXPANDER_WAIT_SECONDS": "20",
+        "INSPECTIO_V3_PERSISTENCE_ACK_DELETE_MAX_CONCURRENCY": "8",
+        "INSPECTIO_V3_PERSISTENCE_S3_BUCKET": "inspectio-a074c6e4-59b9-4dd5-ad86-3f5c1ef7c994",
+        "INSPECTIO_V3_PERSISTENCE_S3_PREFIX": "state/p12_8",
+        "INSPECTIO_V3_PERSISTENCE_WRITER_FLUSH_INTERVAL_MS": "1800",
+        "INSPECTIO_V3_PERSISTENCE_WRITER_FLUSH_MIN_BATCH_EVENTS": "48",
+        "INSPECTIO_V3_PERSIST_DURABILITY_MODE": "best_effort",
+        "INSPECTIO_V3_PERSIST_EMIT_ENABLED": "false",
+        "INSPECTIO_V3_PERSIST_TRANSPORT_MAX_INFLIGHT": "10240",
+        "INSPECTIO_V3_PERSIST_TRANSPORT_QUEUE_URL": "https://sqs.us-east-1.amazonaws.com/194768394273/inspectio-v3-persist-transport",
+        "INSPECTIO_V3_PERSIST_TRANSPORT_QUEUE_URLS": "[\"https://sqs.us-east-1.amazonaws.com/194768394273/inspectio-v3-persist-transport-0\",\"https://sqs.us-east-1.amazonaws.com/194768394273/inspectio-v3-persist-transport-1\",\"https://sqs.us-east-1.amazonaws.com/194768394273/inspectio-v3-persist-transport-2\",\"https://sqs.us-east-1.amazonaws.com/194768394273/inspectio-v3-persist-transport-3\",\"https://sqs.us-east-1.amazonaws.com/194768394273/inspectio-v3-persist-transport-4\",\"https://sqs.us-east-1.amazonaws.com/194768394273/inspectio-v3-persist-transport-5\",\"https://sqs.us-east-1.amazonaws.com/194768394273/inspectio-v3-persist-transport-6\",\"https://sqs.us-east-1.amazonaws.com/194768394273/inspectio-v3-persist-transport-7\"]",
+        "INSPECTIO_V3_PERSIST_TRANSPORT_SHARD_COUNT": "8",
+        "INSPECTIO_V3_SEND_QUEUE_URLS": "[\"https://sqs.us-east-1.amazonaws.com/194768394273/inspectio-v3-send-0\", \"https://sqs.us-east-1.amazonaws.com/194768394273/inspectio-v3-send-1\", \"https://sqs.us-east-1.amazonaws.com/194768394273/inspectio-v3-send-2\", \"https://sqs.us-east-1.amazonaws.com/194768394273/inspectio-v3-send-3\", \"https://sqs.us-east-1.amazonaws.com/194768394273/inspectio-v3-send-4\", \"https://sqs.us-east-1.amazonaws.com/194768394273/inspectio-v3-send-5\", \"https://sqs.us-east-1.amazonaws.com/194768394273/inspectio-v3-send-6\", \"https://sqs.us-east-1.amazonaws.com/194768394273/inspectio-v3-send-7\"]",
+        "INSPECTIO_V3_SEND_SHARD_COUNT": "8",
+        "INSPECTIO_V3_TRY_SEND_ALWAYS_SUCCEED": "true",
+        "INSPECTIO_V3_WORKER_RECEIVE_POLLERS": "3",
+        "INSPECTIO_V3_WORKER_RECORD_OUTCOMES": "false",
+        "INSPECTIO_V3_WORKER_SEND_QUEUE_URL": "https://sqs.us-east-1.amazonaws.com/194768394273/inspectio-v3-send-0",
+        "INSPECTIO_V3_WORKER_WAKEUP_SEC": "0.03",
+        "INSPECTIO_V3_WRITER_FLUSH_LOOP_SLEEP_MS": "10",
+        "INSPECTIO_V3_WRITER_PIPELINE_ENABLE": "true",
+        "INSPECTIO_V3_WRITER_RECEIVE_LOOP_PARALLELISM": "2",
+        "REDIS_URL": "redis://redis:6379/0"
+    },
+    "kind": "ConfigMap",
+    "metadata": {
+        "annotations": {
+            "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"v1\",\"data\":{\"AWS_DEFAULT_REGION\":\"us-east-1\",\"INSPECTIO_L2_BASE_URL\":\"http://inspectio-api:8000\",\"INSPECTIO_V3_BULK_QUEUE_URL\":\"https://sqs.us-east-1.amazonaws.com/194768394273/inspectio-v3-bulk\",\"INSPECTIO_V3_BULK_VISIBILITY_TIMEOUT\":\"120\",\"INSPECTIO_V3_EXPANDER_WAIT_SECONDS\":\"20\",\"INSPECTIO_V3_SEND_QUEUE_URLS\":\"https://sqs.us-east-1.amazonaws.com/194768394273/inspectio-v3-send-0\",\"INSPECTIO_V3_SEND_SHARD_COUNT\":\"1\",\"INSPECTIO_V3_TRY_SEND_ALWAYS_SUCCEED\":\"true\",\"INSPECTIO_V3_WORKER_SEND_QUEUE_URL\":\"https://sqs.us-east-1.amazonaws.com/194768394273/inspectio-v3-send-0\",\"REDIS_URL\":\"redis://redis:6379/0\"},\"kind\":\"ConfigMap\",\"metadata\":{\"annotations\":{},\"labels\":{\"app.kubernetes.io/part-of\":\"inspectio-v3\"},\"name\":\"inspectio-v3-config\",\"namespace\":\"inspectio\"}}\n"
+        },
+        "creationTimestamp": "2026-03-30T15:55:22Z",
+        "labels": {
+            "app.kubernetes.io/part-of": "inspectio-v3"
+        },
+        "name": "inspectio-v3-config",
+        "namespace": "inspectio",
+        "resourceVersion": "1633653",
+        "uid": "5947a204-6ed1-4662-b81b-469b717fee92"
+    }
+}

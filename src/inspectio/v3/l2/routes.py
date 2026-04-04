@@ -24,6 +24,29 @@ def build_router(deps: L2Dependencies) -> APIRouter:
     def healthz() -> dict[str, str]:
         return {"status": "ok", "service": "api"}
 
+    @router.get("/internal/persistence-transport-metrics")
+    async def persistence_transport_metrics() -> dict[str, Any]:
+        if not deps.expose_persistence_transport_metrics:
+            raise HTTPException(status_code=404, detail="not_found")
+        emitter = deps.persistence_emitter
+        snapshot_fn = getattr(
+            emitter,
+            "persistence_transport_observability_snapshot",
+            None,
+        )
+        if snapshot_fn is None or not callable(snapshot_fn):
+            return {
+                "persistence_transport": None,
+                "reason": "emitter_has_no_snapshot",
+            }
+        payload = await snapshot_fn()
+        if payload is None:
+            return {
+                "persistence_transport": None,
+                "reason": "noop_or_transport_disabled",
+            }
+        return payload
+
     @router.get("/messages/success")
     async def messages_success(
         limit: Annotated[int, Query(ge=1, le=100)] = 100,

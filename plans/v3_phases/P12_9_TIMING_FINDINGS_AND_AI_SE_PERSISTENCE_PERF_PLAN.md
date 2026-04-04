@@ -82,8 +82,8 @@
 
 | Step | Task | Detail |
 |------|------|--------|
-| 1.1 | **Confirm ConfigMap key present** | `kubectl -n inspectio get cm inspectio-v3-config -o jsonpath='{.data.INSPECTIO_V3_PERSISTENCE_ACK_DELETE_MAX_CONCURRENCY}'` — if empty, **add** key (default in repo template is `"2"` in `deploy/kubernetes/configmap.yaml`). |
-| 1.2 | **Raise ack delete concurrency in steps** | Increase **`INSPECTIO_V3_PERSISTENCE_ACK_DELETE_MAX_CONCURRENCY`** within **1..8** (clamped in `sqs_consumer.py`). Suggested sweep: **2 → 4 → 6 → 8** with one **Plan D** **`iter-N`** per value (or pair off/on legs per maintainer policy). |
+| 1.1 | **Confirm ConfigMap key present** | `kubectl -n inspectio get cm inspectio-v3-config -o jsonpath='{.data.INSPECTIO_V3_PERSISTENCE_ACK_DELETE_MAX_CONCURRENCY}'` — if empty, **add** key (default in repo template is **`"8"`** in `deploy/kubernetes/configmap.yaml`). |
+| 1.2 | **Tune ack delete concurrency** | Range **1..8** (clamped in `sqs_consumer.py`). Default **`8`** validated on EKS (**iter-9-ack8**). If regressions appear, step **down** with one **Plan D** **`iter-N`** per value and document. |
 | 1.3 | **Recycle after ConfigMap change** | **Default:** **full stack recycle** (all app Deployments that read `inspectio-v3-config`, not writers alone) after each persistence-related CM trial — matches **`P12_9_AI_SE_PLAN_A`** A.1 step 3 and workspace **`restart-containers-before-inspectio-tests`**. Writer-only rollout is **only** for a maintainer-narrowed experiment and must be **labeled** in **`ITERn_RESULTS.md`** so results are not compared apples-to-apples with full-recycle runs. |
 | 1.4 | **Capture evidence** | For each trial: **`writer_snapshot_extract.json`**, peaks for **`ack_latency_ms_max`**, **`ack_queue_depth_high_water_mark`**, and hygiene **R** / gate-2. |
 | 1.5 | **Stop condition** | Stop when **gates pass** or **no further improvement** in **ack** metrics / **R** at next concurrency step (document negative result in **`ITERn_RESULTS.md`**). |

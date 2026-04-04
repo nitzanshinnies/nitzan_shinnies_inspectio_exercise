@@ -222,3 +222,33 @@ def test_idempotency_expires_allows_new_enqueue(
     assert len(backend.items) == 2
     assert isinstance(backend.items[0], BulkIntentV1)
     assert isinstance(backend.items[1], BulkIntentV1)
+
+
+@pytest.mark.unit
+def test_internal_persistence_transport_metrics_not_found_when_disabled(
+    client_and_queue: tuple[TestClient, Any, Any],
+) -> None:
+    client, _, _ = client_and_queue
+    response = client.get("/internal/persistence-transport-metrics")
+    assert response.status_code == 404
+
+
+@pytest.mark.unit
+def test_internal_persistence_transport_metrics_noop_when_enabled(
+    clock_ms: tuple[list[int], Callable[[], int]],
+) -> None:
+    _holder, tick = clock_ms
+    backend = ListBulkEnqueue()
+    app = create_l2_app(
+        enqueue_backend=backend,
+        clock_ms=tick,
+        shard_count=1,
+        idempotency_ttl_ms=3_600_000,
+        expose_persistence_transport_metrics=True,
+    )
+    client = TestClient(app)
+    response = client.get("/internal/persistence-transport-metrics")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["persistence_transport"] is None
+    assert data["reason"] == "emitter_has_no_snapshot"

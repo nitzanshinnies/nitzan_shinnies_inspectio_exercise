@@ -86,6 +86,10 @@ Until explicitly renegotiated, **completion-ratio gates** (report **both** in `I
 
 - `plans/v3_phases/P12_9_OBSERVABILITY_RUNBOOK.md` — create per **Plan C** Task C.4; link stays valid once the file exists.
 
+## Architect roadmap (status)
+
+- `plans/v3_phases/ARCHITECT_PLAN_PERSISTENCE_AND_PLATFORM.md` **§9** — phase completion vs **next actions** (Phase C instrumentation, Phase D S3 path, Phase E hold). Reconciled through **`iter-13-architect-phase-cd`** and **`P12_9_EKS_S3_NETWORK_PATH.md`** as of **2026-04-04**.
+
 ---
 
 **Start here:** **`P12_9_SE_THROUGHPUT_AND_BACKUP_FIX_SPEC.md`** (fix contract) → **`P12_9_AI_SE_PLAN_D_EKS_BENCHMARK_EXECUTION.md`** when you need a fresh **`iter-N`** → read **`P12_9_TIMING_FINDINGS_AND_AI_SE_PERSISTENCE_PERF_PLAN.md`** for measured rationale and phase order → **`P12_9_AI_SE_PLAN_A_TRANSPORT_WRITER_TUNING.md`** for knob-level tasks (ack concurrency **A.1** before flush **A.2**).

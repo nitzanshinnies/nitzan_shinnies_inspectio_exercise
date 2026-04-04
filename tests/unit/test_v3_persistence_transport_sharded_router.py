@@ -67,3 +67,12 @@ async def test_sharded_router_rejects_missing_shard_binding() -> None:
     router = ShardedPersistenceTransportProducer(producers_by_shard={0: _ProducerSpy()})
     with pytest.raises(ValueError, match="no persistence producer for shard 1"):
         await router.publish(_event(event_id="missing", shard=1))
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_sharded_observability_marks_unknown_producer_type() -> None:
+    router = ShardedPersistenceTransportProducer(producers_by_shard={0: _ProducerSpy()})
+    snap = await router.observability_snapshot()
+    assert snap["kind"] == "sharded_persistence_transport_producer"
+    assert snap["shards"]["0"]["error"] == "unsupported_producer_type"

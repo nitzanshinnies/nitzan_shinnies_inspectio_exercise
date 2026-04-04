@@ -333,6 +333,10 @@ class V3PersistenceSettings(BaseSettings):
         le=10,
         validation_alias="INSPECTIO_V3_PERSIST_TRANSPORT_BATCH_MAX_EVENTS",
     )
+    expose_persistence_transport_metrics: bool = Field(
+        default=False,
+        validation_alias="INSPECTIO_V3_EXPOSE_PERSISTENCE_TRANSPORT_METRICS",
+    )
 
     @field_validator(
         "persist_transport_queue_url", "persist_transport_dlq_url", mode="before"
@@ -459,7 +463,7 @@ class V3PersistenceWriterSettings(BaseSettings):
         validation_alias="INSPECTIO_V3_WRITER_RECEIVE_MAX_EVENTS",
     )
     persistence_ack_delete_max_concurrency: int = Field(
-        default=2,
+        default=8,
         ge=1,
         le=8,
         validation_alias="INSPECTIO_V3_PERSISTENCE_ACK_DELETE_MAX_CONCURRENCY",
