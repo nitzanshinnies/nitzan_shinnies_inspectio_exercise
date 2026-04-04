@@ -353,6 +353,8 @@ Recover persistence-enabled completion throughput to pass the composite gate whi
 ### Plan reference
 
 - `plans/v3_phases/P12_9_COMPLETION_THROUGHPUT_RESCUE_PLAN.md`
+- Active WS3 execution packet: `plans/v3_phases/artifacts/p12_9/iter-3/ITER3_PLAN.md`
+- Active WS3 rerun hygiene fix: `plans/v3_phases/P12_9_WS3_1_RERUN_MEASUREMENT_HYGIENE_FIX_SPEC.md`
 
 ### Acceptance criteria
 

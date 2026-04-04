@@ -88,12 +88,14 @@ def _build_writer(
     *,
     clock: list[int],
     flush_max_events: int = 100,
+    flush_min_batch_events: int = 1,
     flush_interval_ms: int = 1_000,
 ) -> BufferedPersistenceWriter:
     return BufferedPersistenceWriter(
         store=store,
         clock_ms=lambda: clock[0],
         flush_max_events=flush_max_events,
+        flush_min_batch_events=flush_min_batch_events,
         flush_interval_ms=flush_interval_ms,
         dedupe_event_id_cap=1_000,
         write_max_attempts=2,
@@ -172,6 +174,7 @@ async def test_writer_exhausted_failures_raise_and_buffer_remains() -> None:
         store=store,
         clock_ms=lambda: clock[0],
         flush_max_events=1,
+        flush_min_batch_events=1,
         flush_interval_ms=1,
         dedupe_event_id_cap=100,
         write_max_attempts=1,
@@ -315,3 +318,46 @@ async def test_writer_metrics_snapshot_contains_per_shard_fields() -> None:
     assert "transport_oldest_age_ms_last" in shard
     assert "transport_oldest_age_sampled_at_ms" in shard
     assert "buffered_events" in shard
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_interval_flush_waits_for_min_batch_under_ongoing_ingest() -> None:
+    store = _MemStore()
+    clock = [90_000]
+    writer = _build_writer(
+        store,
+        clock=clock,
+        flush_max_events=100,
+        flush_min_batch_events=3,
+        flush_interval_ms=1_000,
+    )
+    await writer.ingest_events([_event("m-1", shard=0)])
+    clock[0] = 90_900
+    await writer.ingest_events([_event("m-2", shard=0)])
+    clock[0] = 91_100
+    flushed = await writer.flush_due(force=False)
+    assert flushed == []
+    assert writer.metrics.events_flushed == 0
+    await writer.ingest_events([_event("m-3", shard=0)])
+    clock[0] = 92_100
+    flushed_after_fill = await writer.flush_due(force=False)
+    assert len(flushed_after_fill) == 3
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_interval_flush_does_not_starve_small_idle_buffer() -> None:
+    store = _MemStore()
+    clock = [100_000]
+    writer = _build_writer(
+        store,
+        clock=clock,
+        flush_max_events=100,
+        flush_min_batch_events=4,
+        flush_interval_ms=1_000,
+    )
+    await writer.ingest_events([_event("idle-1", shard=0)])
+    clock[0] = 101_100
+    flushed = await writer.flush_due(force=False)
+    assert len(flushed) == 1

@@ -153,7 +153,9 @@ Writer consumes one persistence transport shard queue and writes compressed segm
 - **`INSPECTIO_V3_WRITER_SHARD_ID`** (required for sharded mode, in range `[0, SHARD_COUNT-1]`)
 - **`INSPECTIO_V3_WRITER_RECEIVE_WAIT_SECONDS`**
 - **`INSPECTIO_V3_WRITER_RECEIVE_MAX_EVENTS`**
+- **`INSPECTIO_V3_PERSISTENCE_ACK_DELETE_MAX_CONCURRENCY`** (`1..8`, bounded SQS delete parallelism)
 - **`INSPECTIO_V3_WRITER_FLUSH_MAX_EVENTS`**
+- **`INSPECTIO_V3_PERSISTENCE_WRITER_FLUSH_MIN_BATCH_EVENTS`** (`1..FLUSH_MAX`, interval-trigger occupancy floor)
 - **`INSPECTIO_V3_WRITER_FLUSH_INTERVAL_MS`**
 - **`INSPECTIO_V3_WRITER_DEDUPE_EVENT_ID_CAP`**
 - **`INSPECTIO_V3_WRITER_WRITE_MAX_ATTEMPTS`**

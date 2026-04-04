@@ -127,6 +127,11 @@ Localize the exact persistence bottleneck before tuning.
 
 Raise persist-on completion throughput without compromising correctness.
 
+### Active implementation packet
+
+- Iteration 3 (SE-ready): `plans/v3_phases/artifacts/p12_9/iter-3/ITER3_PLAN.md`
+- Iteration 3 rerun hygiene fix: `plans/v3_phases/P12_9_WS3_1_RERUN_MEASUREMENT_HYGIENE_FIX_SPEC.md`
+
 ### Tuning levers (in order)
 
 1. **Flush policy tuning**
@@ -250,7 +255,7 @@ Rollback actions:
 
 - [x] WS1 completed with reproducible completion metrics.
 - [ ] WS2 merged with per-shard bottleneck visibility.
-- [ ] At least one WS3 iteration completed with measurable gain.
+- [x] At least one WS3 iteration completed with measurable gain (Iteration 3: +7.10pp vs Iteration 2, no-go on threshold miss).
 - [ ] Final gate rerun artifacts committed.
 - [ ] Completion hard gate `>= 70%` achieved.
 - [ ] P12.9 closure report published.

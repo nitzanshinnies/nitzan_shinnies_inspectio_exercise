@@ -31,6 +31,7 @@ class BufferedPersistenceWriter:
         store: PersistenceObjectStore,
         clock_ms: Callable[[], int],
         flush_max_events: int,
+        flush_min_batch_events: int,
         flush_interval_ms: int,
         dedupe_event_id_cap: int,
         write_max_attempts: int,
@@ -43,6 +44,10 @@ class BufferedPersistenceWriter:
         self._store = store
         self._clock_ms = clock_ms
         self._flush_max_events = max(1, flush_max_events)
+        self._flush_min_batch_events = max(
+            1,
+            min(flush_min_batch_events, self._flush_max_events),
+        )
         self._flush_interval_ms = max(1, flush_interval_ms)
         self._dedupe_event_id_cap = max(64, dedupe_event_id_cap)
         self._write_max_attempts = max(1, write_max_attempts)
@@ -55,6 +60,7 @@ class BufferedPersistenceWriter:
         self.metrics = PersistenceWriterMetrics()
         self.metrics.init_clock(now_ms=self._clock_ms())
         self._buffers: dict[int, list[PersistenceEventV1]] = {}
+        self._buffer_last_event_at_ms: dict[int, int] = {}
         self._buffer_started_at_ms: dict[int, int] = {}
         self._next_segment_seq: dict[int, int] = {}
         self._committed_watermark: dict[int, tuple[int, int]] = {}
@@ -72,6 +78,7 @@ class BufferedPersistenceWriter:
             if not shard_buf:
                 self._buffer_started_at_ms[event.shard] = self._clock_ms()
             shard_buf.append(event)
+            self._buffer_last_event_at_ms[event.shard] = self._clock_ms()
             self.metrics.events_buffered += 1
 
     async def flush_due(self, *, force: bool = False) -> list[PersistenceEventV1]:
@@ -81,20 +88,42 @@ class BufferedPersistenceWriter:
             if not events:
                 continue
             buffered_for = now - self._buffer_started_at_ms.get(shard, now)
+            idle_for = now - self._buffer_last_event_at_ms.get(shard, now)
             self.metrics.observe_buffer_state(
                 shard=shard,
                 buffered_events=len(events),
                 oldest_buffer_age_ms=max(0, buffered_for),
                 now_ms=now,
             )
-            should_flush = (
-                force
-                or len(events) >= self._flush_max_events
-                or buffered_for >= self._flush_interval_ms
+            should_flush = self._should_flush(
+                force=force,
+                buffered_events=len(events),
+                buffered_for_ms=max(0, buffered_for),
+                idle_for_ms=max(0, idle_for),
             )
             if should_flush:
                 flushed.extend(await self._flush_shard(shard, events))
         return flushed
+
+    def _should_flush(
+        self,
+        *,
+        force: bool,
+        buffered_events: int,
+        buffered_for_ms: int,
+        idle_for_ms: int,
+    ) -> bool:
+        if force:
+            return True
+        if buffered_events >= self._flush_max_events:
+            return True
+        if buffered_for_ms < self._flush_interval_ms:
+            return False
+        if buffered_events >= self._flush_min_batch_events:
+            return True
+        # Do not starve low-ingest shards: flush small buffers once they have been
+        # idle for a full interval even if min occupancy is not reached.
+        return idle_for_ms >= self._flush_interval_ms
 
     async def _flush_shard(
         self,
@@ -115,6 +144,7 @@ class BufferedPersistenceWriter:
         if not filtered:
             self.metrics.empty_flushes_due_to_dedupe += 1
             self._buffers[shard] = []
+            self._buffer_last_event_at_ms.pop(shard, None)
             self._buffer_started_at_ms.pop(shard, None)
             self.metrics.observe_buffer_state(
                 shard=shard,
@@ -179,6 +209,7 @@ class BufferedPersistenceWriter:
                     max_source_index,
                 )
                 self._buffers[shard] = []
+                self._buffer_last_event_at_ms.pop(shard, None)
                 self._buffer_started_at_ms.pop(shard, None)
                 self.metrics.observe_flush_batch(
                     shard=shard,
