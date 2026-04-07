@@ -1,0 +1,32 @@
+# In-cluster driver: scripts/v4_iter4_sustained_new_message.py → inspectio-v3-iter4-api:8000
+# kubectl -n inspectio delete job inspectio-v3-iter4-wal-load --ignore-not-found
+# sed image tag then apply; wait: kubectl wait --for=condition=complete job/inspectio-v3-iter4-wal-load -n inspectio --timeout=400s
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: inspectio-v3-iter4-wal-load
+  namespace: inspectio
+  labels:
+    app.kubernetes.io/part-of: inspectio-v3
+spec:
+  activeDeadlineSeconds: 400
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 86400
+  template:
+    spec:
+      serviceAccountName: inspectio-app
+      restartPolicy: Never
+      containers:
+        - name: driver
+          image: inspectio-v3:latest
+          imagePullPolicy: Always
+          env:
+            - name: INSPECTIO_ITER4_LOAD_TEST_API_BASE
+              value: http://inspectio-v3-iter4-api:8000
+          args:
+            - python
+            - scripts/v4_iter4_sustained_new_message.py
+            - --duration-sec
+            - "90"
+            - --concurrency
+            - "80"

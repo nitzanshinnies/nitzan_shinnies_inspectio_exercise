@@ -1,0 +1,38 @@
+# Sustained ``POST /messages/repeat`` only (no outcome poll). Tune for ~10k msg/s offered
+# admit: raise ``--concurrency`` × ``--batch`` until stable; image tag must match the stack.
+# Example: 120 × 500 → 60k msgs per wave; offered RPS depends on L1/L2/SQS latency.
+# kubectl -n inspectio delete job inspectio-v3-sustain --ignore-not-found
+# kubectl apply -f deploy/kubernetes/load-test-job-sustain.yaml  # set image first
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: inspectio-v3-sustain
+  namespace: inspectio
+  labels:
+    app.kubernetes.io/part-of: inspectio-v3
+spec:
+  activeDeadlineSeconds: 600
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 86400
+  template:
+    spec:
+      serviceAccountName: inspectio-app
+      restartPolicy: Never
+      containers:
+        - name: driver
+          image: inspectio-v3:latest
+          imagePullPolicy: Always
+          env:
+            - name: INSPECTIO_LOAD_TEST_API_BASE
+              value: http://inspectio-l1:8080
+          args:
+            - python
+            - scripts/v3_sustained_admit.py
+            - --duration-sec
+            - "55"
+            - --concurrency
+            - "120"
+            - --batch
+            - "500"
+            - --body-prefix
+            - sustain10k

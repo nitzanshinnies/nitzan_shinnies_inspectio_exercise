@@ -1,0 +1,33 @@
+# One Job = one HTTP POST /messages/repeat with a large count (single bulk transaction).
+# Tunes: --count, --http-timeout-sec, activeDeadlineSeconds, and image tag to match api/l1.
+# Example wait: kubectl -n inspectio wait --for=condition=complete job/inspectio-v3-single-bulk-admit --timeout=620s
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: inspectio-v3-single-bulk-admit
+  namespace: inspectio
+  labels:
+    app.kubernetes.io/part-of: inspectio-v3
+spec:
+  activeDeadlineSeconds: 600
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 86400
+  template:
+    spec:
+      serviceAccountName: inspectio-app
+      restartPolicy: Never
+      containers:
+        - name: driver
+          image: inspectio-v3:latest
+          imagePullPolicy: Always
+          env:
+            - name: INSPECTIO_LOAD_TEST_API_BASE
+              value: http://inspectio-l1:8080
+          args:
+            - python
+            - scripts/v3_single_bulk_admit_bench.py
+            - --kubernetes
+            - --count
+            - "10000"
+            - --http-timeout-sec
+            - "600"

@@ -1,0 +1,104 @@
+{
+    "apiVersion": "batch/v1",
+    "kind": "Job",
+    "metadata": {
+        "annotations": {
+            "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"batch/v1\",\"kind\":\"Job\",\"metadata\":{\"annotations\":{},\"name\":\"inspectio-v3-p12-9-iter7-off\",\"namespace\":\"inspectio\"},\"spec\":{\"backoffLimit\":0,\"template\":{\"spec\":{\"containers\":[{\"command\":[\"python\",\"scripts/v3_sustained_admit.py\",\"--api-base\",\"http://inspectio-l1:8080\",\"--duration-sec\",\"240\",\"--concurrency\",\"120\",\"--batch\",\"200\",\"--body-prefix\",\"p12-9-iter7-off\"],\"image\":\"194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:p12-9-deploy-20260402183410\",\"imagePullPolicy\":\"Always\",\"name\":\"load\"}],\"restartPolicy\":\"Never\",\"serviceAccountName\":\"inspectio-app\"}}}}\n"
+        },
+        "creationTimestamp": "2026-04-02T18:41:40Z",
+        "generation": 1,
+        "labels": {
+            "batch.kubernetes.io/controller-uid": "744b44ab-dc5c-4368-b02f-888e15f6da6e",
+            "batch.kubernetes.io/job-name": "inspectio-v3-p12-9-iter7-off",
+            "controller-uid": "744b44ab-dc5c-4368-b02f-888e15f6da6e",
+            "job-name": "inspectio-v3-p12-9-iter7-off"
+        },
+        "name": "inspectio-v3-p12-9-iter7-off",
+        "namespace": "inspectio",
+        "resourceVersion": "1398929",
+        "uid": "744b44ab-dc5c-4368-b02f-888e15f6da6e"
+    },
+    "spec": {
+        "backoffLimit": 0,
+        "completionMode": "NonIndexed",
+        "completions": 1,
+        "manualSelector": false,
+        "parallelism": 1,
+        "podReplacementPolicy": "TerminatingOrFailed",
+        "selector": {
+            "matchLabels": {
+                "batch.kubernetes.io/controller-uid": "744b44ab-dc5c-4368-b02f-888e15f6da6e"
+            }
+        },
+        "suspend": false,
+        "template": {
+            "metadata": {
+                "labels": {
+                    "batch.kubernetes.io/controller-uid": "744b44ab-dc5c-4368-b02f-888e15f6da6e",
+                    "batch.kubernetes.io/job-name": "inspectio-v3-p12-9-iter7-off",
+                    "controller-uid": "744b44ab-dc5c-4368-b02f-888e15f6da6e",
+                    "job-name": "inspectio-v3-p12-9-iter7-off"
+                }
+            },
+            "spec": {
+                "containers": [
+                    {
+                        "command": [
+                            "python",
+                            "scripts/v3_sustained_admit.py",
+                            "--api-base",
+                            "http://inspectio-l1:8080",
+                            "--duration-sec",
+                            "240",
+                            "--concurrency",
+                            "120",
+                            "--batch",
+                            "200",
+                            "--body-prefix",
+                            "p12-9-iter7-off"
+                        ],
+                        "image": "194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:p12-9-deploy-20260402183410",
+                        "imagePullPolicy": "Always",
+                        "name": "load",
+                        "resources": {},
+                        "terminationMessagePath": "/dev/termination-log",
+                        "terminationMessagePolicy": "File"
+                    }
+                ],
+                "dnsPolicy": "ClusterFirst",
+                "restartPolicy": "Never",
+                "schedulerName": "default-scheduler",
+                "securityContext": {},
+                "serviceAccount": "inspectio-app",
+                "serviceAccountName": "inspectio-app",
+                "terminationGracePeriodSeconds": 30
+            }
+        }
+    },
+    "status": {
+        "completionTime": "2026-04-02T18:45:47Z",
+        "conditions": [
+            {
+                "lastProbeTime": "2026-04-02T18:45:47Z",
+                "lastTransitionTime": "2026-04-02T18:45:47Z",
+                "message": "Reached expected number of succeeded pods",
+                "reason": "CompletionsReached",
+                "status": "True",
+                "type": "SuccessCriteriaMet"
+            },
+            {
+                "lastProbeTime": "2026-04-02T18:45:47Z",
+                "lastTransitionTime": "2026-04-02T18:45:47Z",
+                "message": "Reached expected number of succeeded pods",
+                "reason": "CompletionsReached",
+                "status": "True",
+                "type": "Complete"
+            }
+        ],
+        "ready": 0,
+        "startTime": "2026-04-02T18:41:40Z",
+        "succeeded": 1,
+        "terminating": 0,
+        "uncountedTerminatedPods": {}
+    }
+}

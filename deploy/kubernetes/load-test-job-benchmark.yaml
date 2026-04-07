@@ -1,0 +1,39 @@
+# Admission-focused bench: large repeat count, no outcomes wait (GET /success caps at 100 rows).
+# Use worker logs / metrics for full 3.1 send-side throughput when N > 100.
+# activeDeadlineSeconds: 600 → kubectl wait --timeout=620s job/inspectio-v3-load-benchmark -n inspectio
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: inspectio-v3-load-benchmark
+  namespace: inspectio
+  labels:
+    app.kubernetes.io/part-of: inspectio-v3
+spec:
+  activeDeadlineSeconds: 600
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 86400
+  template:
+    spec:
+      serviceAccountName: inspectio-app
+      restartPolicy: Never
+      containers:
+        - name: driver
+          image: inspectio-v3:latest
+          imagePullPolicy: Always
+          env:
+            - name: INSPECTIO_LOAD_TEST_API_BASE
+              value: http://inspectio-l1:8080
+          args:
+            - python
+            - scripts/v3_load_test.py
+            - --kubernetes
+            - --sizes
+            - "10000"
+            - --chunk-max
+            - "10000"
+            - --http-timeout-sec
+            - "120"
+            - --max-total-sec
+            - "0"
+            - --no-wait-successes
+            - --json-summary

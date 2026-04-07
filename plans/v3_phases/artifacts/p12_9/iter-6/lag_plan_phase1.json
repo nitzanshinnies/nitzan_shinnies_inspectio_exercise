@@ -1,0 +1,50 @@
+{
+  "art_dir": "/Users/nitzan/Documents/antigravity_ws/nitzan_shinnies_inspectio_exercise/plans/v3_phases/artifacts/p12_9/iter-6",
+  "missing_phase1_files": [],
+  "missing_window_timestamps_for_cloudwatch": [
+    "on_end.txt"
+  ],
+  "off_job": {
+    "failed": 0,
+    "succeeded": 1,
+    "valid_single_attempt": true
+  },
+  "off_log_markers": {
+    "backoff_limit": 0,
+    "client_closed": 0,
+    "http_5xx_or_status": 0,
+    "httpx_read_error": 0,
+    "persist_backpressure": 0,
+    "traceback": 0
+  },
+  "off_sustain": {
+    "admitted_total": 3451400,
+    "batch": 200,
+    "concurrency": 120,
+    "duration_sec": 240.0,
+    "offered_admit_rps": 14380.83
+  },
+  "on_job": {
+    "failed": 1,
+    "succeeded": 0,
+    "valid_single_attempt": false
+  },
+  "on_log_markers": {
+    "backoff_limit": 0,
+    "client_closed": 0,
+    "http_5xx_or_status": 0,
+    "httpx_read_error": 2,
+    "persist_backpressure": 0,
+    "traceback": 2
+  },
+  "on_sustain": {
+    "error": "no SUSTAIN_SUMMARY in /Users/nitzan/Documents/antigravity_ws/nitzan_shinnies_inspectio_exercise/plans/v3_phases/artifacts/p12_9/iter-6/on-allpods.log"
+  },
+  "phase1_gate": {
+    "jobs_valid": false,
+    "next_step": "Fix failed/invalid load jobs (check on_log_markers); do not run hygiene or interpret completion ratio.",
+    "phase1_inputs_complete": true,
+    "timestamp_files_ready_for_cloudwatch": false
+  },
+  "strict_mode": false
+}

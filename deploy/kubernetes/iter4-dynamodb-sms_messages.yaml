@@ -1,0 +1,30 @@
+# Reference: DynamoDB table for inspectio.v3.iter4_dynamo_wal (Iteration 4).
+# PK: messageId (S). GSI SchedulingIndex: shard_id (HASH), nextDueAt (RANGE).
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Inspectio v3 Iter4 SMS messages hot state + scheduling GSI
+
+Resources:
+  SmsMessagesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: sms_messages
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: messageId
+          AttributeType: S
+        - AttributeName: shard_id
+          AttributeType: S
+        - AttributeName: nextDueAt
+          AttributeType: N
+      KeySchema:
+        - AttributeName: messageId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: SchedulingIndex
+          KeySchema:
+            - AttributeName: shard_id
+              KeyType: HASH
+            - AttributeName: nextDueAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL

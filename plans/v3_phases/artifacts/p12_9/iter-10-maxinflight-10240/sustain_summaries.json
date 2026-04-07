@@ -1,0 +1,20 @@
+{
+  "off": {
+    "admitted_total": 2052200,
+    "batch": 200,
+    "concurrency": 120,
+    "duration_sec": 240.0,
+    "offered_admit_rps": 8550.83,
+    "raw_line": "[pod/inspectio-v3-p12-9-iter10-maxinf-off-dwk7w/load] SUSTAIN_SUMMARY admitted_total=2052200 duration_sec=240.0 offered_admit_rps=8550.83 concurrency=120 batch=200 transient_errors=0",
+    "transient_errors": 0
+  },
+  "on": {
+    "admitted_total": 1029000,
+    "batch": 200,
+    "concurrency": 120,
+    "duration_sec": 240.0,
+    "offered_admit_rps": 4287.5,
+    "raw_line": "[pod/inspectio-v3-p12-9-iter10-maxinf-on-bz4bc/load] SUSTAIN_SUMMARY admitted_total=1029000 duration_sec=240.0 offered_admit_rps=4287.50 concurrency=120 batch=200 transient_errors=4",
+    "transient_errors": 4
+  }
+}

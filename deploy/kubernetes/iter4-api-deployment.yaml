@@ -1,0 +1,74 @@
+# Iteration 4 API: DynamoDB hot state + S3 append-only WAL (parallel to L1/L2 pipeline).
+# Requires: table sms_messages + GSI SchedulingIndex; S3 bucket/prefix writable by inspectio-app IRSA.
+apiVersion: v1
+kind: Service
+metadata:
+  name: inspectio-v3-iter4-api
+  namespace: inspectio
+  labels:
+    app.kubernetes.io/part-of: inspectio-v3
+    app.kubernetes.io/component: iter4-api
+spec:
+  selector:
+    app: inspectio-v3-iter4-api
+  ports:
+    - port: 8000
+      targetPort: 8000
+      name: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inspectio-v3-iter4-api
+  namespace: inspectio
+  labels:
+    app.kubernetes.io/part-of: inspectio-v3
+    app.kubernetes.io/component: iter4-api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: inspectio-v3-iter4-api
+  template:
+    metadata:
+      labels:
+        app: inspectio-v3-iter4-api
+    spec:
+      serviceAccountName: inspectio-app
+      containers:
+        - name: api
+          image: inspectio-v3:latest
+          imagePullPolicy: Always
+          command: ["inspectio-v3-iter4-api"]
+          ports:
+            - containerPort: 8000
+              name: http
+          env:
+            - name: INSPECTIO_V3_ITER4_AWS_REGION
+              value: us-east-1
+            - name: INSPECTIO_V3_ITER4_DYNAMODB_TABLE_NAME
+              value: sms_messages
+            - name: INSPECTIO_V3_ITER4_GSI_SCHEDULING_INDEX_NAME
+              value: SchedulingIndex
+            - name: INSPECTIO_V3_ITER4_S3_BUCKET
+              value: inspectio-a074c6e4-59b9-4dd5-ad86-3f5c1ef7c994
+            - name: INSPECTIO_V3_ITER4_S3_WAL_PREFIX
+              value: state/iter4_wal
+            - name: INSPECTIO_V3_ITER4_WAL_WRITER_ID
+              value: iter4-api
+            - name: INSPECTIO_V3_ITER4_TOTAL_SHARDS
+              value: "16"
+            - name: INSPECTIO_V3_ITER4_TOTAL_WORKERS
+              value: "4"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10

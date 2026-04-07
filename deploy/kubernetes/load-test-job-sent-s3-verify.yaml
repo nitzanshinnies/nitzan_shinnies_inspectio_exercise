@@ -1,0 +1,55 @@
+# Admit N messages, drain bulk + all send + all persist-transport queues, verify S3
+# terminal/success count matches (run_tag in body). Image must include scripts/.
+#
+#   kubectl -n inspectio delete job inspectio-v3-sent-s3-verify --ignore-not-found
+#   # set container image to your ECR tag (same family as the stack)
+#   kubectl apply -f deploy/kubernetes/load-test-job-sent-s3-verify.yaml
+#   kubectl -n inspectio wait --for=condition=complete job/inspectio-v3-sent-s3-verify --timeout=3600s
+#   kubectl -n inspectio logs job/inspectio-v3-sent-s3-verify
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: inspectio-v3-sent-s3-verify
+  namespace: inspectio
+  labels:
+    app.kubernetes.io/part-of: inspectio-v3
+spec:
+  activeDeadlineSeconds: 7200
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 86400
+  template:
+    spec:
+      serviceAccountName: inspectio-app
+      restartPolicy: Never
+      containers:
+        - name: driver
+          image: 194768394273.dkr.ecr.us-east-1.amazonaws.com/inspectio-v3:sent-s3-verify-REPLACE_TAG
+          imagePullPolicy: Always
+          envFrom:
+            - configMapRef:
+                name: inspectio-v3-config
+            - secretRef:
+                name: inspectio-v3-secrets
+                optional: true
+          env:
+            - name: INSPECTIO_VERIFY_API_BASE
+              value: http://inspectio-l1:8080
+            - name: INSPECTIO_VERIFY_TOTAL_MESSAGES
+              value: "10000"
+            - name: INSPECTIO_VERIFY_BATCH
+              value: "100"
+            - name: INSPECTIO_VERIFY_CONCURRENCY
+              value: "40"
+            - name: INSPECTIO_VERIFY_DRAIN_TIMEOUT_SEC
+              value: "2400"
+            - name: INSPECTIO_VERIFY_POLL_SEC
+              value: "5"
+            - name: INSPECTIO_VERIFY_CHECKPOINT_STABLE_TIMEOUT_SEC
+              value: "1200"
+            - name: INSPECTIO_VERIFY_CHECKPOINT_STABLE_POLL_SEC
+              value: "10"
+            - name: INSPECTIO_VERIFY_CHECKPOINT_STABLE_ROUNDS
+              value: "4"
+          args:
+            - python
+            - scripts/v3_sent_throughput_s3_verify.py
