@@ -10,6 +10,7 @@ from inspectio.v3.iter4_dynamo_wal.constants import (
     DEFAULT_TOTAL_SHARDS,
     DEFAULT_TOTAL_WORKERS,
     GSI_SCHEDULING_INDEX_DEFAULT_NAME,
+    WAL_FLUSH_INTERVAL_SEC,
 )
 
 
@@ -47,6 +48,12 @@ class Iter4DynamoWalSettings(BaseSettings):
         default=DEFAULT_RECONCILE_INTERVAL_MS,
         ge=50,
         description="How often workers pull due rows from DynamoDB into the heap.",
+    )
+
+    wal_flush_interval_sec: float = Field(
+        default=WAL_FLUSH_INTERVAL_SEC,
+        gt=0,
+        description="S3 WAL background task: flush buffered events at this cadence (seconds).",
     )
 
 

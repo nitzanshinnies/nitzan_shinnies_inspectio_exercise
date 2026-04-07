@@ -15,6 +15,7 @@ from inspectio.v3.settings import (
     V3ExpanderSettings,
     sqs_client_kwargs_from_expander_settings,
 )
+from inspectio.v3.sqs.boto_config import augment_client_kwargs_with_v3_config
 
 
 async def amain() -> None:
@@ -24,7 +25,9 @@ async def amain() -> None:
     dedupe = ExpandedBulkDedupe()
     metrics = ExpansionMetrics()
     rng = random.Random()
-    client_kw = sqs_client_kwargs_from_expander_settings(settings)
+    client_kw = augment_client_kwargs_with_v3_config(
+        sqs_client_kwargs_from_expander_settings(settings),
+    )
     sleeper = asyncio.sleep
     while True:
         async with session.client("sqs", **client_kw) as client:

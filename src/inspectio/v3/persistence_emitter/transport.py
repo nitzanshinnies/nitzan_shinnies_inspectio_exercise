@@ -6,6 +6,9 @@ import uuid
 from collections.abc import Callable
 from typing import Any
 
+from inspectio.v3.persistence_emitter.enqueued_outbound import (
+    L2EnqueuedPersistenceOutboundQueue,
+)
 from inspectio.v3.persistence_emitter.protocol import PersistenceEventEmitter
 from inspectio.v3.persistence_transport.protocol import PersistenceTransportProducer
 from inspectio.v3.persistence_transport.sharded_router import (
@@ -30,9 +33,11 @@ class TransportPersistenceEventEmitter(PersistenceEventEmitter):
         *,
         producer: PersistenceTransportProducer,
         clock_ms: Callable[[], int],
+        enqueued_outbound: L2EnqueuedPersistenceOutboundQueue | None = None,
     ) -> None:
         self._producer = producer
         self._clock_ms = clock_ms
+        self._enqueued_outbound = enqueued_outbound
         self._next_seq_by_shard: dict[int, int] = {}
 
     async def persistence_transport_observability_snapshot(self) -> dict[str, Any]:
@@ -72,6 +77,10 @@ class TransportPersistenceEventEmitter(PersistenceEventEmitter):
             attempt_count=0,
             status="pending",
         )
+        outbound = self._enqueued_outbound
+        if outbound is not None:
+            outbound.put_nowait(event)
+            return
         await self._producer.publish(event)
 
     async def emit_attempt_result(

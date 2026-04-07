@@ -1,0 +1,57 @@
+# Iteration 4 worker: claims shards from HOSTNAME ordinal (StatefulSet pod name suffix).
+# Set INSPECTIO_V3_ITER4_* (bucket, table, region, total_shards, total_workers) via ConfigMap/Secret.
+apiVersion: v1
+kind: Service
+metadata:
+  name: inspectio-v3-iter4-worker-headless
+  namespace: inspectio
+  labels:
+    app.kubernetes.io/part-of: inspectio-v3
+spec:
+  clusterIP: None
+  selector:
+    app: inspectio-v3-iter4-worker
+  ports:
+    - port: 8080
+      name: noop
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: inspectio-v3-iter4-worker
+  namespace: inspectio
+  labels:
+    app.kubernetes.io/part-of: inspectio-v3
+spec:
+  serviceName: inspectio-v3-iter4-worker-headless
+  replicas: 4
+  selector:
+    matchLabels:
+      app: inspectio-v3-iter4-worker
+  template:
+    metadata:
+      labels:
+        app: inspectio-v3-iter4-worker
+    spec:
+      serviceAccountName: inspectio-app
+      containers:
+        - name: worker
+          image: inspectio-v3:latest
+          imagePullPolicy: Always
+          command: ["inspectio-v3-iter4-worker"]
+          env:
+            # HOSTNAME is pod name; worker parses ...-N for index (see worker_index_from_hostname).
+            - name: INSPECTIO_V3_ITER4_S3_BUCKET
+              value: "" # required — set from ConfigMap/Secret
+            - name: INSPECTIO_V3_ITER4_DYNAMODB_TABLE_NAME
+              value: sms_messages
+            - name: INSPECTIO_V3_ITER4_TOTAL_SHARDS
+              value: "16"
+            - name: INSPECTIO_V3_ITER4_TOTAL_WORKERS
+              value: "4"
+            - name: INSPECTIO_V3_ITER4_WAL_PREFIX
+              value: wal
+            - name: INSPECTIO_V3_ITER4_WAL_WRITER_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name

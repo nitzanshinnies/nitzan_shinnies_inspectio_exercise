@@ -1,0 +1,20 @@
+{
+  "off": {
+    "admitted_total": 981000,
+    "batch": 200,
+    "concurrency": 120,
+    "duration_sec": 240.0,
+    "offered_admit_rps": 4087.5,
+    "raw_line": "SUSTAIN_SUMMARY admitted_total=981000 duration_sec=240.0 offered_admit_rps=4087.50 concurrency=120 batch=200 transient_errors=6",
+    "transient_errors": 6
+  },
+  "on": {
+    "admitted_total": 635000,
+    "batch": 200,
+    "concurrency": 120,
+    "duration_sec": 240.0,
+    "offered_admit_rps": 2645.83,
+    "raw_line": "SUSTAIN_SUMMARY admitted_total=635000 duration_sec=240.0 offered_admit_rps=2645.83 concurrency=120 batch=200 transient_errors=4",
+    "transient_errors": 4
+  }
+}

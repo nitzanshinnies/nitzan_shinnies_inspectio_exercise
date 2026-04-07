@@ -1,4 +1,7 @@
-"""500 ms wakeup loop with monotonic pacing and DynamoDB reconciliation."""
+"""500 ms ``wakeup()`` loop: monotonic pacing, heap due-set, concurrent ``send``, DDB updates.
+
+Reconciliation pulls newly-due rows from the SchedulingIndex into the heap between ticks.
+"""
 
 from __future__ import annotations
 
@@ -104,7 +107,10 @@ class WorkerScheduler:
 
         new_attempts = attempt_count + 1
         if new_attempts >= MAX_SEND_ATTEMPTS:
-            await self._repo.mark_permanently_failed(message_id=message_id)
+            await self._repo.mark_permanently_failed(
+                message_id=message_id,
+                attempt_count=new_attempts,
+            )
             await self._wal.enqueue(
                 {
                     "ts_ms": epoch_ms(),

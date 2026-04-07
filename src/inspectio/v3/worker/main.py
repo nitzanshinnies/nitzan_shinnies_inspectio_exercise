@@ -29,6 +29,7 @@ from inspectio.v3.settings import (
     V3WorkerSettings,
     sqs_client_kwargs_from_worker_settings,
 )
+from inspectio.v3.sqs.boto_config import augment_client_kwargs_with_v3_config
 from inspectio.v3.worker.metrics import SendWorkerMetrics
 from inspectio.v3.worker.scheduler import SendScheduler
 
@@ -63,7 +64,9 @@ async def amain() -> None:
     persistence_emitter = NoopPersistenceEventEmitter()
     metrics = SendWorkerMetrics()
     session = aioboto3.Session()
-    kw = sqs_client_kwargs_from_worker_settings(settings)
+    kw = augment_client_kwargs_with_v3_config(
+        sqs_client_kwargs_from_worker_settings(settings),
+    )
 
     def clock_ms() -> int:
         return int(time.time() * 1000)

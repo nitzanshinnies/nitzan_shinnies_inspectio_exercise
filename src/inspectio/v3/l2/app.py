@@ -25,6 +25,7 @@ def create_l2_app(
     idempotency_ttl_ms: int = 3_600_000,
     outcomes_reader: OutcomesReadPort | None = None,
     persistence_emitter: PersistenceEventEmitter | None = None,
+    persistence_transport_shard_count: int = 1,
     expose_persistence_transport_metrics: bool = False,
     lifespan: Callable[[FastAPI], AsyncIterator[None]] | None = None,
 ) -> FastAPI:
@@ -39,6 +40,7 @@ def create_l2_app(
         outcomes_reader=reader,
         persistence_emitter=emitter,
         shard_count=shard_count,
+        persistence_transport_shard_count=persistence_transport_shard_count,
         expose_persistence_transport_metrics=expose_persistence_transport_metrics,
     )
     kwargs: dict[str, object] = {"title": "Inspectio L2", "version": "0.0.0"}

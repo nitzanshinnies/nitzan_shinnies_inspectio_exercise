@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import random
 import uuid
 from typing import Annotated, Any
 
@@ -134,10 +135,8 @@ async def _admit_bulk(
         else batch_id
     )
     received_at_ms = deps.clock_ms()
-    shard = predicted_shard_index(
-        batch_correlation_id=batch_id,
-        shard_count=deps.shard_count,
-    )
+    persist_k = max(1, deps.persistence_transport_shard_count)
+    persist_shard = random.randint(0, persist_k - 1) if persist_k > 1 else 0
     bulk = BulkIntentV1(
         trace_id=trace_id,
         batch_correlation_id=batch_id,
@@ -155,7 +154,7 @@ async def _admit_bulk(
         count=count,
         body=body,
         received_at_ms=received_at_ms,
-        shard=shard,
+        shard=persist_shard,
     )
     return _response_for_admission(
         batch_id=batch_id,

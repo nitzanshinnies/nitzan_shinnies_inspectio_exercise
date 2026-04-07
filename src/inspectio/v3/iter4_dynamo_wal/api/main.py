@@ -50,6 +50,7 @@ def create_iter4_app(
                     writer_id=settings.wal_writer_id,
                     bucket=settings.s3_bucket,
                     wal_prefix=settings.s3_wal_prefix,
+                    flush_interval_sec=settings.wal_flush_interval_sec,
                 )
                 wal.attach_s3_client(s3_client)
                 wal.start_background()

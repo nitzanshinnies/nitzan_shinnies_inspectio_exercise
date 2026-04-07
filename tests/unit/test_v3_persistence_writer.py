@@ -243,6 +243,38 @@ async def test_restart_redelivery_drop_by_committed_watermark_no_new_segment() -
 
 @pytest.mark.unit
 @pytest.mark.asyncio
+async def test_emitter_restart_low_segment_seq_still_flushes_if_emitted_after_checkpoint() -> (
+    None
+):
+    """L2 transport seq resets on pod restart; watermark must not drop fresh traffic."""
+    store = _MemStore()
+    clock = [200_000]
+    writer1 = _build_writer(store, clock=clock)
+    batch_a = [
+        _event("a-1", segment_seq=11, segment_event_index=0),
+        _event("a-2", segment_seq=11, segment_event_index=1),
+    ]
+    await writer1.ingest_events(batch_a)
+    await writer1.flush_due(force=True)
+    cp_before = dict(store.jsons["state/checkpoints/0/latest.json"])
+    assert cp_before["committedSourceSegmentSeq"] == 11
+
+    writer2 = _build_writer(store, clock=clock)
+    fresh = [
+        _event("new-1", segment_seq=0, segment_event_index=0),
+    ]
+    await writer2.ingest_events(fresh)
+    await writer2.flush_due(force=True)
+    assert writer2.metrics.events_flushed == 1
+    assert writer2.metrics.events_dropped_committed_watermark == 0
+    assert (
+        store.jsons["state/checkpoints/0/latest.json"]["nextSegmentSeq"]
+        == cp_before["nextSegmentSeq"] + 1
+    )
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
 async def test_mixed_batch_filters_committed_events_and_advances_checkpoint() -> None:
     store = _MemStore()
     clock = [60_000]

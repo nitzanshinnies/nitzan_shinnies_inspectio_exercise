@@ -14,6 +14,7 @@ from botocore.exceptions import ClientError
 from inspectio.v3.schemas.bulk_intent import BulkIntentV1
 from inspectio.v3.sqs.aws_throttle import is_aws_throttle_error
 from inspectio.v3.sqs.backoff import compute_backoff_delay_ms
+from inspectio.v3.sqs.boto_config import augment_client_kwargs_with_v3_config
 
 
 class SqsBulkEnqueue:
@@ -64,7 +65,8 @@ class SqsBulkEnqueue:
         if self._secret_key:
             client_kw["aws_secret_access_key"] = self._secret_key
 
-        async with self._session.client("sqs", **client_kw) as client:
+        sqs_kw = augment_client_kwargs_with_v3_config(client_kw)
+        async with self._session.client("sqs", **sqs_kw) as client:
             await self._send_payload_with_retries(client, payload)
 
     async def _send_payload_with_retries(self, client: Any, payload: str) -> None:

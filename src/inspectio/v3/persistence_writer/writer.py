@@ -147,7 +147,16 @@ class BufferedPersistenceWriter:
             self._clock_ms() - self._buffer_started_at_ms.get(shard, self._clock_ms()),
         )
         watermark = self._committed_watermark.get(shard, (-1, -1))
-        filtered = [e for e in ordered if self._ordering_key(e) > watermark]
+        wm_seq, _wm_idx = watermark
+        filtered = [
+            e
+            for e in ordered
+            if self._ordering_key(e) > watermark
+            or self._transport_seq_gap_implies_emitter_reset(
+                event_seq=e.segment_seq,
+                watermark_seq=wm_seq,
+            )
+        ]
         dropped = len(ordered) - len(filtered)
         if dropped:
             self.metrics.events_dropped_committed_watermark += dropped
@@ -327,6 +336,25 @@ class BufferedPersistenceWriter:
     @staticmethod
     def _ordering_key(event: PersistenceEventV1) -> tuple[int, int]:
         return (event.segment_seq, event.segment_event_index)
+
+    @staticmethod
+    def _transport_seq_gap_implies_emitter_reset(
+        *,
+        event_seq: int,
+        watermark_seq: int,
+    ) -> bool:
+        """Detect transport ``segmentSeq`` reset after L2 restart vs straggler reorder.
+
+        Straggler duplicates are typically a small gap below the watermark; L2 process
+        restart resets ``segmentSeq`` to a low value while the checkpoint still reflects
+        a large last-committed transport sequence.
+        """
+
+        if watermark_seq < 0 or event_seq >= watermark_seq:
+            return False
+        gap = watermark_seq - event_seq
+        floor = max(8, watermark_seq // 2)
+        return gap >= floor
 
     @classmethod
     def _max_ordering_key(

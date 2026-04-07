@@ -1,4 +1,8 @@
-"""Asynchronous S3 WAL: buffer state events, flush JSON Lines once per interval."""
+"""Asynchronous S3 WAL: buffer state events, flush JSON Lines once per interval.
+
+Layout: ``s3://<bucket>/<wal_prefix>/<writer_id>/<unix_ms>.jsonl`` (append-only PUT per flush).
+Flusher uses ``time.monotonic()`` pacing so a ~1s cadence does not drift under load.
+"""
 
 from __future__ import annotations
 
@@ -65,6 +69,8 @@ class WalBuffer:
 
     async def _run(self) -> None:
         while not self._stop.is_set():
+            loop_start = time.monotonic()
+            deadline = loop_start + self._interval
             try:
                 await asyncio.wait_for(
                     self._stop.wait(),
@@ -72,7 +78,12 @@ class WalBuffer:
                 )
             except TimeoutError:
                 pass
+            if self._stop.is_set():
+                break
             await self._flush_once()
+            remainder = deadline - time.monotonic()
+            if remainder > 0 and not self._stop.is_set():
+                await asyncio.sleep(remainder)
         await self._flush_once()
 
     def start_background(self) -> None:

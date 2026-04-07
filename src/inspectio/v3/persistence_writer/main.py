@@ -19,11 +19,13 @@ from inspectio.v3.persistence_writer.s3_store import S3PersistenceObjectStore
 from inspectio.v3.persistence_writer.writer import BufferedPersistenceWriter
 from inspectio.v3.schemas.persistence_event import PersistenceEventV1
 from inspectio.v3.settings import V3PersistenceWriterSettings
+from inspectio.v3.sqs.boto_config import augment_client_kwargs_with_v3_config
 
 _log = logging.getLogger(__name__)
 MILLISECONDS_PER_SECOND = 1000
 ACK_QUEUE_BLOCK_SLEEP_SEC = 0.005
 ACK_BATCH_MAX_EVENTS = 1_000
+ACK_SCHEDULE_MAX_INFLIGHT = 32
 
 
 @dataclass(slots=True)
@@ -189,14 +191,12 @@ async def amain() -> None:
         client_kw["aws_access_key_id"] = settings.aws_access_key_id
     if settings.aws_secret_access_key:
         client_kw["aws_secret_access_key"] = settings.aws_secret_access_key
+    boto_kw = augment_client_kwargs_with_v3_config(client_kw)
 
     queue_url = settings.resolved_transport_queue_url()
     async with (
-        session.client("sqs", **client_kw) as sqs_client,
-        session.client(
-            "s3",
-            **client_kw,
-        ) as s3_client,
+        session.client("sqs", **boto_kw) as sqs_client,
+        session.client("s3", **boto_kw) as s3_client,
     ):
         consumer = SqsPersistenceTransportConsumer(
             client=sqs_client,
@@ -277,6 +277,17 @@ async def amain() -> None:
                     await asyncio.sleep(backoff_ms / 1000.0)
             return 0
 
+        ack_schedule_sem = asyncio.Semaphore(ACK_SCHEDULE_MAX_INFLIGHT)
+        pending_scheduled_acks: set[asyncio.Task[None]] = set()
+
+        def _remember_ack_task(task: asyncio.Task[None]) -> None:
+            pending_scheduled_acks.add(task)
+
+            def _forget(done: asyncio.Task[None]) -> None:
+                pending_scheduled_acks.discard(done)
+
+            task.add_done_callback(_forget)
+
         async def _emit_snapshot_if_due() -> None:
             nonlocal last_snapshot_ms
             snapshot_now = clock_ms()
@@ -325,13 +336,25 @@ async def amain() -> None:
                 flushed = await writer.flush_due(force=False)
                 writer.metrics.observe_flush_loop_iteration(noop=not flushed)
                 if flushed:
-                    ack_latency_ms = await ack_many_with_retry(flushed)
-                    _observe_ack_metrics_for_batch(
-                        writer=writer,
-                        events=flushed,
-                        latency_ms=ack_latency_ms,
-                        now_ms=clock_ms(),
-                    )
+                    frozen = list(flushed)
+
+                    async def _legacy_ack_job() -> None:
+                        async with ack_schedule_sem:
+                            try:
+                                ms = await ack_many_with_retry(frozen)
+                                _observe_ack_metrics_for_batch(
+                                    writer=writer,
+                                    events=frozen,
+                                    latency_ms=ms,
+                                    now_ms=clock_ms(),
+                                )
+                            except Exception:  # noqa: BLE001
+                                _log.exception(
+                                    "persistence writer legacy ack failed batch_len=%s",
+                                    len(frozen),
+                                )
+
+                    _remember_ack_task(asyncio.create_task(_legacy_ack_job()))
                 await _emit_snapshot_if_due()
                 if not events:
                     await asyncio.sleep(settings.writer_idle_sleep_sec)
@@ -400,16 +423,28 @@ async def amain() -> None:
             while True:
                 first = await ack_queue.get()
                 batch = _drain_ack_batch(ack_queue=ack_queue, first=first)
-                ack_latency_ms = await ack_many_with_retry(batch)
-                _observe_ack_metrics_for_batch(
-                    writer=writer,
-                    events=batch,
-                    latency_ms=ack_latency_ms,
-                    now_ms=clock_ms(),
-                )
-                for _ in batch:
-                    ack_queue.task_done()
-                writer.metrics.observe_ack_queue_depth(depth=ack_queue.qsize())
+                frozen = list(batch)
+
+                async def _decoupled_ack_job() -> None:
+                    async with ack_schedule_sem:
+                        try:
+                            ack_latency_ms = await ack_many_with_retry(frozen)
+                            _observe_ack_metrics_for_batch(
+                                writer=writer,
+                                events=frozen,
+                                latency_ms=ack_latency_ms,
+                                now_ms=clock_ms(),
+                            )
+                        except Exception:  # noqa: BLE001
+                            _log.exception(
+                                "persistence writer decoupled ack failed batch_len=%s",
+                                len(frozen),
+                            )
+                    for _ in frozen:
+                        ack_queue.task_done()
+                    writer.metrics.observe_ack_queue_depth(depth=ack_queue.qsize())
+
+                _remember_ack_task(asyncio.create_task(_decoupled_ack_job()))
 
         async def _snapshot_loop() -> None:
             while True:
@@ -447,6 +482,10 @@ async def amain() -> None:
             for task in tasks:
                 task.cancel()
             await asyncio.gather(*tasks, return_exceptions=True)
+            if pending_scheduled_acks:
+                await asyncio.gather(
+                    *list(pending_scheduled_acks), return_exceptions=True
+                )
             try:
                 await _shutdown_flush_and_ack(
                     writer=writer,

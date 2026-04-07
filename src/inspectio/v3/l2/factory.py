@@ -13,6 +13,9 @@ from fastapi import FastAPI
 from inspectio.v3.l2.app import create_l2_app
 from inspectio.v3.outcomes.null_store import NullOutcomesReader
 from inspectio.v3.outcomes.redis_store import RedisOutcomesStore
+from inspectio.v3.persistence_emitter.enqueued_outbound import (
+    L2EnqueuedPersistenceOutboundQueue,
+)
 from inspectio.v3.persistence_emitter.noop import NoopPersistenceEventEmitter
 from inspectio.v3.persistence_emitter.transport import TransportPersistenceEventEmitter
 from inspectio.v3.persistence_transport.sharded_router import (
@@ -23,6 +26,7 @@ from inspectio.v3.persistence_transport.sqs_producer import (
 )
 from inspectio.v3.schemas.bulk_intent import BulkIntentV1
 from inspectio.v3.settings import V3PersistenceSettings, V3SqsSettings
+from inspectio.v3.sqs.boto_config import augment_client_kwargs_with_v3_config
 from inspectio.v3.sqs.bulk_producer import SqsBulkEnqueue
 
 
@@ -72,6 +76,15 @@ def create_l2_app_from_env() -> FastAPI:
     outcomes_reader = (
         RedisOutcomesStore.from_url(redis_url) if redis_url else NullOutcomesReader()
     )
+    if (
+        persistence_settings.persistence_emit_enabled
+        and persistence_settings.persist_transport_queue_urls
+    ):
+        persistence_transport_shard_count = len(
+            persistence_settings.persist_transport_queue_urls
+        )
+    else:
+        persistence_transport_shard_count = 1
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
@@ -84,7 +97,9 @@ def create_l2_app_from_env() -> FastAPI:
             client_kw["aws_access_key_id"] = settings.aws_access_key_id
         if settings.aws_secret_access_key:
             client_kw["aws_secret_access_key"] = settings.aws_secret_access_key
-        async with session.client("sqs", **client_kw) as client:
+        sqs_kw = augment_client_kwargs_with_v3_config(client_kw)
+        enqueued_outbound: L2EnqueuedPersistenceOutboundQueue | None = None
+        async with session.client("sqs", **sqs_kw) as client:
             relay.impl = SqsBulkEnqueue(
                 queue_url=settings.bulk_queue_url,
                 region_name=settings.aws_region,
@@ -133,11 +148,20 @@ def create_l2_app_from_env() -> FastAPI:
                         max_inflight_events=persistence_settings.persist_transport_max_inflight_events,
                         max_batch_events=persistence_settings.persist_transport_batch_max_events,
                     )
+                enqueued_outbound = L2EnqueuedPersistenceOutboundQueue(
+                    producer=producer,
+                )
+                enqueued_outbound.start()
                 emitter_relay.impl = TransportPersistenceEventEmitter(
                     producer=producer,
                     clock_ms=lambda: int(time.time() * 1000),
+                    enqueued_outbound=enqueued_outbound,
                 )
-            yield
+            try:
+                yield
+            finally:
+                if enqueued_outbound is not None:
+                    await enqueued_outbound.stop()
 
     return create_l2_app(
         enqueue_backend=relay,
@@ -145,6 +169,7 @@ def create_l2_app_from_env() -> FastAPI:
         shard_count=shard_count,
         outcomes_reader=outcomes_reader,
         persistence_emitter=emitter_relay,
+        persistence_transport_shard_count=persistence_transport_shard_count,
         expose_persistence_transport_metrics=persistence_settings.expose_persistence_transport_metrics,
         lifespan=lifespan,
     )

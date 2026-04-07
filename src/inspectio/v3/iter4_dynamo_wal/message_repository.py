@@ -108,7 +108,10 @@ class MessageRepository:
         next_due_at_ms: int,
     ) -> None:
         if new_attempt_count >= MAX_SEND_ATTEMPTS:
-            await self.mark_permanently_failed(message_id=message_id)
+            await self.mark_permanently_failed(
+                message_id=message_id,
+                attempt_count=new_attempt_count,
+            )
             return
         await self._client.update_item(
             TableName=self._table,
@@ -124,18 +127,28 @@ class MessageRepository:
             ),
         )
 
-    async def mark_permanently_failed(self, *, message_id: str) -> None:
+    async def mark_permanently_failed(
+        self,
+        *,
+        message_id: str,
+        attempt_count: int | None = None,
+    ) -> None:
+        """Mark terminal failure; optional ``attempt_count`` (e.g. 6) for audit."""
+        names: dict[str, str] = {"#s": "status"}
+        values: dict[str, Any] = {
+            ":f": STATUS_FAILED,
+            ":due": epoch_ms(),
+        }
+        expr = "SET #s = :f, nextDueAt = :due"
+        if attempt_count is not None:
+            expr += ", attemptCount = :ac"
+            values[":ac"] = attempt_count
         await self._client.update_item(
             TableName=self._table,
             Key=marshall_item({"messageId": message_id}),
-            UpdateExpression="SET #s = :f, nextDueAt = :due",
-            ExpressionAttributeNames={"#s": "status"},
-            ExpressionAttributeValues=marshall_item(
-                {
-                    ":f": STATUS_FAILED,
-                    ":due": epoch_ms(),
-                },
-            ),
+            UpdateExpression=expr,
+            ExpressionAttributeNames=names,
+            ExpressionAttributeValues=marshall_item(values),
         )
 
     async def load_all_pending_for_shard(self, shard_id: str) -> list[dict[str, Any]]:

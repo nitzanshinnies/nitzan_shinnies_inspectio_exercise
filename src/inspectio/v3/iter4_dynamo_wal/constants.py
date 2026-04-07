@@ -1,9 +1,13 @@
-"""Named policy values for SMS retry scheduler (Iteration 4)."""
+"""Named policy values for SMS retry scheduler (Iteration 4).
+
+Event-sourcing pivot: DynamoDB holds mutable hot state; S3 stores append-only JSONL WAL.
+"""
 
 from __future__ import annotations
 
 # DynamoDB / throughput
 BATCH_WRITE_ITEM_MAX_ITEMS = 25
+BATCH_WRITE_RETRY_SLEEP_SEC = 0.05
 MAX_POOL_CONNECTIONS = 500
 
 # Retry policy

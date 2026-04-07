@@ -1,4 +1,9 @@
-"""Orchestration for ``newMessage`` / enqueue API path."""
+"""Orchestration for ``newMessage`` / enqueue API path.
+
+Idempotency: ``get`` by ``messageId``. Route ``shard_id`` via ``message_shard_id`` (hash % K).
+Conditional put ``pending``, WAL ``enqueue``, immediate ``send``; on failure bump ``attemptCount``,
+``nextDueAt = now + 500ms``, WAL ``retry_scheduled``. On success WAL ``success``.
+"""
 
 from __future__ import annotations
 
